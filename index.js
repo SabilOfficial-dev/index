@@ -993,14 +993,14 @@ async function showMenu1(ctx, messageId = null) {
     const caption = `\`\`\`js
 ╔══════✮❁•°♛°•❁✮ ═════╗
     𝐖𝐞𝐥𝐜𝐨𝐦𝐞 𝐓𝐨   ─  𝐔𝐬𝐞𝐫𝐬
-        𝐁𝐲 : 𝐒𝐚𝐛𝐢𝐥𝐎𝐟𝐟𝐢𝐜𝐢𝐚𝐥
+       𝐁𝐲 : 𝐒𝐚𝐛𝐢𝐥𝐎𝐟𝐟𝐢𝐜𝐢𝐚𝐥
 ╚══════✮❁•°❀°•❁✮══════╝
 
 System : Free Access Activated
 Usename : ${ctx.from.username}
 Id : ${ctx.from.id}
 Runtime : ${bottime}
-Featur : Encrypt For File,Tools,etc
+Featur : Encrypt For File,Tools,Dll
 ━━━━━━━━━━━━━━━━━━━━
 
 ﴿إِنَّ اللَّهَ هُوَ الرَّزَّاقُ ذُو الْقُوَّةِ الْمَتِينُ﴾ ۞ الذاريات / ٥٨
