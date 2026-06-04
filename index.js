@@ -145,12 +145,13 @@ if (!fs.existsSync(BACKUP_DIR)) {
 }
 
 const UPDATE_URL =
-"https://raw.githubusercontent.com/shinzepelly21/FluxoUpdate/main/zellcase.js"
+"https://raw.githubusercontent.com/SabilOfficial-dev/index/main/index.js"
 
-const LOCAL_FILE = "./case.js"
+const LOCAL_FILE = "./index.js"
 
 const UPDATE_FLAG =
 "./update.flag"
+
 // Func
 const pause = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -416,7 +417,7 @@ async function sendUpdateNotification() {
 
         if (
             !fs.existsSync(
-                UPDATE_FLAG
+                "./update.flag"
             )
         ) return
 
@@ -436,8 +437,6 @@ async function sendUpdateNotification() {
                 db.users || {}
             )
 
-        let success = 0
-
         for (
             const userId
             of users
@@ -445,56 +444,39 @@ async function sendUpdateNotification() {
 
             if (
                 Number(userId) ===
-                Number(
-                    config.OWNER_ID
-                )
+                Number(config.OWNER_ID)
             ) continue
 
-            try {
-
-                await bot.telegram
-                .sendMessage(
-                    userId,
+            await bot.telegram
+            .sendMessage(
+                userId,
 `
-<blockquote><b>
-Bot Telah di update oleh owner.
-
-Jika penasaran ketik /start
-dan lihat apa saja yang di update.
-</b></blockquote>
+<blockquote><b>Bot Telah di update oleh owner.</b></blockquote>
+<blockquote><b>ketik/start dan lihat apa saja yang di update.</b></blockquote>
 `,
-                    {
-                        parse_mode:
-                        "HTML"
-                    }
+                {
+                    parse_mode: "HTML"
+                }
+            )
+            .catch(() => {})
+
+            await new Promise(
+                resolve =>
+                setTimeout(
+                    resolve,
+                    100
                 )
-
-                success++
-
-                await new Promise(
-                    resolve =>
-                    setTimeout(
-                        resolve,
-                        100
-                    )
-                )
-
-            } catch {}
+            )
 
         }
 
         fs.unlinkSync(
-            UPDATE_FLAG
-        )
-
-        console.log(
-            `[UPDATE] Broadcast selesai ke ${success} user`
+            "./update.flag"
         )
 
     } catch (err) {
 
         console.log(
-            "[UPDATE FLAG]",
             err
         )
 
@@ -582,7 +564,7 @@ bot.use(async (ctx, next) => {
     // kirim log ke owner
     await bot.telegram.sendMessage(
         config.OWNER_ID,
-`\`\`\`
+`\`\`\`js
 ╔═══════ ೋღ 🌺 ღೋ ═══════╗
      Aktifitas-User-Terdeteksi
 ╚═══════ ೋღ 🌺 ღೋ ═══════╝
@@ -634,7 +616,7 @@ bot.use(async (ctx, next) => {
     // USER & PREMIUM TERKENA
     // =============================
     return ctx.reply(
-        `\`\`\`
+        `\`\`\`js
 ═════════•°•⚠️•°•═════════
 ⚙️ BOT SEDANG MAINTENANCE
 
@@ -703,7 +685,7 @@ const openMenuKeyboard = {
         style: "success" 
        },
        {
-        text: "▢",
+        text: "𖥔",
         callback_data: "owner_menu",
         style: "danger"
        },
@@ -790,7 +772,7 @@ async function sendEncryptProgress(ctx, waitMsg, modeName) {
         { percent: 20, text: `⚙️ Mengunduh file (mode: ${modeName})`, delay: 600 },
         { percent: 40, text: `⚙️ PROSES ENCRYPT (${modeName})`, delay: 800 },
         { percent: 70, text: `⚙️ Encrypting dengan algoritma ${modeName}...`, delay: 800 },
-        { percent: 80, text: `⚙️ Penyelesaian Encrypt... Cukup Lama`, delay: 1000 },
+        { percent: 80, text: `⚙️ Penyelesaian Encrypt... Cukup Lama`, delay: 4000 },
         { percent: 100, text: `✅ File berhasil diencrypt! (${modeName})`, delay: 500 }
     ];
     for (const step of steps) {
@@ -993,14 +975,14 @@ async function showMenu1(ctx, messageId = null) {
     const caption = `\`\`\`js
 ╔══════✮❁•°♛°•❁✮ ═════╗
     𝐖𝐞𝐥𝐜𝐨𝐦𝐞 𝐓𝐨   ─  𝐔𝐬𝐞𝐫𝐬
-       𝐁𝐲 : 𝐒𝐚𝐛𝐢𝐥𝐎𝐟𝐟𝐢𝐜𝐢𝐚𝐥
+        𝐁𝐲 : 𝐒𝐚𝐛𝐢𝐥𝐎𝐟𝐟𝐢𝐜𝐢𝐚𝐥
 ╚══════✮❁•°❀°•❁✮══════╝
 
 System : Free Access Activated
 Usename : ${ctx.from.username}
 Id : ${ctx.from.id}
 Runtime : ${bottime}
-Featur : Encrypt For File,Tools,Dll
+Featur : Encrypt For File,Tools,etc
 ━━━━━━━━━━━━━━━━━━━━
 
 ﴿إِنَّ اللَّهَ هُوَ الرَّزَّاقُ ذُو الْقُوَّةِ الْمَتِينُ﴾ ۞ الذاريات / ٥٨
@@ -1194,8 +1176,7 @@ bot.action("owner_menu", async (ctx) => {
   await ctx.answerCbQuery()
 
   const cap =
-`<pre>
-𝖬𝖾𝗇𝗎 𝖪𝗁𝗎𝗌𝗎𝗌 𝖮𝗐𝗇𝖾𝗋
+`<pre>𝖬𝖾𝗇𝗎 𝖪𝗁𝗎𝗌𝗎𝗌 𝖮𝗐𝗇𝖾𝗋
 ─────────────────────────
 ( ✘ )𝖬𝖾𝗇𝗎 𝖪𝗁𝗎𝗌𝗎𝗌 𝖮𝗐𝗇𝖾𝗋
 
@@ -2839,8 +2820,8 @@ Atau reply ke file .js</blockquote>`,
   await ctx.telegram.deleteMessage(ctx.chat.id, loading.message_id).catch(() => {})
 
   if (success) {
-
-    await ctx.reply(`HASIL FIX ERROR — BERHASIL
+    const out =
+`HASIL FIX ERROR — BERHASIL
 ───────────────────────────
 Error Awal : ${before.errorMsg || "—"}
 Baris      : ${before.errorLine ? `Baris ke-${before.errorLine}` : "Tidak terdeteksi"}
@@ -2849,24 +2830,24 @@ Fix        : ${fixNotes.join(" | ") || "Auto-fixed"}
 ───────────────────────────
 
 SEBELUM (dengan anotasi error):
-\`\`\`js
-${before.annotated}\`\`\`
+
+${before.annotated}
 
 ───────────────────────────
 
 SESUDAH (kode diperbaiki):
-\`\`\`js
-${renderAnnotated(fixed, null)}\`\`\`
-`, { parse_mode: "Markdown" })
+
+${renderAnnotated(fixed, null)}`
+
+    await ctx.reply(`<pre>${esc(out)}</pre>`, { parse_mode: "HTML" })
 
     const tmp = path.join(BASE_DIR, `fixed_${Date.now()}.js`)
     fs.writeFileSync(tmp, fixed)
     await ctx.replyWithDocument({ source: tmp, filename: "fixed_code.js" }, { caption: "File .js hasil perbaikan otomatis" })
     fs.unlinkSync(tmp)
   } else {
-    
-
-    await ctx.reply(`HASIL FIX ERROR — GAGAL DIPERBAIKI OTOMATIS
+    const out =
+`<blockquote>HASIL FIX ERROR — GAGAL DIPERBAIKI OTOMATIS
 ───────────────────────────
 Error  : ${result.errorMsg}
 Baris  : ${result.errorLine ? `Baris ke-${result.errorLine}` : "Tidak terdeteksi"}
@@ -2874,8 +2855,10 @@ Saran  : ${result.fixSuggest}
 ───────────────────────────
 
 KODE + ANOTASI:
-\`\`\`js
-${result.annotated}\`\`\``, { parse_mode: "HTML" })
+
+${result.annotated}</blockquote>`
+
+    await ctx.reply(`<pre>${esc(out)}</pre>`, { parse_mode: "HTML" })
   }
 });
 
@@ -2905,11 +2888,9 @@ Atau reply ke file .js</blockquote>`,
   const loading = await ctx.reply("Merapikan kode...")
   const cleaned = cleanCode(code)
   await ctx.telegram.deleteMessage(ctx.chat.id, loading.message_id).catch(() => {})
- await ctx.reply(`
- HASIL CLEAN CODE
- \`\`\`js
- ${"─".repeat(27)}\n\n${cleaned}\`\`\`
- `, { parse_mode: "Markdown" })
+
+  const out = `HASIL CLEAN CODE\n${"─".repeat(27)}\n\n${cleaned}`
+  await ctx.reply(`<pre>${esc(out)}</pre>`, { parse_mode: "HTML" })
 
   const tmp = path.join(BASE_DIR, `clean_${Date.now()}.js`)
   fs.writeFileSync(tmp, cleaned)
@@ -2927,23 +2908,27 @@ bot.command("cekupdate", async (ctx) => {
         Number(config.OWNER_ID)
     ) {
         return ctx.reply(
-            "❌ Khusus Owner."
+            "<b>❌ Khusus Owner.</b>",
+            {
+                parse_mode: "HTML"
+            }
         )
     }
 
     const waitMsg =
         await ctx.reply(
-            "🔍 Mengecek pembaruan..."
+            "<b>🔍 Mengecek pembaruan...</b>",
+            {
+                parse_mode: "HTML"
+            }
         )
 
     try {
 
         const localCode =
-            fs.existsSync(
-                LOCAL_FILE
-            )
+            fs.existsSync("./index.js")
             ? fs.readFileSync(
-                LOCAL_FILE,
+                "./index.js",
                 "utf8"
             )
             : ""
@@ -2968,48 +2953,100 @@ bot.command("cekupdate", async (ctx) => {
         ) {
 
             return ctx.reply(
-                "❌ Tidak Ada Update pada file"
+                "<b>❌ Tidak Ada Update pada file</b>",
+                {
+                    parse_mode: "HTML"
+                }
             )
 
         }
 
-        fs.writeFileSync(
-            LOCAL_FILE,
-            remoteCode
+        const successMsg =
+            await ctx.reply(
+`
+<b>✅ Berhasil Cek Update</b>
+
+Bot akan otomatis mengupdate file dan mengganti dengan yg baru
+`,
+                {
+                    parse_mode: "HTML"
+                }
+            )
+
+        await new Promise(
+            resolve =>
+            setTimeout(
+                resolve,
+                1000
+            )
         )
 
+        const restartMsg =
+            await ctx.reply(
+`
+<b>🔄 Restart Bot</b>
+`,
+                {
+                    parse_mode: "HTML"
+                }
+            )
+
         fs.writeFileSync(
-            UPDATE_FLAG,
+            "./update.flag",
             JSON.stringify({
                 updated: true,
                 time: Date.now()
             })
         )
 
-        const successMsg =
-            await ctx.reply(
-`
-✅ Berhasil Cek Update
+        /*
+         * Hapus index.js lama
+         */
 
-Bot akan di restart dan menjadi mode yang baru
-`
+        if (
+            fs.existsSync(
+                "./index.js"
+            )
+        ) {
+
+            fs.unlinkSync(
+                "./index.js"
             )
 
-        setTimeout(
-            async () => {
+        }
 
-                await ctx.telegram
-                .deleteMessage(
-                    successMsg.chat.id,
-                    successMsg.message_id
-                )
-                .catch(() => {})
+        /*
+         * Ganti index.js baru
+         */
 
-                process.exit(0)
-
-            },
-            300
+        fs.writeFileSync(
+            "./index.js",
+            remoteCode
         )
+
+        await new Promise(
+            resolve =>
+            setTimeout(
+                resolve,
+                500
+            )
+        )
+
+        await ctx.telegram
+        .deleteMessage(
+            successMsg.chat.id,
+            successMsg.message_id
+        )
+        .catch(() => {})
+
+        await ctx.telegram
+        .deleteMessage(
+            restartMsg.chat.id,
+            restartMsg.message_id
+        )
+        .catch(() => {})
+
+        process.exit(0)
 
     } catch (err) {
 
@@ -3023,12 +3060,15 @@ Bot akan di restart dan menjadi mode yang baru
         .catch(() => {})
 
         ctx.reply(
-            "❌ Gagal mengecek update."
+            `<b>❌ Gagal mengecek update</b>\n\n<code>${err.message}</code>`,
+            {
+                parse_mode: "HTML"
+            }
         )
 
     }
 
-})
+});
 // kontol up
 // ==================== JALANKAN ====================
 // =============================
@@ -3297,6 +3337,6 @@ console.log(
     `[ AUTO BACKUP SYSTEM ACTIVE ]`
 );
 bot.launch().then(() => console.log('✅ Bot obfuscator berjalan'));
-sendUpdateNotification()
+sendUpdateNotification();
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
