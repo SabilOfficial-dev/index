@@ -1176,7 +1176,7 @@ bot.action("owner_menu", async (ctx) => {
   await ctx.answerCbQuery()
 
   const cap =
-`<pre>𝖬𝖾𝗇𝗎 𝖪𝗁𝗎𝗌𝗎𝗌 𝖮𝗐𝗇𝖾𝗋
+`<blockquote>𝖬𝖾𝗇𝗎 𝖪𝗁𝗎𝗌𝗎𝗌 𝖮𝗐𝗇𝖾𝗋
 ─────────────────────────
 ( ✘ )𝖬𝖾𝗇𝗎 𝖪𝗁𝗎𝗌𝗎𝗌 𝖮𝗐𝗇𝖾𝗋
 
@@ -1184,7 +1184,7 @@ bot.action("owner_menu", async (ctx) => {
 /maintenance – on/off|alasan<
 ─────────────────────────
 
-𝖠𝖼𝖼𝖾𝗌𝗌 𝖮𝗇𝗅𝗒 𝖮𝗐𝗇𝖾𝗋 𝖨𝖽</pre>
+𝖠𝖼𝖼𝖾𝗌𝗌 𝖮𝗇𝗅𝗒 𝖮𝗐𝗇𝖾𝗋 𝖨𝖽</blockquote>
 `
 
   try {
@@ -1322,9 +1322,8 @@ function customStyle(code,name){
   const funcName = /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(name) ? name : "CustomLoader"
   const varName=randomName(names)
 
-  return `
-(function(){
-${chaosVars(1200,names)}
+  return `(function(){
+${chaosVars(1200,name)}
 function ${name}(){
 const ${varName}="${b64}";
 return Buffer.from(${varName},"base64").toString();
@@ -1583,22 +1582,16 @@ var _${randomHex(8)}="${randomHex(50)}";
 }
 
 const result = `
-<!-- HARDHTML -->
-
 <script>
-
 ${anti}
-
 setInterval(()=>{
 debugger
 },1)
-
 eval(
 atob(
 "${b64}"
 )
 )
-
 </script>
 `
 
@@ -1645,10 +1638,7 @@ Buffer
 )
 
 const result = `
-<!-- INVISIBLE HTML -->
-
 <script>
-
 eval(
 atob(
 unescape(
@@ -1656,7 +1646,6 @@ unescape(
 )
 )
 )
-
 </script>
 `
 
@@ -2350,7 +2339,7 @@ bot.command("maintenance", async (ctx) => {
 
     // invalid
     return ctx.reply(
-        `\`\`\`
+        `\`\`\`js
 ✘ Format Salah
 
 /maintenance on|alasan
@@ -3291,7 +3280,7 @@ setInterval(
         )
 
         await sendBackup(
-            "Auto Backup 30 Menit"
+            "Auto Backup 40 Menit"
         )
 
     },
