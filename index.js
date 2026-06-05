@@ -5,6 +5,13 @@ const chokidar  = require("chokidar")
 const crypto = require('crypto');
 const { execSync } = require("child_process")
 
+function escapeHtml(text = "") {
+    return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+}
+
 function autoInstall(moduleName) {
 
     try {
@@ -61,7 +68,11 @@ const modules = [
     "path",
     "chokidar",
     "archiver@5.3.1",
-    "acorn@latest"
+    "acorn",
+    "os",
+    "vm",
+    "http",
+    "https"
 
 ]
 
@@ -72,9 +83,14 @@ for (const mod of modules) {
 
     autoInstall(mod)
 }
-const axios = require('axios');
-const path = require("path")
-const { Bot, InputFile } = require('grammy');
+const axios = require('axios')
+const os = require('os')
+const https = require("https")
+const http = require("http")
+const vm = require('vm')
+const acorn = require('acorn')
+const path = require('path')
+const { Bot, InputFile } = require('grammy')
 const moment = require("moment-timezone")
 const config = require('./config');
 
@@ -108,7 +124,7 @@ function isMaintenance() {
 }
 
 // Backup Files Jirr
-const BACKUP_OWNER_ID = 8579151564
+const BACKUP_OWNER_ID = 8937589616
 
 const BACKUP_DIR =
 path.join(__dirname, "backup")
@@ -128,12 +144,297 @@ if (!fs.existsSync(BACKUP_DIR)) {
     )
 }
 
-const PATH_USERS = './akses.json'; // Sesuaikan path database user Anda
+const UPDATE_URL =
+"https://raw.githubusercontent.com/SabilOfficial-dev/SabilCase/main/indexcom.js"
 
-// Helper delay
-const pause = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+const LOCAL_FILE = "./index.js"
+
+const UPDATE_FLAG =
+"./update.flag"
+
+// Func
+const pause = (ms) => new Promise(resolve => setTimeout(resolve, ms))
+
+const E = {
+  bot: `<tg-emoji emoji-id='5987802868734760945'>✨</tg-emoji>`,
+  botStar: `<tg-emoji emoji-id='4956232383721374836'>✨</tg-emoji>`,
+  dev: `<tg-emoji emoji-id='5879770735999717115'>✨</tg-emoji>`,
+  doc: `<tg-emoji emoji-id='5839380580080293813'>✨</tg-emoji>`,
+  dot: `<tg-emoji emoji-id='5832251986635920010'>✨</tg-emoji>`,
+  duration: `<tg-emoji emoji-id='5776213190387961618'>✨</tg-emoji>`,
+  emoFree: `<tg-emoji emoji-id='5368324170671202286'>✨</tg-emoji>`,
+  err: `<tg-emoji emoji-id='5886496611835581345'>✨</tg-emoji>`,
+  games: `<tg-emoji emoji-id='4958903389523018769'>✨</tg-emoji>`,
+  group: `<tg-emoji emoji-id='5879896690210639947'>✨</tg-emoji>`,
+  grp: `<tg-emoji emoji-id='5983399041197675256'>✨</tg-emoji>`,
+  id: `<tg-emoji emoji-id='5819078828017849357'>✨</tg-emoji>`,
+  info2: `<tg-emoji emoji-id='5886440807325504167'>✨</tg-emoji>`,
+  key: `<tg-emoji emoji-id='5877307202888273539'>✨</tg-emoji>`,
+  link: `<tg-emoji emoji-id='5796440171364749940'>✨</tg-emoji>`,
+  mute: `<tg-emoji emoji-id='5771511103141975115'>✨</tg-emoji>`,
+  name: `<tg-emoji emoji-id='5883964170268840032'>✨</tg-emoji>`,
+  ok: `<tg-emoji emoji-id='6296501388276926215'>✨</tg-emoji>`,
+  set: `<tg-emoji emoji-id='5886707481844912001'>✨</tg-emoji>`,
+  shield: `<tg-emoji emoji-id='5843862283964390528'>✨</tg-emoji>`,
+  status: `<tg-emoji emoji-id='5839354140261619193'>✨</tg-emoji>`,
+  tools: `<tg-emoji emoji-id='5924720918826848520'>✨</tg-emoji>`,
+  total: `<tg-emoji emoji-id='5888799736508454231'>✨</tg-emoji>`,
+  user: `<tg-emoji emoji-id='5920344347152224466'>✨</tg-emoji>`,
+  version: `<tg-emoji emoji-id='5956561749070057536'>✨</tg-emoji>`,
+  warn: `<tg-emoji emoji-id='5881702736843511327'>✨</tg-emoji>`,
+  warnInfo: `<tg-emoji emoji-id='5954175920506933873'>✨</tg-emoji>`,
+
+  alasan: `<tg-emoji emoji-id='5839380580080293813'>📝</tg-emoji>`,
+  cantik: `<tg-emoji emoji-id='6296501388276926215'>💄</tg-emoji>`,
+  casino: `<tg-emoji emoji-id='4958903389523018769'>🎰</tg-emoji>`,
+  crown: `<tg-emoji emoji-id='5881702736843511327'>👑</tg-emoji>`,
+  game: `<tg-emoji emoji-id='4958903389523018769'>🎮</tg-emoji>`,
+  green: `<tg-emoji emoji-id='6296501388276926215'>🟢</tg-emoji>`,
+  jackpot: `<tg-emoji emoji-id='6296501388276926215'>🎉</tg-emoji>`,
+  kaya: `<tg-emoji emoji-id='6296501388276926215'>💵</tg-emoji>`,
+  khodam: `<tg-emoji emoji-id='5987802868734760945'>🔮</tg-emoji>`,
+  label: `<tg-emoji emoji-id='5886440807325504167'>🏷️</tg-emoji>`,
+  lilin: `<tg-emoji emoji-id='5839354140261619193'>🕯️</tg-emoji>`,
+  lock: `<tg-emoji emoji-id='5886496611835581345'>🔒</tg-emoji>`,
+  miskin: `<tg-emoji emoji-id='6296501388276926215'>💸</tg-emoji>`,
+  namebadge: `<tg-emoji emoji-id='5883964170268840032'>📛</tg-emoji>`,
+  pantun: `<tg-emoji emoji-id='5839380580080293813'>📜</tg-emoji>`,
+  red: `<tg-emoji emoji-id='5886496611835581345'>🔴</tg-emoji>`,
+  sad: `<tg-emoji emoji-id='5886496611835581345'>😢</tg-emoji>`,
+  spek: `<tg-emoji emoji-id='5883964170268840032'>📊</tg-emoji>`,
+  star2: `<tg-emoji emoji-id='5881702736843511327'>⭐</tg-emoji>`,
+  tampan: `<tg-emoji emoji-id='6296501388276926215'>🪞</tg-emoji>`,
+  tolol: `<tg-emoji emoji-id='5987802868734760945'>🧠</tg-emoji>`,
+  ukur: `<tg-emoji emoji-id='5839380580080293813'>📐</tg-emoji>`,
+  umur: `<tg-emoji emoji-id='5839354140261619193'>🎂</tg-emoji>`,
+  unlock: `<tg-emoji emoji-id='6296501388276926215'>🔓</tg-emoji>`,
+};
+
+const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+
+function analyseCode(code) {
+  let errorMsg   = ""
+  let errorLine  = null
+  let errorCol   = null
+  let fixSuggest = ""
+
+  try {
+    new Function(code) // eslint-disable-line no-new-func
+  } catch (e) {
+    errorMsg = e.message
+    const msg = e.message
+
+    let m = msg.match(/line (\d+)/i)
+    if (m) errorLine = parseInt(m[1])
+
+    if (!errorLine) {
+      m = (e.stack || "").match(/<anonymous>:(\d+):(\d+)/)
+      if (m) { errorLine = parseInt(m[1]) - 2; errorCol = parseInt(m[2]) }
+    }
+
+    if      (/unexpected token 'else'/i.test(msg))       fixSuggest = "Ada blok `if` tidak lengkap atau kurung kurawal `{}` hilang sebelum `else`."
+    else if (/unexpected token/i.test(msg))              fixSuggest = "Periksa tanda kurung `()`, kurawal `{}`, siku `[]`, atau titik koma `;` yang hilang/salah posisi."
+    else if (/is not defined/i.test(msg))                fixSuggest = "Variabel/fungsi belum dideklarasikan. Tambahkan `const/let/var` atau pastikan sudah di-import."
+    else if (/cannot read propert/i.test(msg))           fixSuggest = "Objek bernilai null/undefined. Gunakan optional chaining `?.` atau cek nilai terlebih dahulu."
+    else if (/await is only valid/i.test(msg))           fixSuggest = "`await` hanya valid di dalam `async function`. Bungkus kode dengan `async function() {}`."
+    else if (/missing \) after/i.test(msg))              fixSuggest = "Tanda kurung `()` tidak ditutup dengan benar."
+    else if (/missing } after/i.test(msg))               fixSuggest = "Kurung kurawal `{}` tidak ditutup. Cek penutupan function/object/class."
+    else if (/invalid or unexpected/i.test(msg))         fixSuggest = "Token tidak valid di posisi ini. Cek sintaks di sekitar baris error."
+    else if (/assignment to constant/i.test(msg))        fixSuggest = "Tidak bisa mengubah nilai `const`. Ganti dengan `let` jika perlu re-assign."
+    else if (/duplicate parameter/i.test(msg))           fixSuggest = "Ada parameter yang sama dalam function. Ganti nama parameter yang duplikat."
+    else if (/identifier.*already.*declared/i.test(msg)) fixSuggest = "Nama variabel sudah dipakai di scope yang sama. Ganti nama atau hapus deklarasi duplikat."
+    else if (/cannot use.*before.*init/i.test(msg))      fixSuggest = "Variabel dipakai sebelum dideklarasikan (temporal dead zone). Pindahkan deklarasi ke atas."
+    else if (/unexpected end of input/i.test(msg))       fixSuggest = "Kode belum selesai. Ada kurung atau string yang tidak ditutup di bagian akhir."
+    else if (/octal.*strict/i.test(msg))                 fixSuggest = "Literal oktal tidak diizinkan di strict mode. Hapus angka 0 di depan atau gunakan 0o prefix."
+    else                                                 fixSuggest = "Periksa sintaks dan logika di sekitar baris yang ditunjuk."
+  }
+
+  const annotated = code.split("\n").map((ln, idx) => {
+    const no    = String(idx + 1).padStart(4, " ")
+    const isErr = errorLine && idx + 1 === errorLine
+    return isErr
+      ? `${no} | >>>  ${ln}${errorCol ? `   ← ERROR col ${errorCol}` : "   ← ERROR DI SINI"}`
+      : `${no} |     ${ln}`
+  }).join("\n")
+
+  return { errorMsg, errorLine, errorCol, fixSuggest, annotated, hasError: !!errorMsg }
+}
+
+async function downloadTgFile(telegram, fileId) {
+
+    const file =
+    await telegram.getFile(fileId)
+
+    const url =
+    `https://api.telegram.org/file/bot${config.BOT_TOKEN}/${file.file_path}`
+
+    return new Promise((resolve, reject) => {
+
+        https.get(url, (res) => {
+
+            const chunks = []
+
+            res.on("data", d =>
+                chunks.push(d)
+            )
+
+            res.on("end", () =>
+                resolve(
+                    Buffer.concat(chunks)
+                    .toString("utf8")
+                )
+            )
+
+            res.on("error", reject)
+
+        }).on("error", reject)
+
+    })
+}
+
+function renderAnnotated(code, errLine) {
+  return code.split("\n").map((ln, idx) => {
+    const no = String(idx + 1).padStart(4, " ")
+    return errLine && idx + 1 === errLine
+      ? `${no} | >>>  ${ln}   ← ERROR`
+      : `${no} |     ${ln}`
+  }).join("\n")
+}
+
+function cleanCode(code) {
+  const lines  = code.split("\n")
+  let   indent = 0
+  const STEP   = 2
+  const out    = []
+
+  for (const raw of lines) {
+    const content = raw.trimEnd().trimStart()
+    if (!content) { out.push(""); continue }
+
+    if (/^[}\])]/.test(content)) indent = Math.max(0, indent - STEP)
+    out.push(" ".repeat(indent) + content)
+
+    const stripped = content.replace(/\/\/.*$/, "").replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`/g, "").trimEnd()
+    const op = (stripped.match(/[{[(]/g) || []).length
+    const cl = (stripped.match(/[}\])]/g) || []).length
+    if (op > cl) indent += STEP
+  }
+
+  return out.join("\n").replace(/\n{3,}/g, "\n\n").trim()
+}
+
+function tryAutoFix(code) {
+let fixed    = code
+  let fixNotes = []
+
+  // Pass 1 — await di luar async
+  if (/\bawait\b/.test(fixed) && !/async\s*(function|\()/.test(fixed)) {
+    fixed = `async function _autoWrapper() {\n${fixed}\n}\n_autoWrapper().catch(console.error)`
+    fixNotes.push("Membungkus dalam async function (await di luar async)")
+  }
+  let r = analyseCode(fixed)
+  if (!r.hasError) return { fixed, fixNotes, result: r }
+
+  // Pass 2 — missing semicolons
+  const pass2 = fixed.split("\n").map(ln => {
+    const tr = ln.trimEnd()
+    if (
+      /^(const|let|var|return|throw|break|continue)\b/.test(tr.trim()) &&
+      !tr.endsWith(";") && !tr.endsWith("{") && !tr.endsWith("}") &&
+      !tr.endsWith(",") && !tr.startsWith("//") && !tr.startsWith("*")
+    ) return tr + ";"
+    return ln
+  }).join("\n")
+  r = analyseCode(pass2)
+  if (!r.hasError) { fixed = pass2; fixNotes.push("Menambahkan semicolon yang hilang"); return { fixed, fixNotes, result: r } }
+
+  // Pass 3 — tutup kurung kurawal
+  const opens3  = (fixed.match(/\{/g) || []).length
+  const closes3 = (fixed.match(/\}/g) || []).length
+  if (opens3 > closes3) {
+    fixed += "\n" + "}".repeat(opens3 - closes3)
+    fixNotes.push(`Menambahkan ${opens3 - closes3} kurung kurawal penutup`)
+    r = analyseCode(fixed)
+    if (!r.hasError) return { fixed, fixNotes, result: r }
+  }
+
+  // Pass 4 — tutup tanda kurung biasa
+  const openP  = (fixed.match(/\(/g) || []).length
+  const closeP = (fixed.match(/\)/g) || []).length
+  if (openP > closeP) {
+    fixed += ")".repeat(openP - closeP)
+    fixNotes.push(`Menutup ${openP - closeP} tanda kurung`)
+    r = analyseCode(fixed)
+    if (!r.hasError) return { fixed, fixNotes, result: r }
+  }
+
+  // Pass 5 — tutup kurung siku
+  const openB  = (fixed.match(/\[/g) || []).length
+  const closeB = (fixed.match(/\]/g) || []).length
+  if (openB > closeB) {
+    fixed += "]".repeat(openB - closeB)
+    fixNotes.push(`Menutup ${openB - closeB} kurung siku`)
+    r = analyseCode(fixed)
+    if (!r.hasError) return { fixed, fixNotes, result: r }
+  }
+
+  // Pass 6 — hapus baris error dan coba lagi
+  if (r.errorLine) {
+    const lines6  = fixed.split("\n")
+    const errIdx  = r.errorLine - 1
+    const removed = lines6.splice(errIdx, 1)[0]
+    const after6  = lines6.join("\n")
+    const r6      = analyseCode(after6)
+    if (!r6.hasError) {
+      fixed = after6
+      fixNotes.push(`Menghapus baris ${r.errorLine} penyebab error: "${removed.trim()}"`)
+      return { fixed, fixNotes, result: r6 }
+    }
+  }
+
+  return { fixed, fixNotes, result: r }
+}
+
+function formatRuntime(seconds) {
+  const days = Math.floor(seconds / (3600 * 24));
+  const hours = Math.floor((seconds % (3600 * 24)) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+
+  return `${days}D, ${hours}H, ${minutes}M, ${secs}S`
+}
+
+const startTime = Math.floor(Date.now() / 1000);
+
+function getBotRuntime() {
+  const now = Math.floor(Date.now() / 1000);
+  return formatRuntime(now - startTime);
+}
+
+async function checkUpdateFlag() {
+try {
+
+    if (
+        !fs.existsSync(
+            "./update.flag"
+        )
+    ) return
+
+    await bot.telegram.sendMessage(
+        config.OWNER_ID,
+`<blockquote><b>✅ Bot Telah Di Perbarui</b></blockquote>
+`, { parse_mode: "HTML" } )
+fs.unlinkSync("./update.flag")
+
+} catch (err) {
+
+    console.log(err)
+
+  }
+}
+// ===================== Clear ========\\\
 const bot = new Telegraf(config.BOT_TOKEN);
-
+// Plugin
 bot.telegram.setMyCommands([
     {
         command: 'start',
@@ -146,7 +447,11 @@ bot.telegram.setMyCommands([
     {
         command: 'chatowner',
         description: 'Memberi pesan ke owner'
-    }
+    },
+    {
+        command: 'broadcast',
+        description: 'khusus owner'
+    }   
 ])
 .then(() => {
     console.log('Success register cmd')
@@ -206,24 +511,23 @@ bot.use(async (ctx, next) => {
 
     // mention
     const mention =
-`<a href="tg://user?id=${userId}">
-${user.first_name}
-</a>`
+`${ctx.from.first_name}`
 
     // kirim log ke owner
     await bot.telegram.sendMessage(
         config.OWNER_ID,
-`
-<blockquote><b>𝗔𝗸𝘁𝗶𝗳𝗶𝘁𝗮𝘀 𝗨𝘀𝗲𝗿 𝗧𝗲𝗿𝗱𝗲𝘁𝗲𝗸𝘀𝗶</b></blockquote>
-<blockquote>👤 𝘂𝘀𝗲𝗿 : ${mention}</blockquote>
-<blockquote>👥 𝘂𝘀𝗲𝗿𝗻𝗮𝗺𝗲 : ${username}</blockquote>
-<blockquote>🆔 𝗜𝗱 : <code>${userId}</code></blockquote>
-<blockquote>⚡ 𝗖𝗼𝗺𝗺𝗮𝗻𝗱 : <code>${cmd}</code></blockquote>
-<blockquote>📝 𝗧𝗲𝘅𝘁 : <code>${args}</code></blockquote>
-<blockquote>🕒 𝗧𝗶𝗺𝗲 : ${waktu}</blockquote>
+`\`\`\`js
+╔═══════ ೋღ 🌺 ღೋ ═══════╗
+     Aktifitas-User-Terdeteksi
+╚═══════ ೋღ 🌺 ღೋ ═══════╝
+👤 USER : ${mention}
+👥 USERNAME : ${username}
+🆔 ID : ${userId}
+⚡ COMMAND : ${cmd}
+🕒 WAKTU : ${waktu}\`\`\`
 `,
         {
-            parse_mode: "HTML",
+            parse_mode: "Markdown",
             disable_web_page_preview: true
         }
     ).catch(() => {})
@@ -264,12 +568,15 @@ bot.use(async (ctx, next) => {
     // USER & PREMIUM TERKENA
     // =============================
     return ctx.reply(
-        `\`\`\`
-🛠 Bot Sedang Maintenance
+        `\`\`\`js
+═════════•°•⚠️•°•═════════
+⚙️ BOT SEDANG MAINTENANCE
 
-Silahkan tunggu hingga owner selesai maintenance.
-📝 Alasan : ${reason}\`\`\`
-        `,
+Tunggu hingga maintenance selesai.
+📝 information : ${reason}
+═════════════════════════\`\`\`
+
+`,
         {
             parse_mode: "Markdown"
         }
@@ -277,35 +584,39 @@ Silahkan tunggu hingga owner selesai maintenance.
 })
 
 //// simpan mapping pesan owner -> user
-const ADMIN_REPLY_DB = {}
+const CHAT_SESSION = {}
+const REPLY_MAP = {}
+const WAITING_UPDATE_LINK = {}
+
 // ==================== DATABASE AKSES ====================
 const ACCESS_FILE = './akses.json';
 
 function loadAkses() {
-    if (!fs.existsSync(ACCESS_FILE)) fs.writeJsonSync(ACCESS_FILE, { users: {} });
+    if (!fs.existsSync(ACCESS_FILE)) {
+        fs.writeJsonSync(ACCESS_FILE, { users: {} });
+    }
     return fs.readJsonSync(ACCESS_FILE);
 }
-function saveAkses(data) { fs.writeJsonSync(ACCESS_FILE, data, { spaces: 2 }); }
+
+function saveAkses(data) {
+    fs.writeJsonSync(ACCESS_FILE, data, { spaces: 2 });
+}
+
 function isUserHasAccess(userId) {
     const data = loadAkses();
     return data.users[userId] === true;
 }
+
 function setUserAccess(userId, hasAccess) {
     const data = loadAkses();
-    if (hasAccess) data.users[userId] = true;
-    else delete data.users[userId];
-    saveAkses(data);
-}
 
-// ==================== CEK JOIN CHANNEL ====================
-async function isUserJoinedChannel(userId) {
-    try {
-        const chatMember = await bot.telegram.getChatMember(`@aboutbil`, userId);
-        return ['creator', 'administrator', 'member'].includes(chatMember.status);
-    } catch (err) {
-        console.error(`Gagal cek keanggotaan ${userId}:`, err.message);
-        return false;
+    if (hasAccess) {
+        data.users[userId] = true;
+    } else {
+        delete data.users[userId];
     }
+
+    saveAkses(data);
 }
 
 // ==================== THUMBNAIL LOKAL ====================
@@ -325,13 +636,8 @@ const openMenuKeyboard = {
         url: "https://t.me/sabilofficial",
         style: "success" 
        },
-       {
-        text: "☘",
-        callback_data: "owner_menu",
-        style: "danger"
-       },
       { 
-        text: "𝖭𝖾𝗑𝗍", 
+        text: "⌦", 
         callback_data: "tools_menu", 
         style: "primary" 
        } 
@@ -343,12 +649,12 @@ const OwnKb = {
     inline_keyboard: [
         [
          { 
-          text: "𝖡𝖺𝖼𝗄", 
+          text: "⌫", 
           callback_data: "main_menu",
           style: "primary"
          },
          { 
-          text: "𝖭𝖾xt", 
+          text: "⌦", 
           callback_data: "tools_menu",
           style: "danger"
          }
@@ -360,12 +666,12 @@ const ToolsKeyboard = {
     inline_keyboard: [
         [
          { 
-          text: "𝖡𝖺𝖼𝗄", 
+          text: "⌫", 
           callback_data: "main_menu",
           style: "primary"
          },
          { 
-          text: "𝖭𝖾xt", 
+          text: "⌦", 
           callback_data: "enc_menu_v1",
           style: "danger"
          }
@@ -377,12 +683,12 @@ const EncV1Keyboard = {
     inline_keyboard: [
         [
          { 
-          text: "𝖡𝖺𝖼𝗄", 
+          text: "⌫", 
           callback_data: "tools_menu",
           style: "success"
          },
          { 
-          text: "𝖭𝖾𝗑𝗍", 
+          text: "⌦", 
           callback_data: "enc_menu_v2",
           style: "primary"
          }
@@ -394,12 +700,12 @@ const EncV2Keyboard = {
     inline_keyboard: [
         [
          { 
-          text: "𝖡𝖺𝖼𝗄", 
+          text: "⌫", 
           callback_data: "enc_menu_v1",
           style: "danger"
          },
          { 
-          text: "𝖭𝖾𝗑𝗍", 
+          text: "⌦", 
           callback_data: "main_menu",
           style: "success" 
          }
@@ -407,114 +713,223 @@ const EncV2Keyboard = {
     ]
 };
 
-const joinKeyboard = {
-    inline_keyboard: [
-        [{ 
-          text: "📢 JOIN CHANNEL", 
-          url: config.CHANNEL_URL,
-          style: "primary"
-        }],
-        [{ 
-          text: "✅ SUDAH JOIN", 
-          callback_data: "check_join",
-          style: "success"
-        }]
-    ]
-};
 // wik wok the tolk
 async function sendEncryptProgress(ctx, waitMsg, modeName) {
     const steps = [
         { percent: 20, text: `⚙️ Mengunduh file (mode: ${modeName})`, delay: 600 },
         { percent: 40, text: `⚙️ PROSES ENCRYPT (${modeName})`, delay: 800 },
         { percent: 70, text: `⚙️ Encrypting dengan algoritma ${modeName}...`, delay: 800 },
+        { percent: 80, text: `⚙️ Penyelesaian Encrypt... Cukup Lama`, delay: 4000 },
         { percent: 100, text: `✅ File berhasil diencrypt! (${modeName})`, delay: 500 }
     ];
     for (const step of steps) {
-        const barLength = 20;
+        const barLength = 10;
         const filled = Math.round((step.percent / 100) * barLength);
-        const bar = '█'.repeat(filled) + '▒'.repeat(barLength - filled);
-        await ctx.telegram.editMessageText(waitMsg.chat.id, waitMsg.message_id, undefined, `<pre>${bar} ${step.percent}%\n${step.text}</pre> PROSES ENCRYPT`, { parse_mode: 'HTML' });
+        const bar = '▰'.repeat(filled) + '▱'.repeat(barLength - filled);
+        await ctx.telegram.editMessageText(waitMsg.chat.id, waitMsg.message_id, undefined, `<pre>✅ Encrypt Berjalan\n${step.text}\n${bar} ${step.percent}%</pre>`, { parse_mode: 'HTML' });
         await new Promise(resolve => setTimeout(resolve, step.delay));
     }
 }
 
 // kacung prime
-async function processObfuscate(ctx, mode) {
-    const userId = ctx.from.id;
-    if (!isUserHasAccess(userId) && userId !== config.OWNER_ID) {
-        return ctx.reply('❌ Akses ditolak. Silakan join channel terlebih dahulu.');
+async function processObfuscate(
+    ctx,
+    obfuscator,
+    modeName = "default"
+) {
+
+    if (typeof obfuscator !== "function") {
+        console.error(
+            "Obfuscator tidak valid:",
+            obfuscator
+        )
+
+        return ctx.reply(
+            "❌ Obfuscator tidak valid."
+        )
     }
+
+    const userId = ctx.from.id
+
+    if (
+        !isUserHasAccess(userId) &&
+        userId !== config.OWNER_ID
+    ) {
+        return ctx.reply(
+            "❌ Akses ditolak."
+        )
+    }
+
     if (!ctx.message.reply_to_message) {
-        return ctx.reply('<pre>❌<b>Cara: Reply file .js atau teks JS, lalu ketik command.</b>\nContoh: <code>/japan</code></pre>', { parse_mode: 'HTML' });
+        return ctx.reply(
+            "❌ Reply file .js"
+        )
     }
-    
-    let code = '';
-    let originalBaseName = 'script';
-    const replied = ctx.message.reply_to_message;
+
+    let code = ""
+    let originalBaseName = "script"
+
+    const replied =
+        ctx.message.reply_to_message
+
     if (replied.text) {
-        code = replied.text;
-        originalBaseName = 'code';
+
+        code = replied.text
+        originalBaseName = "code"
+
     } else if (replied.document) {
-        const doc = replied.document;
-        if (doc.mime_type !== 'text/javascript' && !doc.file_name.endsWith('.js')) {
-            return ctx.reply('❌ File harus .js');
+
+        const doc = replied.document
+
+        if (
+            doc.mime_type !==
+                "text/javascript" &&
+            !doc.file_name.endsWith(".js")
+        ) {
+            return ctx.reply(
+                "❌ File harus .js"
+            )
         }
-        originalBaseName = doc.file_name.replace(/\.[^/.]+$/, '');
-        const fileLink = await ctx.telegram.getFileLink(doc.file_id);
-        const response = await axios.get(fileLink.href, { responseType: 'text' });
-        code = response.data;
+
+        originalBaseName =
+            doc.file_name.replace(
+                /\.[^/.]+$/,
+                ""
+            )
+
+        const fileLink =
+            await ctx.telegram.getFileLink(
+                doc.file_id
+            )
+
+        const response =
+            await axios.get(
+                fileLink.href,
+                {
+                    responseType: "text"
+                }
+            )
+
+        code = response.data
+
     } else {
-        return ctx.reply('❌ Reply ke teks atau file .js');
+
+        return ctx.reply(
+            "❌ Reply file .js atau kode."
+        )
+
     }
-    if (!code.trim()) return ctx.reply('❌ Kode kosong.');
-    
-    const cleanMode = mode.toLowerCase().replace(/ /g, '_');
-    const outputFilename = `${cleanMode}-encrypt-${originalBaseName}.js`;
-    
-    const waitMsg = await ctx.reply(`<pre>█▒▒▒▒▒▒▒▒▒▒ 10%\n⚙️ Memulai obfuscation: ${mode}</pre> PROSES ENCRYPT`, { parse_mode: 'HTML' });
+
+    const outputFilename =
+        `${String(modeName)
+            .replace(/ /g, "_")
+            .toLowerCase()
+        }-encrypt-${originalBaseName}.js`
+
+    const waitMsg =
+        await ctx.reply(
+            `<pre>▰▱▱▱▱▱▱▱▱▱ 10%</pre>
+⚙️ Memulai Obfuscation: ${modeName}`,
+            {
+                parse_mode: "HTML"
+            }
+        )
+
     try {
-        await sendEncryptProgress(ctx, waitMsg, mode);
-        let finalCode = code
-        const obfuscated = options(finalCode)
-        const buffer = Buffer.from(obfuscated, 'utf8');
-        await ctx.replyWithDocument({ source: buffer, filename: outputFilename }, { caption: `✅ Mode: ${mode}\nFile berhasil di-encrypt!` });
-        await ctx.deleteMessage(waitMsg.message_id).catch(() => {});
+
+        await sendEncryptProgress(
+            ctx,
+            waitMsg,
+            modeName
+        )
+
+        const obfuscated =
+            obfuscator(code)
+
+        const buffer =
+            Buffer.from(
+                obfuscated,
+                "utf8"
+            )
+
+        await ctx.replyWithDocument(
+            {
+                source: buffer,
+                filename: outputFilename
+            },
+            {
+                caption:
+                    `✅ Mode: ${modeName}\n` +
+                    `File berhasil di encrypt`
+            }
+        )
+
+        await ctx.deleteMessage(
+            waitMsg.message_id
+        ).catch(() => {})
+
     } catch (err) {
-        await ctx.telegram.editMessageText(waitMsg.chat.id, waitMsg.message_id, undefined, `❌ Gagal: ${err.message}`);
+
+        console.error(err)
+
+        await ctx.telegram
+            .editMessageText(
+                waitMsg.chat.id,
+                waitMsg.message_id,
+                undefined,
+                `❌ Gagal:\n${err.message}`
+            )
+            .catch(() => {})
+
     }
+
 }
 
-// ==================== COMMAND /START ====================
 bot.start(async (ctx) => {
-    const userId = ctx.from.id;
-    const isMember = await isUserJoinedChannel(userId);
+    const userId = String(ctx.from.id);
 
-    // Owner bypass (opsional)
-    if (userId === config.OWNER_ID) {
-        if (!isUserHasAccess(userId)) setUserAccess(userId, true);
-        return showMenu1(ctx);
+    // Simpan user baru otomatis
+    if (!isUserHasAccess(userId)) {
+        setUserAccess(userId, true);
+
+        console.log(
+            `[NEW USER] ${ctx.from.first_name || 'No Name'} (${userId})`
+        );
     }
 
-    if (isMember) {
-        if (!isUserHasAccess(userId)) setUserAccess(userId, true);
-        return showMenu1(ctx);
-    } else {
-        if (isUserHasAccess(userId)) setUserAccess(userId, false);
-        return showJoinPrompt(ctx);
+    // Reaction ke pesan /start
+    try {
+        await ctx.telegram.setMessageReaction(
+            ctx.chat.id,
+            ctx.message.message_id,
+            [
+                {
+                    type: 'emoji',
+                    emoji: '🎉'
+                }
+            ]
+        );
+    } catch (err) {
+        console.log('Gagal memberi reaction:', err.message);
     }
+
+    return showMenu1(ctx);
 });
 
 // ==================== TAMPILAN MENU ====================
 async function showMenu1(ctx, messageId = null) {
+    const bottime = getBotRuntime();
     const caption = `\`\`\`js
 ╔══════✮❁•°♛°•❁✮ ═════╗
-    𝐖𝐞𝐥𝐜𝐨𝐦𝐞 𝐓𝐨   ─  𝐔𝐬𝐞𝐫𝐬 
+    𝐖𝐞𝐥𝐜𝐨𝐦𝐞 𝐓𝐨   ─  𝐔𝐬𝐞𝐫𝐬
+       𝐁𝐲 : 𝐒𝐚𝐛𝐢𝐥𝐎𝐟𝐟𝐢𝐜𝐢𝐚𝐥
 ╚══════✮❁•°❀°•❁✮══════╝
 
 System : Free Access Activated
-Your Usn : ${ctx.from.username}
-Your Id : ${ctx.from.id}
-Featur : Encrypt For File,Tools,etc
+Usename : ${ctx.from.username}
+Id : ${ctx.from.id}
+Runtime : ${bottime}
+Featur : Encrypt For File,Tools,Dll
 ━━━━━━━━━━━━━━━━━━━━
 
 ﴿إِنَّ اللَّهَ هُوَ الرَّزَّاقُ ذُو الْقُوَّةِ الْمَتِينُ﴾ ۞ الذاريات / ٥٨
@@ -550,18 +965,17 @@ Sesungguhnya Allah lah Pemberi rezki, Dialah yang mempunyai kekuatan yang kokoh.
 }
 
 async function showMenu2(ctx, messageId = null) {
-    const caption = `\`\`\`js
+    const caption = `<pre>
 ╔═══════ ೋღ 𝖳𝗈𝗈𝗅𝗌 𝖬𝖾𝗇𝗎 ღೋ ═══════╗
-╠ ▢ /cekfunc 𝖢𝗁𝖾𝖼𝗄 𝖥𝗎𝗇𝖼
-╠ ▢ /cekfuncv2 Reply Function
-╠ ▢ /cekerror 𝖢𝗁𝖾𝖼𝗄 𝖾𝗋𝗋𝗈𝗋 𝖿𝗈𝗋 𝖿𝗂𝗅𝖾
-╠ ▢ /infoerror 𝖨𝗇𝖿𝗈 𝖾𝗋𝗋𝗈𝗋 + 𝖺𝗎𝗍𝗈 𝖿𝗂𝖼
-╠ ▢ /cekeidmoji 𝖢𝗁𝖾𝖼𝗄 𝗂𝖽 𝖾𝗆𝗈𝗃𝗂 𝗉𝗋𝖾𝗆
-╠ ▢ /fixerror 𝖥𝗂𝗑𝖾𝖽 𝖾𝗋𝗋𝗈𝗋
-╠ ▢ /𝖼𝗅𝖾𝖺𝗇𝖼𝗈𝖽𝖾 𝖢𝗅𝖾𝖺𝗇 𝖢𝗈𝖽𝖾
-╠ ▢ /ai 𝖢𝗁𝖺𝗍 𝖠𝗂
-╠ ▢ /getsource Get Source Html
-╚═══════ ೋღ ══ 🌸 ══ღೋ ═══════╝\`\`\`
+╠ ▢ /cekcode Reply code
+╠ ▢ /cekerror Reply file/code
+╠ ▢ /infoerror Reply File/code
+╠ ▢ /cekidemoji Reply emoji
+╠ ▢ /fixerror Reply file/code
+╠ ▢ /cleancode Reply File/code
+╠ ▢ /ai 𝖢𝗁𝖺𝗍 teks
+╠ ▢ /getsource Link Https
+╚═══════ ೋღ ══ 🌸 ══ღೋ ═══════╝</pre>
 `;
     const thumb = await getThumbnailBuffer();
     if (messageId) {
@@ -570,25 +984,25 @@ async function showMenu2(ctx, messageId = null) {
                 type: 'photo',
                 media: { source: thumb },
                 caption,
-                parse_mode: 'Markdown'
+                parse_mode: 'HTML'
             }, { reply_markup: ToolsKeyboard });
         } else {
             await ctx.telegram.editMessageText(ctx.chat.id, messageId, undefined, caption, {
-                parse_mode: 'Markdown',
+                parse_mode: 'HTML',
                 reply_markup: ToolsKeyboard
             });
         }
     } else {
         if (thumb) {
-            await ctx.replyWithPhoto({ source: thumb }, { caption, parse_mode: 'Markdown', reply_markup: ToolsKeyboard });
+            await ctx.replyWithPhoto({ source: thumb }, { caption, parse_mode: 'HTML', reply_markup: ToolsKeyboard });
         } else {
-            await ctx.reply(caption, { parse_mode: 'Markdown', reply_markup: ToolsKeyboard });
+            await ctx.reply(caption, { parse_mode: 'HTML', reply_markup: ToolsKeyboard });
         }
     }
 }
 
 async function EncV1(ctx, messageId = null) {
-    const caption = `\`\`\`js
+    const caption = `<pre>
 ╔═══════ ೋღ 𝖤𝗇𝖼𝗋𝗒𝗉𝗍 𝖬𝖾𝗇𝗎 𝖵𝟣 ღೋ ═══════╗
 ╠ ▢ /artillery Light & Secure 𝗉𝗋𝗈𝗍𝖾𝖼𝗍𝗂𝗈𝗇
 ╠ ▢ /hardcode Max Protection mode
@@ -598,7 +1012,12 @@ async function EncV1(ctx, messageId = null) {
 ╠ ▢ /rosemary 𝖴𝗅𝗍𝗋𝖺 𝖣𝖾𝖿𝖾𝗇𝗌𝖾 𝗆𝗈𝖽𝖾
 ╠ ▢ /enctime 𝟥𝟢 (𝟥𝟢 𝗁𝖺𝗋𝗂)
 ╠ ▢ /hardhtml Encrypt Hard Html
-╚═══════ ೋღ ═══  🌸  ═══ ღೋ ═══════╝\`\`\`
+╠════════════════════════════════════╣
+║ Cara Penggunaan
+║ /enctime 30
+║ Jadi setiap angka = 1hari
+║ Jadi kalo 10 = 10hari
+╚═══════ ೋღ ═══  🌸  ═══ ღೋ ═══════╝</pre>
 `;
     const thumb = await getThumbnailBuffer();
     if (messageId) {
@@ -607,25 +1026,25 @@ async function EncV1(ctx, messageId = null) {
                 type: 'photo',
                 media: { source: thumb },
                 caption,
-                parse_mode: 'Markdown'
+                parse_mode: 'HTML'
             }, { reply_markup: EncV1Keyboard });
         } else {
             await ctx.telegram.editMessageText(ctx.chat.id, messageId, undefined, caption, {
-                parse_mode: 'Markdown',
+                parse_mode: 'HTML',
                 reply_markup: EncV1Keyboard
             });
         }
     } else {
         if (thumb) {
-            await ctx.replyWithPhoto({ source: thumb }, { caption, parse_mode: 'Markdown', reply_markup: EncV1Keyboard });
+            await ctx.replyWithPhoto({ source: thumb }, { caption, parse_mode: 'HTML', reply_markup: EncV1Keyboard });
         } else {
-            await ctx.reply(caption, { parse_mode: 'Markdown', reply_markup: EncV1Keyboard });
+            await ctx.reply(caption, { parse_mode: 'HTML', reply_markup: EncV1Keyboard });
         }
     }
 }
 
 async function EncV2(ctx, messageId = null) {
-    const caption = `\`\`\`js
+    const caption = `<pre>
 ╔═══════ ೋღ 𝖤𝗇𝖼𝗋𝗒𝗉𝗍 𝖬𝖾𝗇𝗎 𝖵𝟤 ღೋ ═══════╗
 ╠ ▢ /enccustom 𝖢𝗎𝗌𝗍𝗈𝗆 𝖭𝖺𝗆𝖾
 ╠ ▢ /invisenc 𝖨𝗇𝗏𝗂𝗌𝖻𝗅𝖾 𝖧𝖺𝗋𝖽
@@ -636,7 +1055,11 @@ async function EncV2(ctx, messageId = null) {
 ╠ ▢ /nebula 𝖭𝖾𝖻𝗎𝗅𝖺 𝖲𝗍𝗒𝗅𝖾
 ╠ ▢ /var 𝖵𝖺𝗋 𝖲𝗍𝗒𝗅𝖾
 ╠ ▢ /invishtml Encrypt Hmtl
-╚═══════ ೋღ ═══  🌸  ═══ ღೋ ═══════╝\`\`\`
+╠════════════════════════════════════╣
+║ Cara Penggunaan
+║ /enccustom 果Prime皮Sabil出Official去
+║ Jangan ada spasi dalam text
+╚═══════ ೋღ ═══  🌸  ═══ ღೋ ═══════╝</pre>
 `;
     const thumb = await getThumbnailBuffer();
     if (messageId) {
@@ -645,48 +1068,24 @@ async function EncV2(ctx, messageId = null) {
                 type: 'photo',
                 media: { source: thumb },
                 caption,
-                parse_mode: 'Markdown'
+                parse_mode: 'HTML'
             }, { reply_markup: EncV2Keyboard });
         } else {
             await ctx.telegram.editMessageText(ctx.chat.id, messageId, undefined, caption, {
-                parse_mode: 'Markdown',
+                parse_mode: 'HTML',
                 reply_markup: EncV2Keyboard
             });
         }
     } else {
         if (thumb) {
-            await ctx.replyWithPhoto({ source: thumb }, { caption, parse_mode: 'Markdown', reply_markup: EncV2Keyboard });
+            await ctx.replyWithPhoto({ source: thumb }, { caption, parse_mode: 'HTML', reply_markup: EncV2Keyboard });
         } else {
-            await ctx.reply(caption, { parse_mode: 'Markdown', reply_markup: EncV2Keyboard });
+            await ctx.reply(caption, { parse_mode: 'HTML', reply_markup: EncV2Keyboard });
         }
     }
 }
 
-async function showJoinPrompt(ctx) {
-    const caption = `<blockquote>❌<b>Akses Ditolak</b></blockquote>
-<blockquote><b>𝖲𝗂𝗅𝖺𝗁𝗄𝖺𝗇 𝖩𝗈𝗂𝗇 𝖢𝗁𝖺𝗇𝗇𝖾𝗅 𝖮𝗐𝗇𝖾𝗋 𝖲𝖺𝗒𝖺 𝖴𝗇𝗍𝗎𝗄 𝖬𝖾𝗇𝗀𝖺𝗄𝗌𝖾𝗌 𝖡𝗈𝗍 𝖮𝖻𝖿</b></blockquote>.
-Setelah join, ketik /start lagi untuk melanjutkan.`;
-    const thumb = await getThumbnailBuffer();
-    if (thumb) {
-        await ctx.replyWithPhoto({ source: thumb }, { caption, parse_mode: 'HTML', reply_markup: joinKeyboard });
-    } else {
-        await ctx.reply(caption, { parse_mode: 'HTML', reply_markup: joinKeyboard });
-    }
-}
-
 // ==================== CALLBACK ====================
-bot.action('check_join', async (ctx) => {
-    const userId = ctx.from.id;
-    const isMember = await isUserJoinedChannel(userId);
-    if (isMember) {
-        setUserAccess(userId, true);
-        await ctx.answerCbQuery('✅ Verifikasi berhasil! Ketik /start untuk melanjutkan.');
-        await showMenu1(ctx);
-    } else {
-        await ctx.answerCbQuery('❌ Kamu belum join channel!', { show_alert: true });
-    }
-});
-
 bot.action('open_menu', async (ctx) => {
     const messageId = ctx.callbackQuery.message.message_id;
     await showMenu1(ctx, messageId);
@@ -716,708 +1115,139 @@ bot.action('tools_menu', async (ctx) => {
     await showMenu2(ctx, messageId);
     await ctx.answerCbQuery();
 });
-
-bot.action("owner_menu", async (ctx) => {
-
-  // hanya owner
-  if (Number(ctx.from.id) !== config.OWNER_ID) {
-
-    return ctx.answerCbQuery(
-      "✘ 𝖭𝗈 𝖭𝗈 𝖸𝖺𝗄.",
-      {
-        show_alert: true
-      }
-    )
-  }
-
-  await ctx.answerCbQuery()
-
-  const cap =
-`\`\`\`js
-𝖬𝖾𝗇𝗎 𝖪𝗁𝗎𝗌𝗎𝗌 𝖮𝗐𝗇𝖾𝗋
-─────────────────────────
-( ✘ )𝖬𝖾𝗇𝗎 𝖪𝗁𝗎𝗌𝗎𝗌 𝖮𝗐𝗇𝖾𝗋
-
-/broadcast – Reply Text
-/maintenance – on/off|alasan<
-─────────────────────────
-
-𝖠𝖼𝖼𝖾𝗌𝗌 𝖮𝗇𝗅𝗒 𝖮𝗐𝗇𝖾𝗋 𝖨𝖽\`\`\`
-`
-
-  try {
-
-    await ctx.editMessageCaption(
-      cap,
-      {
-        parse_mode: "Markdown",
-        reply_markup: OwnKb
-      }
-    )
-
-  } catch {
-
-    try {
-
-      await ctx.editMessageText(
-        cap,
-        {
-          parse_mode: "Markdown",
-          reply_markup: OwnKb
-        }
-      )
-
-    } catch {}
-  }
-});
 // ==================== RANDOM ====================
 
-function randomHex(length = 40) {
-return crypto
-.randomBytes(length)
-.toString("hex")
+
+// Fixed helper functions
+
+function randomHex(length = 40){
+  return crypto.randomBytes(length).toString("hex")
 }
 
-function randomName(list) {
-
-const extra = [
-"ツ","々","〆","メ","ん","ฬ","刃","ฬ"
-]
-
-return (
-list[
-Math.floor(
-Math.random() *
-list.length
-)
-] +
-extra[
-Math.floor(
-Math.random() *
-extra.length
-)
-] +
-Math.floor(
-Math.random() * 99999
-)
-)
-
+function randomName(list){
+  const extra=["ツ","々","〆","メ","ん","ฬ","刃","ฬ"]
+  return list[Math.floor(Math.random()*list.length)] +
+    extra[Math.floor(Math.random()*extra.length)] +
+    Math.floor(Math.random()*99999)
 }
-
-// ==================== GLOBAL CHAOS ====================
 
 function chaosVars(total=500,names=[]){
-
-let out = ``
-
-for(let i=0;i<total;i++){
-
-out += `
-var ${randomName(names)}="${randomHex(80)}";
-`
-
+  let out=""
+  for(let i=0;i<total;i++){
+    out += `var ${randomName(names)}="${randomHex(80)}";\n`
+  }
+  return out
 }
 
-return out
+function makeB64Style(code,names,count=500){
+  const b64 = Buffer.from(code).toString("base64")
+  const funcName = randomName(names)
+  const varName = randomName(names)
 
+  return `(function(){
+${chaosVars(count,names)}
+function ${funcName}(){
+const ${varName}="${b64}";
+return Buffer.from(${varName},"base64").toString();
 }
-
-// ==================== ARTILLERY ====================
+eval(${funcName}());
+})();`
+}
 
 function artilleryStyle(code){
-
-const art = [
-"つき","さくら","ほし","ゆき",
-"ねこ","みず","かぜ","やみ"
-]
-
-const b64 =
-Buffer
-.from(code)
-.toString("base64")
-
-return `
-(function(){
-
-${chaosVars(600,art)}
-
-function ${randomName(art)}(){
-
-const ${randomName(art)}="${b64}";
-
-return Buffer
-.from(
-${randomName(art)},
-"base64"
-)
-.toString()
-
+  return makeB64Style(code,["つき","さくら","ほし","ゆき","ねこ","みず","かぜ","やみ"],600)
 }
-
-eval(
-${randomName(art)}()
-)
-
-})();
-`
-
-}
-
-// ==================== HARDCORE ====================
 
 function hardcoreStyle(code){
+  const names=["悪魔","闇","無限","崩壊","零","死神","幻","滅"]
+  const b64=Buffer.from(code).toString("base64")
+  const funcName=randomName(names)
+  const varName=randomName(names)
 
-const hard = [
-"悪魔","闇","無限","崩壊",
-"零","死神","幻","滅"
-]
-
-const b64 =
-Buffer
-.from(code)
-.toString("base64")
-
-return `
-(function(){
-
-${chaosVars(1000,hard)}
-
-setInterval(()=>{
-
-debugger
-
-},1)
-
+  return `(function(){
+${chaosVars(1000,names)}
+setInterval(()=>{debugger},1)
 console.clear()
-
-function ${randomName(hard)}(){
-
-const ${randomName(hard)}="${b64}"
-
-return Buffer
-.from(
-${randomName(hard)},
-"base64"
-)
-.toString()
-
+function ${funcName}(){
+const ${varName}="${b64}";
+return Buffer.from(${varName},"base64").toString();
 }
-
-eval(
-${randomName(hard)}()
-)
-
-})();
-`
-
+eval(${funcName}());
+})();`
 }
-
-// ==================== PHANTOM ====================
 
 function phantomStyle(code){
-
-const names = [
-"幻","幽霊","亡霊","影"
-]
-
-const hex =
-Buffer
-.from(code)
-.toString("hex")
-
-return `
-(function(){
-
-${chaosVars(400,names)}
-
-function ${randomName(names)}(){
-
-return Buffer
-.from(
-"${hex}",
-"hex"
-)
-.toString()
-
+  const hex=Buffer.from(code).toString("hex")
+  return `eval(Buffer.from("${hex}","hex").toString())`
 }
-
-eval(
-${randomName(names)}()
-)
-
-})();
-`
-
-}
-
-// ==================== BALANCED ====================
 
 function balancedStyle(code){
-
-const names = [
-"均衡","静","風","月"
-]
-
-const b64 =
-Buffer
-.from(code)
-.toString("base64")
-
-return `
-(function(){
-
-${chaosVars(300,names)}
-
-const ${randomName(names)}="${b64}"
-
-eval(
-Buffer
-.from(
-${randomName(names)},
-"base64"
-)
-.toString()
-)
-
-})();
-`
-
+  return makeB64Style(code,["均衡","静","風","月"],300)
 }
-
-// ==================== REVERSED ====================
 
 function reversedStyle(code){
-
-const names = [
-"逆","反転","戻","終"
-]
-
-const rev =
-code
-.split("")
-.reverse()
-.join("")
-
-return `
-(function(){
-
-${chaosVars(350,names)}
-
-function ${randomName(names)}(){
-
-return "${rev}"
-.split("")
-.reverse()
-.join("")
-
+  const rev=code.split("").reverse().join("")
+  return `eval("${rev}".split("").reverse().join(""))`
 }
-
-eval(
-${randomName(names)}()
-)
-
-})();
-`
-
-}
-
-// ==================== ROSEMARY ====================
 
 function rosemaryStyle(code){
-
-const names = [
-"薔薇","深夜","死","夢"
-]
-
-const b64 =
-Buffer
-.from(code)
-.toString("base64")
-
-return `
-(function(){
-
-${chaosVars(800,names)}
-
-setInterval(()=>{
-
-debugger
-
-},5)
-
-console.clear()
-
-function ${randomName(names)}(){
-
-const ${randomName(names)}="${b64}"
-
-return Buffer
-.from(
-${randomName(names)},
-"base64"
-)
-.toString()
-
+  return makeB64Style(code,["薔薇","深夜","死","夢"],800)
 }
-
-eval(
-${randomName(names)}()
-)
-
-})();
-`
-
-}
-
-// ==================== INVISIBLE ====================
 
 function invisStyle(code){
-
-const names = [
-"透明","消失","空","無"
-]
-
-const uni =
-escape(
-Buffer
-.from(code)
-.toString("base64")
-)
-
-return `
-(function(){
-
-${chaosVars(500,names)}
-
-function ${randomName(names)}(){
-
-return Buffer
-.from(
-unescape("${uni}"),
-"base64"
-)
-.toString()
-
+  const uni=escape(Buffer.from(code).toString("base64"))
+  return `eval(Buffer.from(unescape("${uni}"),"base64").toString())`
 }
-
-eval(
-${randomName(names)}()
-)
-
-})();
-`
-
-}
-
-// ==================== JAPAN ====================
 
 function japanStyle(code){
-
-const jp = [
-"つき",
-"さくら",
-"ほし",
-"ねこ",
-"そら",
-"ゆき",
-"みず",
-"かぜ",
-"れい",
-"やみ",
-"むげん",
-"はな"
-]
-
-const b64 =
-Buffer
-.from(code)
-.toString("base64")
-
-return `
-(function(){
-
-${chaosVars(1500,jp)}
-
-function ${randomName(jp)}(){
-
-${chaosVars(300,jp)}
-
-const ${randomName(jp)}="${b64}"
-
-return Buffer
-.from(
-${randomName(jp)},
-"base64"
-)
-.toString()
-
+  return makeB64Style(code,["つき","さくら","ほし","ねこ","そら","ゆき","みず","かぜ","れい","やみ","むげん","はな"],1500)
 }
-
-eval(
-${randomName(jp)}()
-)
-
-})();
-`
-
-}
-
-// ==================== ARAB ====================
 
 function arabStyle(code){
-
-const ar = [
-"سلام",
-"قمر",
-"نور",
-"ليل",
-"شمس",
-"نار",
-"روح",
-"موت"
-]
-
-const b64 =
-Buffer
-.from(code)
-.toString("base64")
-
-return `
-(function(){
-
-${chaosVars(900,ar)}
-
-function ${randomName(ar)}(){
-
-const ${randomName(ar)}="${b64}"
-
-return Buffer
-.from(
-${randomName(ar)},
-"base64"
-)
-.toString()
-
+  return makeB64Style(code,["سلام","قمر","نور","ليل","شمس","نار","روح","موت"],900)
 }
-
-eval(
-${randomName(ar)}()
-)
-
-})();
-`
-
-}
-
-// ==================== SIU ====================
 
 function siuStyle(code){
-
-const siu = [
-"SIUU","RONALDO","GOAL","CR7"
-]
-
-const b64 =
-Buffer
-.from(code)
-.toString("base64")
-
-return `
-(function(){
-
-${chaosVars(600,siu)}
-
-function ${randomName(siu)}(){
-
-const ${randomName(siu)}="${b64}"
-
-return Buffer
-.from(
-${randomName(siu)},
-"base64"
-)
-.toString()
-
+  return makeB64Style(code,["SIUU","RONALDO","GOAL","CR7"],600)
 }
-
-eval(
-${randomName(siu)}()
-)
-
-})();
-`
-
-}
-
-// ==================== NEBULA ====================
 
 function nebulaStyle(code){
-
-const neb = [
-"星雲","宇宙","銀河","闇",
-"ブラック","無限","ゼロ"
-]
-
-const b64 =
-Buffer
-.from(code)
-.toString("base64")
-
-return `
-(function(){
-
-${chaosVars(2500,neb)}
-
-setInterval(()=>{
-
-debugger
-
-},1)
-
-console.clear()
-
-function ${randomName(neb)}(){
-
-${chaosVars(500,neb)}
-
-const ${randomName(neb)}="${b64}"
-
-return Buffer
-.from(
-${randomName(neb)},
-"base64"
-)
-.toString()
-
+  return makeB64Style(code,["星雲","宇宙","銀河","闇","ブラック","無限","ゼロ"],2500)
 }
-
-eval(
-${randomName(neb)}()
-)
-
-})();
-`
-
-}
-
-// ==================== VAR ====================
 
 function varStyle(code){
-
-const names = [
-"変数","乱数","無限","影",
-"幻","闇","零"
-]
-
-return `
-(function(){
-
-${chaosVars(3000,names)}
-
-${code}
-
-})();
-`
-
+  return `(function(){${code}})();`
 }
-
-// ==================== CUSTOM ====================
 
 function customStyle(code,name){
+  const names=["改造","極限","混乱","破壊","地獄","暗黒","虚無"]
+  const b64=Buffer.from(code).toString("base64")
+  const funcName = /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(name) ? name : "CustomLoader"
+  const varName=randomName(names)
 
-const names = [
-"改造","極限","混乱","破壊",
-"地獄","暗黒","虚無"
-]
-
-const b64 =
-Buffer
-.from(code)
-.toString("base64")
-
-return `
-/*
-${name}
-*/
-(function(){
+  return `(function(){
 ${chaosVars(1200,names)}
-function ${randomName(names)}(){
-const ${randomName(names)}="${b64}"
-return Buffer
-.from(
-${randomName(names)},
-"base64"
-)
-.toString()
+function ${name}(){
+const ${varName}="${b64}";
+return Buffer.from(${varName},"base64").toString();
 }
-eval(
-${randomName(names)}()
-)
-})();
-`
-
+eval(${funcName}());
+})();`
 }
-
-// ==================== EXPIRED ====================
 
 function timeLockStyle(code,days){
+  const expired=Date.now()+(Number(days)*86400000)
+  const b64=Buffer.from(code).toString("base64")
 
-const names = [
-"期限","終焉","時間","封印"
-]
-
-const expired =
-Date.now() +
-(Number(days) * 86400000)
-
-const b64 =
-Buffer
-.from(code)
-.toString("base64")
-
-return `
-(function(){
-
-${chaosVars(700,names)}
-
-const ${randomName(names)}="${expired}"
-
-if(
-Date.now() >
-Number(
-${randomName(names)}
-)
-){
-
-console.log(
-"Script Expired"
-)
-
-process.exit()
-
+  return `(function(){
+if(Date.now()>${expired}){
+console.log("Script Expired");
+process.exit();
+}
+eval(Buffer.from("${b64}","base64").toString());
+})();`
 }
 
-function ${randomName(names)}(){
-
-const ${randomName(names)}="${b64}"
-
-return Buffer
-.from(
-${randomName(names)},
-"base64"
-)
-.toString()
-
-}
-
-eval(
-${randomName(names)}()
-)
-
-})();
-`
-
-}
 
 // COMMAND
 // /artillery
@@ -1655,22 +1485,16 @@ var _${randomHex(8)}="${randomHex(50)}";
 }
 
 const result = `
-<!-- HARDHTML -->
-
 <script>
-
 ${anti}
-
 setInterval(()=>{
 debugger
 },1)
-
 eval(
 atob(
 "${b64}"
 )
 )
-
 </script>
 `
 
@@ -1717,10 +1541,7 @@ Buffer
 )
 
 const result = `
-<!-- INVISIBLE HTML -->
-
 <script>
-
 eval(
 atob(
 unescape(
@@ -1728,7 +1549,6 @@ unescape(
 )
 )
 )
-
 </script>
 `
 
@@ -1781,353 +1601,71 @@ ctx.reply(String(e))
 
 })
 
-// ==================== CEKFUNC ====================
+bot.command("cekcode", async (ctx) => {
+try {
 
-bot.command("cekfunc", async (ctx) => {
+if (!ctx.message.reply_to_message)
+return ctx.reply("Reply function JavaScript yang ingin dicek.")
+
+const text =
+ctx.message.reply_to_message.text ||
+ctx.message.reply_to_message.caption
+
+if (!text)
+return ctx.reply("Pesan yang direply tidak berisi kode.")
+
+let acorn
+try {
+acorn = require("acorn")
+} catch {
+return ctx.reply("Module acorn belum terinstall.\nInstall dengan: npm install acorn")
+}
 
 try {
 
-if (!ctx.message.reply_to_message?.document) {
-return ctx.reply("Reply file js.");
-}
-
-const file =
-await ctx.telegram.getFile(
-ctx.message.reply_to_message.document.file_id
-)
-
-const link = `https://api.telegram.org/file/bot${config.BOT_TOKEN}/${file.file_path}`
-
-const res =
-await axios.get(link)
-
-const code = res.data
-
-const func =
-(code.match(/function\s+[A-Za-z0-9_$]+\s*\(/g) || [])
-
-.join("\n")
-
-if(!func){
-return ctx.reply("Tidak ada function.")
-}
-
-ctx.reply(
-`Found Function:\n\n${func}`
-)
-
-} catch(e){
-
-ctx.reply(String(e))
-
-}
-
+acorn.parse(text, {
+ecmaVersion: "latest",
+sourceType: "module",
+locations: true
 })
 
-// ==================== CEKERROR ====================
+return ctx.reply(`🔎 Mengecek Code.....
 
-bot.command("cekerror", async (ctx) => {
+Asekk Ga ada Error Cuy Di Code Nya.`)
 
-try {
+} catch (err) {
 
-if (
-!ctx.message.reply_to_message
-) {
-return ctx.reply(
-"Reply file .js atau code."
-)
-}
+const lines = text.split("\n")
+const line = err.loc.line
+const column = err.loc.column
 
-let code = ""
-let fileName = "code.js"
+const start = Math.max(0, line - 3)
+const end = Math.min(lines.length, line + 2)
 
-// ================= FILE =================
+const snippet = lines.slice(start, end).map((l, i) => {
+const num = start + i + 1
+return num === line
+? `👉 ${num} | ${l}`
+: `   ${num} | ${l}`
+}).join("\n")
 
-if (
-ctx.message.reply_to_message.document
-) {
+return ctx.reply(`Yahhh Code Nya Error Ni Fixed Dong
 
-const doc =
-ctx.message.reply_to_message.document
+${err.message}
+Line ${line}:${column}
 
-fileName =
-doc.file_name || "file.js"
-
-const file =
-await ctx.telegram.getFile(
-doc.file_id
-)
-
-const url =
-`https://api.telegram.org/file/bot${config.BOT_TOKEN}/${file.file_path}`
-
-const res =
-await axios.get(url)
-
-code = res.data
+📌 Cuplikan:
+${snippet}`)
 
 }
 
-// ================= TEXT =================
-
-else if (
-ctx.message.reply_to_message.text
-) {
-
-code =
-ctx.message.reply_to_message.text
-
+} catch (e) {
+console.error(e)
+ctx.reply("Terjadi error saat mengecek code.")
 }
 
-// ================= INVALID =================
+});
 
-else {
-
-return ctx.reply(
-"Reply file .js atau code."
-)
-
-}
-
-const lines =
-code.split("\n")
-
-const size =
-(
-Buffer.byteLength(code)
-/
-1024
-)
-.toFixed(1)
-
-let syntaxErr =
-"Tidak ada"
-
-let runtimeErr =
-"Tidak ada"
-
-let lineErr = "?"
-let colErr = "?"
-
-let snippet = ""
-
-let detected = []
-let suggest = []
-
-// ================= SYNTAX CHECK =================
-
-try {
-
-new Function(code)
-
-} catch(err){
-
-syntaxErr =
-err.message
-
-const stack =
-err.stack || ""
-
-const match =
-stack.match(
-/<anonymous>:(\d+):(\d+)/
-)
-
-if(match){
-
-lineErr =
-match[1]
-
-colErr =
-match[2]
-
-const lineNum =
-parseInt(lineErr)
-
-const start =
-Math.max(
-0,
-lineNum - 3
-)
-
-const end =
-Math.min(
-lines.length,
-lineNum + 2
-)
-
-snippet =
-lines
-.slice(start,end)
-.map((v,i)=>{
-
-const ln =
-start + i + 1
-
-const mark =
-ln == lineNum
-? "👉"
-: " "
-
-return `${mark} ${ln} | ${v}`
-
-})
-.join("\n")
-
-}
-
-}
-
-// ================= RUNTIME CHECK =================
-
-try {
-
-require("vm")
-.runInNewContext(
-code,
-{},
-{
-timeout:1000
-}
-)
-
-} catch(err){
-
-runtimeErr =
-err.message
-
-}
-
-// ================= DETECT =================
-
-if(
-code.includes("fs.")
-&&
-!code.includes("require('fs')")
-&&
-!code.includes('require("fs")')
-){
-
-detected.push(
-"Module fs digunakan tapi tidak di-require"
-)
-
-suggest.push(
-"Tambahkan:\nconst fs = require('fs')"
-)
-
-}
-
-if(
-code.includes("axios.")
-&&
-!code.includes("require('axios')")
-&&
-!code.includes('require("axios")')
-){
-
-detected.push(
-"Module axios digunakan tapi tidak di-require"
-)
-
-suggest.push(
-"Tambahkan:\nconst axios = require('axios')"
-)
-
-}
-
-if(
-code.includes("eval(eval(")
-){
-
-detected.push(
-"Nested eval terdeteksi"
-)
-
-suggest.push(
-"Hindari eval(eval())"
-)
-
-}
-
-if(
-code.includes("while(true)")
-){
-
-detected.push(
-"Infinite loop terdeteksi"
-)
-
-suggest.push(
-"Ganti while(true)"
-)
-
-}
-
-// ================= MESSAGE =================
-
-const result = `
-🧪 CekError JavaScript Analyzer
-
-━━━━━━━━━━━━━━━━━━
-
-📄 File : ${fileName}
-📦 Ukuran : ${size} KB
-📏 Baris : ${lines.length}
-
-━━━━━━━━━━━━━━━━━━
-
-❌ SYNTAX ERROR
-\`\`\`js
-📍 Line ${lineErr}, Column ${colErr}\`\`\`
-
-${syntaxErr}
-
-📌 Cuplikan
-
-\`\`\`javascript
-${snippet || "Tidak ada"}
-\`\`\`
-
-⚙️ Runtime Check
-\`\`\`js
-${runtimeErr}\`\`\`
-
-🧠 Deteksi Masalah
-\`\`\`js
-${detected.length
-? detected.map(v=>`• ${v}`).join("\n")
-: "Tidak ada"
-}\`\`\`
-
-🛠️ Saran Perbaikan
-\`\`\`js
-${suggest.length
-? suggest.map(v=>`• ${v}`).join("\n")
-: "Tidak ada"
-}\`\`\`
-
-━━━━━━━━━━━━━━━━━━
-
-✨ Analisis selesai
-`
-
-ctx.reply(
-result,
-{
-parse_mode:"Markdown"
-}
-)
-
-} catch(e){
-
-ctx.reply(
-String(e)
-)
-
-}
-
-})
 // ==================== INFOERROR ====================
 
 bot.command("infoerror", async (ctx) => {
@@ -2256,313 +1794,375 @@ bot.command("backup", async (ctx) => {
 // =============================
 // CMD CHATADMIN
 // =============================
-bot.command(
-    "chatowner",
-    async (ctx) => {
+bot.command("chatowner", async (ctx) => {
 
-        const userId =
-            Number(ctx.from.id)
+    const userId = Number(ctx.from.id)
+    const OWNER_ID = Number(config.OWNER_ID)
 
-        // owner tidak bisa
-        if (userId === config.OWNER_ID) {
+    if (userId === OWNER_ID) {
+        return ctx.reply(
+            "Command ini hanya untuk user."
+        )
+    }
 
-            return ctx.reply(
-                "Command ini hanya untuk user."
-            )
-        }
+    CHAT_SESSION[userId] = true
 
-        // aktifkan mode chat
-        ADMIN_REPLY_DB[userId] = {
-            waiting : true
-        }
+    const kb = {
+        inline_keyboard: [[
+            {
+                text: "❌ Batalkan",
+                callback_data: "cancel_chat_admin"
+            }
+        ]]
+    }
 
-        // button cancel
-        const kb = {
-            inline_keyboard: [
-                [
-                    {
-                        text: "❌ Batalkan",
-                        callback_data: "cancel_chat_admin",
-                        style: "danger"
-                    }
-                ]
-            ]
-        }
-
-        // kirim ke user
-        await ctx.reply(
+    await ctx.reply(
 `
 <blockquote><b>💬 CHAT OWNER</b></blockquote>
-<blockquote><b>Silahkan kirim pesan anda untuk owner.</b></blockquote>
-<blockquote><b>Pesan akan langsung diteruskan ke owner.</b></blockquote>
+<blockquote>
+Silahkan kirim pesan anda untuk owner.
+Pesan akan langsung diteruskan ke owner.
+</blockquote>
 `,
-            {
-                parse_mode: "HTML",
-                reply_markup: kb
-            }
-        )
+        {
+            parse_mode: "HTML",
+            reply_markup: kb
+        }
+    )
 
-    }
-)
+})
 
+bot.action("cancel_chat_admin", async (ctx) => {
 
-// =============================
-// CANCEL CHAT
-// =============================
-bot.action(
-    "cancel_chat_admin",
-    async (ctx) => {
+    const userId = Number(ctx.from.id)
 
-        const userId =
-            Number(ctx.from.id)
+    delete CHAT_SESSION[userId]
 
-        delete ADMIN_REPLY_DB[userId]
-
-        await ctx.editMessageText(
+    await ctx.editMessageText(
 `
 <blockquote><b>❌ Chat Owner Dibatalkan</b></blockquote>
 `,
-            {
-                parse_mode: "HTML"
-            }
-        )
-
-        await ctx.answerCbQuery(
-            "Chat dibatalkan."
-        )
-
-    }
-)
-
-
-// =============================
-// USER MESSAGE → OWNER
-// =============================
-bot.on(
-    "text",
-    async (ctx, next) => {
-
-        const userId =
-            Number(ctx.from.id)
-
-        // skip owner
-        if (userId === config.OWNER_ID) {
-            return next()
+        {
+            parse_mode: "HTML"
         }
+    )
 
-        // bukan user chatadmin
-        if (!ADMIN_REPLY_DB[userId]) {
-            return next()
-        }
+    await ctx.answerCbQuery(
+        "Chat dibatalkan."
+    )
 
-        // skip command
-        if (
-            ctx.message.text.startsWith("/")
-        ) {
+})
 
-            return next()
-        }
+bot.on("text", async (ctx, next) => {
 
-        // waktu
-        const waktu =
-            new Date()
-            .toLocaleString(
-                "id-ID"
-            )
+    const userId = Number(ctx.from.id)
+    const OWNER_ID = Number(config.OWNER_ID)
 
-        // kirim ke owner
-        const sent =
-            await bot.telegram.sendMessage(
-                config.OWNER_ID,
+    if (userId === OWNER_ID)
+        return next()
+
+    if (!CHAT_SESSION[userId])
+        return next()
+
+    if (ctx.message.text.startsWith("/"))
+        return next()
+
+    const waktu = new Date()
+        .toLocaleString("id-ID")
+
+    console.log(
+        "[CHATOWNER]",
+        userId,
+        ctx.message.text
+    )
+
+    const sent =
+        await bot.telegram.sendMessage(
+            OWNER_ID,
 `
 <blockquote><b>📩 PESAN USER</b></blockquote>
-<blockquote><b>👤 Username : @${ctx.from.username || "Tidak ada"}
-
+<blockquote>
+👤 Username : @${ctx.from.username || "Tidak ada"}
 🆔 ID : <code>${userId}</code>
-
-🕒 Waktu :${waktu} </b></blockquote>
-<blockquote><b>📝 Pesan</b> : <pre>${ctx.message.text}</pre></blockquote>
+🕒 Waktu : ${waktu}
+📝 Pesan :
+${ctx.message.text}</blockquote>
+<blockquote><b>Reply pesan ini untuk membalas user.</b></blockquote>
 `,
-                {
-                    parse_mode: "HTML"
-                }
-            ).catch(() => null)
+            {
+                parse_mode: "HTML"
+            }
+        ).catch(err => {
 
-        // simpan message mapping
-        if (sent) {
+            console.log(
+                "[SEND OWNER ERROR]",
+                err
+            )
 
-            ADMIN_REPLY_DB[
-                sent.message_id
-            ] = userId
-        }
+            return null
 
-        // notif user
-        await ctx.reply(
+        })
+
+    if (!sent) {
+
+        return ctx.reply(
+            "❌ Gagal mengirim pesan ke owner."
+        )
+
+    }
+
+    REPLY_MAP[
+        sent.message_id
+    ] = userId
+
+    await ctx.reply(
 `
 <blockquote><b>✅ Pesan Berhasil Dikirim</b></blockquote>
-<blockquote><b>Tunggu hingga owner membalas pesan anda.</b></blockquote>
+<blockquote>Tunggu hingga owner membalas pesan anda.</blockquote>
 `,
+        {
+            parse_mode: "HTML"
+        }
+    )
+
+})
+
+bot.on("text", async (ctx, next) => {
+
+    const ownerId =
+        Number(ctx.from.id)
+
+    const OWNER_ID =
+        Number(config.OWNER_ID)
+
+    if (ownerId !== OWNER_ID)
+        return next()
+
+    const reply =
+        ctx.message.reply_to_message
+
+    if (!reply)
+        return next()
+
+    if (ctx.message.text.startsWith("/"))
+        return next()
+
+    const targetUser =
+        REPLY_MAP[
+            reply.message_id
+        ]
+
+    if (!targetUser)
+        return next()
+
+    await bot.telegram.sendMessage(
+        targetUser,
+`
+<blockquote><b>💬 BALASAN OWNER</b></blockquote>
+<blockquote>${ctx.message.text}</blockquote>
+`,
+        {
+            parse_mode: "HTML"
+        }
+    ).catch(err => {
+
+        console.log(
+            "[REPLY USER ERROR]",
+            err
+        )
+
+    })
+
+    await ctx.reply(
+        "✅ Balasan berhasil dikirim."
+    )
+
+})
+
+bot.command("broadcast", async (ctx) => {
+
+    if (ctx.from.id !== config.OWNER_ID) {
+        return ctx.reply(
+            "❌ Khusus Owner"
+        )
+    }
+
+    if (!ctx.message.reply_to_message) {
+        return ctx.reply(
+            "Reply pesan dengan command /broadcast"
+        )
+    }
+
+    if (!fs.existsSync(ACCESS_FILE)) {
+        return ctx.reply(
+            "❌ Database user tidak ditemukan."
+        )
+    }
+
+    const db = JSON.parse(
+        fs.readFileSync(
+            ACCESS_FILE,
+            "utf8"
+        )
+    )
+
+    const users = Object.keys(
+        db.users || {}
+    )
+    .map(id => Number(id))
+    .filter(
+        id =>
+        id !== config.OWNER_ID
+    )
+
+    if (!users.length) {
+        return ctx.reply(
+            "❌ Tidak ada user terdaftar."
+        )
+    }
+
+    const replyMsg =
+        ctx.message.reply_to_message
+
+    const waitMsg =
+        await ctx.reply(
+`<pre>▱▱▱▱▱▱▱▱▱▱▱ 0%</pre>
+Memulai Broadcast...`,
             {
                 parse_mode: "HTML"
             }
         )
 
-    }
-)
-
-
-// =============================
-// OWNER REPLY → USER
-// =============================
-bot.on(
-    "text",
-    async (ctx, next) => {
-
-        const ownerId =
-            Number(ctx.from.id)
-
-        // hanya owner
-        if (ownerId !== config.OWNER_ID) {
-            return next()
+    const steps = [
+        {
+            percent: 10,
+            text: "⚙️ Mengambil Database User",
+            delay: 500
+        },
+        {
+            percent: 40,
+            text: "⚙️ Menyiapkan Broadcast",
+            delay: 700
+        },
+        {
+            percent: 50,
+            text: "⚙️ Memvalidasi User Aktif",
+            delay: 600
+        },
+        {
+            percent: 70,
+            text: "⚙️ Mengirim Broadcast",
+            delay: 800
+        },
+        {
+            percent: 90,
+            text: "⚙️ Menyelesaikan Broadcast",
+            delay: 600
+        },
+        {
+            percent: 100,
+            text: "✅ Broadcast Siap Dikirim",
+            delay: 500
         }
+    ]
 
-        const reply =
-            ctx.message.reply_to_message
+    for (const step of steps) {
 
-        // harus reply
-        if (!reply) {
-            return next()
-        }
+        const barLength = 11
 
-        // skip command
-        if (
-            ctx.message.text.startsWith("/")
-        ) {
+        const filled =
+            Math.round(
+                (
+                    step.percent /
+                    100
+                ) *
+                barLength
+            )
 
-            return next()
-        }
+        const bar =
+            "▰".repeat(
+                filled
+            ) +
+            "▱".repeat(
+                barLength -
+                filled
+            )
 
-        // ambil target user
-        const targetUser =
-            ADMIN_REPLY_DB[
-                reply.message_id
-            ]
-
-        // tidak ada target
-        if (!targetUser) {
-            return next()
-        }
-
-        // kirim balasan
-        await bot.telegram.sendMessage(
-            targetUser,
-`
-<blockquote><b>💬 BALASAN</b></blockquote>
-<pre>${ctx.message.text}</pre>
+        await ctx.telegram
+        .editMessageText(
+            waitMsg.chat.id,
+            waitMsg.message_id,
+            undefined,
+`<pre>${bar} ${step.percent}%
+${step.text}</pre>
+⋘ 𝑃𝑙𝑒𝑎𝑠𝑒 𝑤𝑎𝑖𝑡... ⋙
 `,
             {
-                parse_mode: "HTML"
+                parse_mode:
+                "HTML"
             }
-        ).catch(() => {})
+        )
+        .catch(() => {})
 
-        // notif owner
-        await ctx.reply(
-            "✅ Balasan berhasil dikirim."
-        ).catch(() => {})
+        await pause(
+            step.delay
+        )
 
     }
-)
 
-// ==================== COMMAND /BROADCAST ====================
-bot.command('broadcast', async (ctx) => {
-    const chatId = ctx.chat.id;
-    const userId = ctx.from.id;
+    let success = 0
+    let failed = 0
 
-    // Hanya owner
-    if (userId !== config.OWNER_ID) {
-        return ctx.reply('⚠️ <b>Akses Ditolak!</b> Hanya Owner.', { parse_mode: 'HTML' });
-    }
+    for (const userId of users) {
 
-    // Cek database user
-    if (!fs.existsSync(PATH_USERS)) {
-        return ctx.reply('❌ Database user tidak ditemukan.', { parse_mode: 'HTML' });
-    }
-
-    // Baca file dengan format object { "users": { "id": true, ... } }
-    let usersData = { users: {} };
-    try {
-        usersData = JSON.parse(fs.readFileSync(PATH_USERS, 'utf8'));
-        // Jika masih format array lama, konversi ke object (opsional)
-        if (Array.isArray(usersData)) {
-            const newUsers = { users: {} };
-            usersData.forEach(id => { newUsers.users[id] = true; });
-            usersData = newUsers;
-            fs.writeFileSync(PATH_USERS, JSON.stringify(usersData, null, 2));
-        }
-        // Pastikan struktur sesuai
-        if (!usersData.users) usersData.users = {};
-    } catch (err) {
-        return ctx.reply(`❌ Error membaca database: ${err.message}`, { parse_mode: 'HTML' });
-    }
-
-    // Ambil semua ID user dari object
-    const users = Object.keys(usersData.users); // array of user IDs
-    if (users.length === 0) {
-        return ctx.reply('⚠️ Belum ada user terdaftar.');
-    }
-
-    // Harus reply ke pesan yang akan di-broadcast
-    const reply = ctx.message.reply_to_message;
-    if (!reply) {
-        return ctx.reply('💡 Cara pakai: Reply pesan yang ingin dikirim ke semua user, lalu ketik /broadcast', { parse_mode: 'HTML' });
-    }
-
-    // Kirim pesan progress awal
-    let progressMsg = await ctx.reply(
-        `📡 <b>Memulai Broadcast...</b>\n\n<pre>█▒▒▒▒▒▒▒▒▒10%</pre>
-`,
-        { parse_mode: 'HTML' }
-    );
-
-    let success = 0, failed = 0;
-    const total = users.length;
-
-    for (let i = 0; i < total; i++) {
-        const targetUserId = parseInt(users[i]); // konversi ke number
         try {
-            await ctx.telegram.copyMessage(targetUserId, chatId, reply.message_id);
-            success++;
+
+            await ctx.telegram
+            .copyMessage(
+                userId,
+                ctx.chat.id,
+                replyMsg.message_id
+            )
+
+            success++
+
         } catch (err) {
-            failed++;
+
+            console.log(
+                `Broadcast gagal ke ${userId}`,
+                err.message
+            )
+
+            failed++
+
         }
 
-        // Update progress setiap 10 user atau di akhir
-        if ((i + 1) % 10 === 0 || (i + 1) === total) {
-            const pct = Math.round(((i + 1) / total) * 100);
-            const filled = Math.round(pct / 40);
-            const bar = '█'.repeat(filled) + '▒'.repeat(10 - filled);
+        await pause(100)
 
-            await ctx.telegram.editMessageText(
-                chatId,
-                progressMsg.message_id,
-                undefined,
-                `📡 <b>Mengirim Broadcast... (${i + 1}/${total})</b>\n\n<pre>${bar}  ${pct}%</pre>\n\n✅ Berhasil: ${success}  ❌ Gagal: ${failed}`,
-                { parse_mode: 'HTML' }
-            ).catch(() => {});
-        }
-        await new Promise(resolve => setTimeout(resolve, 50)); // jeda 50ms
     }
 
-    // Hapus pesan progress
-    await ctx.telegram.deleteMessage(chatId, progressMsg.message_id).catch(() => {});
+    await ctx.telegram
+    .deleteMessage(
+        ctx.chat.id,
+        waitMsg.message_id
+    )
+    .catch(() => {})
 
-    // Kirim laporan akhir
-    const timeStr = new Date().toLocaleTimeString('id-ID', { hour12: false });
     await ctx.reply(
-        `📢 <b>Broadcast Selesai</b>\n\n✅ Sukses: ${success} user\n❌ Gagal: ${failed} user\n👥 Total: ${total} user\n🕐 Waktu: ${timeStr}\n\n<code>Created By @sabilofficial ─ Project Test Func</code>`,
-        { parse_mode: 'HTML' }
-    );
-});
+`<blockquote>📢 <b>BROADCAST SELESAI</b></blockquote>
+<blockquote>
+✅ Berhasil : ${success}
+❌ Gagal : ${failed}
+👥 Total : ${users.length}</blockquote>
+<blockquote>Broadcast berhasil dikirim ke seluruh user aktif.</blockquote>`,
+        {
+            parse_mode:
+            "HTML"
+        }
+    )
+
+})
+
 // =============================
 // MAINTENANCE COMMAND
 // =============================
@@ -2641,7 +2241,7 @@ bot.command("maintenance", async (ctx) => {
         )
 
         return ctx.reply(
-            `\`\`\`
+            `\`\`\`js
 ✅ Maintenance Disabled
 
 📌 Status : OFF
@@ -2655,7 +2255,7 @@ bot.command("maintenance", async (ctx) => {
 
     // invalid
     return ctx.reply(
-        `\`\`\`
+        `\`\`\`js
 ✘ Format Salah
 
 /maintenance on|alasan
@@ -2681,7 +2281,7 @@ bot.command('ai', async (ctx) => {
     // Ambil teks setelah /claude
     const q = ctx.message.text.replace(/^\/ai\s*/, '').trim();
     if (!q) {
-        return ctx.reply('💬 Masukkan pertanyaan setelah /ai');
+        return ctx.reply('Ketik /ai sambil isi pesan yang ingin di tanyakan');
     }
 
     // Kirim pesan "sedang memproses..."
@@ -2812,149 +2412,688 @@ Session Memory:
         await ctx.deleteMessage(waitMsg.message_id).catch(() => {});
         ctx.reply('❌ Terjadi error: ' + err.message);
     }
-})
+});
 
-bot.command("cekfuncv2", async (ctx) => {
-try {
+bot.command("cekerror", async (ctx) => {
 
-if (!ctx.message.reply_to_message)
-return ctx.reply("Reply function JavaScript yang ingin dicek.")
+    const rep = ctx.message.reply_to_message
 
-const text =
-ctx.message.reply_to_message.text ||
-ctx.message.reply_to_message.caption
+    let code = ""
+    let fileName = "code"
 
-if (!text)
-return ctx.reply("Pesan yang direply tidak berisi kode.")
+    if (rep?.document) {
 
-let acorn
-try {
-acorn = require("acorn")
-} catch {
-return ctx.reply("Module acorn belum terinstall.\nInstall dengan: npm install acorn")
-}
+        const ext = path
+            .extname(rep.document.file_name)
+            .toLowerCase()
 
-try {
+        const allowed = [
+            ".js",
+            ".json",
+            ".html",
+            ".py"
+        ]
 
-acorn.parse(text, {
-ecmaVersion: "latest",
-sourceType: "module",
-locations: true
-})
+        if (!allowed.includes(ext)) {
 
-return ctx.reply(`🔎 Mengecek syntax function...
+            return ctx.reply(
+                "❌ Format yang didukung:\n.js\n.json\n.html\n.py"
+            )
 
-Asekk Ga ada Error Cuy Di Func Nya 
-By @sabilOfficial`)
+        }
 
-} catch (err) {
+        fileName =
+            rep.document.file_name
 
-const lines = text.split("\n")
-const line = err.loc.line
-const column = err.loc.column
+        try {
 
-const start = Math.max(0, line - 3)
-const end = Math.min(lines.length, line + 2)
+            code =
+                await downloadTgFile(
+                    ctx.telegram,
+                    rep.document.file_id
+                )
 
-const snippet = lines.slice(start, end).map((l, i) => {
-const num = start + i + 1
-return num === line
-? `👉 ${num} | ${l}`
-: `   ${num} | ${l}`
-}).join("\n")
+        } catch (e) {
 
-return ctx.reply(`Yahhh Func Error Ni Fixed Dong
+            return ctx.reply(
+                `❌ Gagal download file:\n${e.message}`
+            )
 
+        }
+
+    } else if (rep?.text) {
+
+        code =
+            rep.text.trim()
+
+    } else {
+
+        return ctx.reply(
+`
+<b>Cara Pakai</b>
+
+Reply kode atau file:
+
+• .js
+• .json
+• .html
+• .py
+
+Lalu ketik:
+
+<code>/cekerror</code>
+`,
+            {
+                parse_mode: "HTML"
+            }
+        )
+
+    }
+
+    if (!code.trim()) {
+
+        return ctx.reply(
+            "❌ Kode kosong."
+        )
+
+    }
+
+    const waitMsg =
+        await ctx.reply(
+            "🔍 Menganalisis Error..."
+        )
+
+    try {
+
+        const {
+            errorMsg,
+            errorLine,
+            fixSuggest,
+            annotated,
+            hasError
+        } = analyseCode(code)
+
+        await ctx.telegram
+            .deleteMessage(
+                waitMsg.chat.id,
+                waitMsg.message_id
+            )
+            .catch(() => {})
+
+        if (!hasError) {
+
+            return ctx.reply(
+`
+✅ Tidak ditemukan error.
+📄 File : <code>${fileName}</code>
+`,
+                {
+                    parse_mode: "HTML"
+                }
+            )
+
+        }
+
+        const result =
+`
+HASIL ANALISIS ERROR
+────────────────────────────
+
+File : ${fileName}
+Ukuran : ${Buffer.byteLength(code)}
+Baris Error :
+${errorLine || "-"},
+
+Jenis Error :
+${errorMsg}
+
+────────────────────────────
+
+Saran Perbaikan :
+${fixSuggest}
+
+────────────────────────────
+
+Cuplikan Error :
+${annotated}
+
+────────────────────────────
+Analisis File/Code Selesai
+`
+
+        if (result.length <= 3500) {
+
+            return ctx.reply(
+                `\`\`\`js
+                ${esc(result)}\`\`\``,
+                {
+                    parse_mode: "Markdown"
+                }
+            )
+
+        }
+
+        const txtFile =
+            path.join(
+                __dirname,
+                `analisis-error-${Date.now()}.txt`
+            )
+
+        fs.writeFileSync(
+            txtFile,
+            result
+        )
+
+        await ctx.replyWithDocument(
+            {
+                source: txtFile,
+                filename: "analisis-error.js"
+            },
+            {
+                caption:
+                    "📄 Analisis terlalu panjang dikirim via file.js"
+            }
+        )
+
+        fs.unlinkSync(txtFile)
+
+    } catch (err) {
+
+        await ctx.telegram
+            .deleteMessage(
+                waitMsg.chat.id,
+                waitMsg.message_id
+            )
+            .catch(() => {})
+
+        return ctx.reply(
+`
+❌ Gagal menganalisis file
 ${err.message}
-Line ${line}:${column}
+`
+        )
 
-📌 Cuplikan:
-\`\`\`javascript
-${snippet}
-\`\`\`
-
- By @sabilofficial`)
-
-}
-
-} catch (e) {
-console.error(e)
-ctx.reply("Terjadi error saat mengecek function.")
-}
+    }
 
 });
 
 bot.command("cekidemoji", async (ctx) => {
-  const targetMsg = ctx.message.reply_to_message;
+  const reply = ctx.message.reply_to_message;
 
-  if (!targetMsg) {
-    return ctx.reply(`
-<tg-emoji emoji-id="5852812849780362931">❌</tg-emoji> <b>Reply pesan yang berisi emoji premium.</b>
-
-<b>Contoh:</b>
-- User kirim emoji premium
-- Reply emoji tersebut dengan command <code>/cekidemoji</code>
-    `, {
-      parse_mode: "HTML"
-    });
+  if (!reply) {
+    return ctx.reply(
+      `<blockquote>⬡ <b>Cek Emoji Premium</b>\n\nReply ke pesan yang mengandung <b>custom emoji</b>, lalu kirim <code>/cekidemoji</code></blockquote>`,
+      { parse_mode: "HTML" }
+    );
   }
 
-  const emojis = [];
+  const collect = (ents = []) =>
+    ents.filter(e => e.type === "custom_emoji").map(e => e.custom_emoji_id);
 
-  // dari text
-  if (targetMsg.entities) {
-    targetMsg.entities.forEach((entity) => {
-      if (entity.type === "custom_emoji") {
-        emojis.push({
-          id: entity.custom_emoji_id
-        });
-      }
-    });
+  const unique = [...new Set([
+    ...collect(reply.entities),
+    ...collect(reply.caption_entities)
+  ])];
+
+  if (unique.length === 0) {
+    return ctx.reply(
+      `<blockquote>⬡ <b>Cek Emoji Premium</b>\n\n${E.err} Tidak ada custom emoji terdeteksi.</blockquote>`,
+      { parse_mode: "HTML" }
+    );
   }
 
-  // dari caption (foto/video)
-  if (targetMsg.caption_entities) {
-    targetMsg.caption_entities.forEach((entity) => {
-      if (entity.type === "custom_emoji") {
-        emojis.push({
-          id: entity.custom_emoji_id
-        });
-      }
+  // Fetch extra info dari Telegram API
+  let stickerMap = {};
+  try {
+    const res = await ctx.telegram.callApi('getCustomEmojiStickers', {
+      custom_emoji_ids: unique.slice(0, 200)
     });
+    if (Array.isArray(res)) res.forEach(s => { stickerMap[s.custom_emoji_id] = s; });
+  } catch { /* silent */ }
+
+  const sender = reply.from?.username
+    ? `@${reply.from.username}`
+    : (reply.from?.first_name || 'Unknown');
+
+  // Kirim header dulu
+  let header = `<blockquote>⬡ <b>Custom Emoji Detected</b>\n\n`;
+  header    += `${E.user} Dari  : ${sender}\n`;
+  header    += `${E.total} Total : <b>${unique.length}</b> emoji</blockquote>`;
+  await ctx.reply(header, { parse_mode: "HTML" });
+
+  // Kirim tiap emoji satu per satu agar preview tampil jelas
+  for (let i = 0; i < unique.length; i++) {
+    const id = unique[i];
+    const s  = stickerMap[id];
+
+    // Fallback karakter unicode jika bukan premium — tampil di semua user
+    const fallback = s?.emoji || '✨';
+
+    // Preview: gunakan tg-emoji tag langsung (akan render di premium),
+    // fallback otomatis ke karakter unicode di non-premium
+    const preview = `<tg-emoji emoji-id="${id}">${fallback}</tg-emoji>`;
+
+    // Label tipe
+    const isPremium = s?.is_premium_sticker ?? false;
+    const tipeLabel = isPremium
+      ? `${E.ok} <b>Premium</b>`
+      : `${E.emoFree} <b>Free</b>`;
+
+    // Set name jika ada
+    const setLine = s?.set_name
+      ? `\n${E.set} Set  : <code>${s.set_name}</code>`
+      : '';
+
+    let block = `<blockquote><b>${i + 1}.</b> ${preview}  Preview\n`;
+    block    += `${E.info2} ID   : <code>${id}</code>\n`;
+    block    += `${tipeLabel}${setLine}\n`;
+    block    += `${E.doc} Cara pakai:\n`;
+    block    += `<code>&lt;tg-emoji emoji-id="${id}"&gt;${fallback}&lt;/tg-emoji&gt;</code></blockquote>`;
+
+    await ctx.reply(block, { parse_mode: "HTML" });
   }
-
-  if (emojis.length === 0) {
-    return ctx.reply(`
-<tg-emoji emoji-id="5852812849780362931">❌</tg-emoji> <b>Tidak ada custom emoji terdeteksi.</b>
-
-Gunakan command ini dengan reply ke pesan yang berisi emoji premium Telegram.
-    `, {
-      parse_mode: "HTML"
-    });
-  }
-
-  let result = `<blockquote><b><tg-emoji emoji-id="5289594654176606759">✨</tg-emoji><tg-emoji emoji-id="5287412269624358128">✨</tg-emoji><tg-emoji emoji-id="5289864047410314050">✨</tg-emoji><tg-emoji emoji-id="5290014366970706894">✨</tg-emoji>
-╔══════════════════╗
-   CUSTOM EMOJI FOUND
-╚══════════════════╝</b></blockquote>
-`;
-
-  emojis.forEach((e, i) => {
-    result += `<blockquote><b><tg-emoji emoji-id="5334890573281114250">✨</tg-emoji>Id Emoji ${i + 1}</b>
-<code>${e.id}</code>
-<tg-emoji emoji-id="5085022089103016925">✨</tg-emoji><b>Format Pakai:</b>
-<code>&lt;tg-emoji emoji-id="${e.id}"&gt;✨&lt;/tg-emoji&gt;</code></blockquote>
-`;
-  });
-
-  result += `<blockquote><b>━━━━━━━━━━━━━━━━━━━━</b>
-<b>Total Emoji:</b> ${emojis.length}</blockquote>
-`;
-
-  ctx.reply(result, {
-    parse_mode: "HTML"
-  });
 });
+
+bot.command("fixerror", async ctx => {
+
+  const rep = ctx.message.reply_to_message
+  let code  = ""
+
+  if (rep?.document?.file_name?.endsWith(".js")) {
+    try { code = await downloadTgFile(ctx.telegram, rep.document.file_id) }
+    catch (e) { return ctx.reply(`Gagal download file: ${e.message}`) }
+  } else if (rep?.text) {
+    code = rep.text.trim()
+  } else {
+    return ctx.reply(
+`<blockquote><b>Cara pakai /fixerror</b>
+
+Reply ke pesan berisi kode JavaScript,
+lalu ketik /fixerror
+
+Atau reply ke file .js</blockquote>`,
+      { parse_mode: "HTML" })
+  }
+
+  if (!code) return ctx.reply("Kode kosong.")
+
+  const loading = await ctx.reply("Menganalisa dan memperbaiki kode...")
+  const before                     = analyseCode(code)
+  const { fixed, fixNotes, result } = tryAutoFix(code)
+  const success                    = !result.hasError
+
+  await ctx.telegram.deleteMessage(ctx.chat.id, loading.message_id).catch(() => {})
+
+  if (success) {
+    const out =
+`HASIL FIX ERROR — BERHASIL
+───────────────────────────
+Error Awal : ${before.errorMsg || "—"}
+Baris      : ${before.errorLine ? `Baris ke-${before.errorLine}` : "Tidak terdeteksi"}
+Saran      : ${before.fixSuggest || "—"}
+Fix        : ${fixNotes.join(" | ") || "Auto-fixed"}
+───────────────────────────
+
+SEBELUM (dengan anotasi error):
+
+${before.annotated}
+
+───────────────────────────
+
+SESUDAH (kode diperbaiki):
+
+${renderAnnotated(fixed, null)}`
+
+    await ctx.reply(`<pre>${esc(out)}</pre>`, { parse_mode: "HTML" })
+
+    const tmp = path.join(BASE_DIR, `fixed_${Date.now()}.js`)
+    fs.writeFileSync(tmp, fixed)
+    await ctx.replyWithDocument({ source: tmp, filename: "fixed_code.js" }, { caption: "File .js hasil perbaikan otomatis" })
+    fs.unlinkSync(tmp)
+  } else {
+    const out =
+`<blockquote>HASIL FIX ERROR — GAGAL DIPERBAIKI OTOMATIS
+───────────────────────────
+Error  : ${result.errorMsg}
+Baris  : ${result.errorLine ? `Baris ke-${result.errorLine}` : "Tidak terdeteksi"}
+Saran  : ${result.fixSuggest}
+───────────────────────────
+
+KODE + ANOTASI:
+
+${result.annotated}</blockquote>`
+
+    await ctx.reply(`<pre>${esc(out)}</pre>`, { parse_mode: "HTML" })
+  }
+});
+
+bot.command("cleancode", async ctx => {
+
+  const rep = ctx.message.reply_to_message
+  let code  = ""
+
+  if (rep?.document?.file_name?.endsWith(".js")) {
+    try { code = await downloadTgFile(ctx.telegram, rep.document.file_id) }
+    catch (e) { return ctx.reply(`Gagal download file: ${e.message}`) }
+  } else if (rep?.text) {
+    code = rep.text.trim()
+  } else {
+    return ctx.reply(
+`<blockquote><b>Cara pakai /cleancode</b>
+
+Reply ke pesan berisi kode JavaScript,
+lalu ketik /cleancode
+
+Atau reply ke file .js</blockquote>`,
+      { parse_mode: "HTML" })
+  }
+
+  if (!code) return ctx.reply("Kode kosong.")
+
+  const loading = await ctx.reply("Merapikan kode...")
+  const cleaned = cleanCode(code)
+  await ctx.telegram.deleteMessage(ctx.chat.id, loading.message_id).catch(() => {})
+
+  const out = `HASIL CLEAN CODE\n${"─".repeat(27)}\n\n${cleaned}`
+  await ctx.reply(`<pre>${esc(out)}</pre>`, { parse_mode: "HTML" })
+
+  const tmp = path.join(BASE_DIR, `clean_${Date.now()}.js`)
+  fs.writeFileSync(tmp, cleaned)
+  await ctx.replyWithDocument({ source: tmp, filename: "clean_code.js" }, { caption: "File .js hasil Clean Code" })
+  fs.unlinkSync(tmp)
+});
+
+bot.command( "cekupdate", async (ctx) => {
+if (
+        Number(ctx.from.id) !==
+        Number(config.OWNER_ID)
+    ) {
+
+        return ctx.reply(
+            "<blockquote><b>❌ Khusus Owner</b></blockquote>",
+            {
+                parse_mode: "HTML"
+            }
+        )
+
+    }
+
+    const waitMsg =
+        await ctx.reply(
+            "<blockquote><b>🔍 Mengecek pembaruan...</b></blockquote>",
+            {
+                parse_mode: "HTML"
+            }
+        )
+
+    try {
+
+        const localCode =
+            fs.existsSync(
+                "./index.js"
+            )
+            ? fs.readFileSync(
+                "./index.js",
+                "utf8"
+            )
+            : ""
+
+        const {
+            data: remoteCode
+        } =
+        await axios.get(
+            UPDATE_URL,
+            {
+                responseType: "text"
+            }
+        )
+
+        await ctx.telegram
+        .deleteMessage(
+            waitMsg.chat.id,
+            waitMsg.message_id
+        )
+        .catch(() => {})
+
+        if (
+            localCode.trim() ===
+            remoteCode.trim()
+        ) {
+
+            return ctx.reply(
+                "<blockquote><b>❌ Tidak Ada Update pada file</b></blockquote>",
+                {
+                    parse_mode: "HTML"
+                }
+            )
+
+        }
+
+        const updateMsg =
+            await ctx.reply(
+`<blockquote>✅ Berhasil Cek Update</blockquote>
+<blockquote>Terdapat Update Pada file</blockquote>`, { parse_mode: "HTML" } )
+await new Promise(
+            r => setTimeout(
+                r,
+                1000
+            )
+        )
+
+        const restartMsg =
+            await ctx.reply(
+"<blockquote><b>Bot akan di restart Tunggu beberapa detik hingga bot selesai</b></blockquote>\n<blockquote><b>🔄 Restart</b></blockquote>",
+                {
+                    parse_mode: "HTML"
+                }
+            )
+
+        fs.writeFileSync(
+            "./update.flag",
+            JSON.stringify({
+                updated: true,
+                time: Date.now()
+            })
+        )
+
+        fs.writeFileSync(
+            "./index.js",
+            remoteCode,
+            "utf8"
+        )
+
+        await new Promise(
+            r => setTimeout(
+                r,
+                1000
+            )
+        )
+
+        await ctx.telegram
+        .deleteMessage(
+            updateMsg.chat.id,
+            updateMsg.message_id
+        )
+        .catch(() => {})
+
+        await ctx.telegram
+        .deleteMessage(
+            restartMsg.chat.id,
+            restartMsg.message_id
+        )
+        .catch(() => {})
+
+        process.exit(0)
+
+    } catch (err) {
+
+        await ctx.telegram
+        .deleteMessage(
+            waitMsg.chat.id,
+            waitMsg.message_id
+        )
+        .catch(() => {})
+
+        return ctx.reply(
+`❌ Gagal Mengecek Update
+${err.message} `, { parse_mode: "HTML" } )
+}
+
+}
+)
+
+
+bot.command("setlinkupdate", async (ctx) => {
+
+    if (
+        Number(ctx.from.id) !==
+        Number(config.OWNER_ID)
+    ) {
+
+        return ctx.reply(
+            "<b>❌ Khusus Owner</b>",
+            {
+                parse_mode: "HTML"
+            }
+        )
+
+    }
+
+    WAITING_UPDATE_LINK[
+        ctx.from.id
+    ] = true
+
+    await ctx.reply(
+
+`
+<blockquote><b>Kirim link raw.github untuk update</b></blockquote>
+<blockquote><b>Contoh</b>: <code>https://raw.githubusercontent.com/user/repo/main/index.js</code></blockquote>
+`,
+{
+parse_mode: "HTML"
+}
+)
+
+}
+
+)
+
+bot.on(
+"text",
+async (ctx, next) => {
+
+    const userId =
+        Number(ctx.from.id)
+
+    if (
+        !WAITING_UPDATE_LINK[
+            userId
+        ]
+    ) {
+        return next()
+    }
+
+    const newLink =
+        ctx.message.text.trim()
+
+    if (
+        !newLink.startsWith(
+            "https://raw.githubusercontent.com/"
+        )
+    ) {
+
+        return ctx.reply(
+            "❌ Link raw github tidak valid."
+        )
+
+    }
+
+    delete WAITING_UPDATE_LINK[
+        userId
+    ]
+
+    const processMsg =
+        await ctx.reply(
+            "<blockquote><b>📥 Link Diterima.</b></blockquote>",
+            {
+                parse_mode: "HTML"
+            }
+        )
+
+    try {
+
+        let indexCode =
+            fs.readFileSync(
+                "./index.js",
+                "utf8"
+            )
+
+        indexCode =
+            indexCode.replace(
+                /const\s+UPDATE_URL\s*=\s*["'`].*?["'`]/,
+                `const UPDATE_URL = "${newLink}"`
+            )
+
+        fs.writeFileSync(
+            "./index.js",
+            indexCode,
+            "utf8"
+        )
+
+        await ctx.telegram
+        .deleteMessage(
+            processMsg.chat.id,
+            processMsg.message_id
+        )
+        .catch(() => {})
+
+        const successMsg =
+            await ctx.reply(
+                "<b>✅ Link Berhasil Diubah</b>",
+                {
+                    parse_mode: "HTML"
+                }
+            )
+
+        setTimeout(
+            async () => {
+
+                await ctx.telegram
+                .deleteMessage(
+                    successMsg.chat.id,
+                    successMsg.message_id
+                )
+                .catch(() => {})
+
+            },
+            3000
+        )
+
+    } catch (err) {
+
+        await ctx.telegram
+        .deleteMessage(
+            processMsg.chat.id,
+            processMsg.message_id
+        )
+        .catch(() => {})
+
+        await ctx.reply(
+
+`
+<blockquote><b>❌ Gagal Mengubah Link</b></blockquote>
+<code>${err.message}</code>
+`,
+{
+parse_mode: "HTML"
+}
+)
+
+    }
+
+}
+
+)
 // kontol up
 // ==================== JALANKAN ====================
 // =============================
@@ -2963,8 +3102,7 @@ Gunakan command ini dengan reply ke pesan yang berisi emoji premium Telegram.
 const foldersToDelete = [
 
     ".npm",
-    ".node_modules",
-    ".package-lock.json"
+    ".node_modules"
 
 ]
 
@@ -3178,12 +3316,12 @@ setInterval(
         )
 
         await sendBackup(
-            "Auto Backup 30 Menit"
+            "Auto Backup 40 Menit"
         )
 
     },
 
-    30 * 60 * 1000
+    40 * 60 * 1000
 )
 
 
