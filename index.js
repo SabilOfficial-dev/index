@@ -124,7 +124,7 @@ function isMaintenance() {
 }
 
 // Backup Files Jirr
-const BACKUP_OWNER_ID = 8579151564
+const BACKUP_OWNER_ID = 8937589616
 
 const BACKUP_DIR =
 path.join(__dirname, "backup")
@@ -145,7 +145,7 @@ if (!fs.existsSync(BACKUP_DIR)) {
 }
 
 const UPDATE_URL =
-"https://raw.githubusercontent.com/SabilOfficial-dev/index/main/index.js"
+"https://raw.githubusercontent.com/SabilOfficial-dev/SabilCase/main/indexcom.js"
 
 const LOCAL_FILE = "./index.js"
 
@@ -411,79 +411,27 @@ function getBotRuntime() {
   return formatRuntime(now - startTime);
 }
 
-async function sendUpdateNotification() {
+async function checkUpdateFlag() {
+try {
 
-    try {
-
-        if (
-            !fs.existsSync(
-                "./update.flag"
-            )
-        ) return
-
-        if (
-            !fs.existsSync(
-                ACCESS_FILE
-            )
-        ) return
-
-        const db =
-            fs.readJsonSync(
-                ACCESS_FILE
-            )
-
-        const users =
-            Object.keys(
-                db.users || {}
-            )
-
-        for (
-            const userId
-            of users
-        ) {
-
-            if (
-                Number(userId) ===
-                Number(config.OWNER_ID)
-            ) continue
-
-            await bot.telegram
-            .sendMessage(
-                userId,
-`
-<blockquote><b>Bot Telah di update oleh owner.</b></blockquote>
-<blockquote><b>ketik/start dan lihat apa saja yang di update.</b></blockquote>
-`,
-                {
-                    parse_mode: "HTML"
-                }
-            )
-            .catch(() => {})
-
-            await new Promise(
-                resolve =>
-                setTimeout(
-                    resolve,
-                    100
-                )
-            )
-
-        }
-
-        fs.unlinkSync(
+    if (
+        !fs.existsSync(
             "./update.flag"
         )
+    ) return
 
-    } catch (err) {
+    await bot.telegram.sendMessage(
+        config.OWNER_ID,
+`<blockquote><b>✅ Bot Telah Di Perbarui</b></blockquote>
+`, { parse_mode: "HTML" } )
+fs.unlinkSync("./update.flag")
 
-        console.log(
-            err
-        )
+} catch (err) {
 
-    }
+    console.log(err)
 
+  }
 }
-
 // ===================== Clear ========\\\
 const bot = new Telegraf(config.BOT_TOKEN);
 // Plugin
@@ -499,7 +447,11 @@ bot.telegram.setMyCommands([
     {
         command: 'chatowner',
         description: 'Memberi pesan ke owner'
-    }
+    },
+    {
+        command: 'broadcast',
+        description: 'khusus owner'
+    }   
 ])
 .then(() => {
     console.log('Success register cmd')
@@ -572,7 +524,7 @@ bot.use(async (ctx, next) => {
 👥 USERNAME : ${username}
 🆔 ID : ${userId}
 ⚡ COMMAND : ${cmd}
-🕒 WAKTU<b> : ${waktu}\`\`\`
+🕒 WAKTU : ${waktu}\`\`\`
 `,
         {
             parse_mode: "Markdown",
@@ -684,13 +636,8 @@ const openMenuKeyboard = {
         url: "https://t.me/sabilofficial",
         style: "success" 
        },
-       {
-        text: "𖥔",
-        callback_data: "owner_menu",
-        style: "danger"
-       },
       { 
-        text: "𝖭𝖾𝗑𝗍", 
+        text: "⌦", 
         callback_data: "tools_menu", 
         style: "primary" 
        } 
@@ -702,12 +649,12 @@ const OwnKb = {
     inline_keyboard: [
         [
          { 
-          text: "𝖡𝖺𝖼𝗄", 
+          text: "⌫", 
           callback_data: "main_menu",
           style: "primary"
          },
          { 
-          text: "𝖭𝖾xt", 
+          text: "⌦", 
           callback_data: "tools_menu",
           style: "danger"
          }
@@ -719,12 +666,12 @@ const ToolsKeyboard = {
     inline_keyboard: [
         [
          { 
-          text: "𝖡𝖺𝖼𝗄", 
+          text: "⌫", 
           callback_data: "main_menu",
           style: "primary"
          },
          { 
-          text: "𝖭𝖾xt", 
+          text: "⌦", 
           callback_data: "enc_menu_v1",
           style: "danger"
          }
@@ -736,12 +683,12 @@ const EncV1Keyboard = {
     inline_keyboard: [
         [
          { 
-          text: "𝖡𝖺𝖼𝗄", 
+          text: "⌫", 
           callback_data: "tools_menu",
           style: "success"
          },
          { 
-          text: "𝖭𝖾𝗑𝗍", 
+          text: "⌦", 
           callback_data: "enc_menu_v2",
           style: "primary"
          }
@@ -753,12 +700,12 @@ const EncV2Keyboard = {
     inline_keyboard: [
         [
          { 
-          text: "𝖡𝖺𝖼𝗄", 
+          text: "⌫", 
           callback_data: "enc_menu_v1",
           style: "danger"
          },
          { 
-          text: "𝖭𝖾𝗑𝗍", 
+          text: "⌦", 
           callback_data: "main_menu",
           style: "success" 
          }
@@ -776,7 +723,7 @@ async function sendEncryptProgress(ctx, waitMsg, modeName) {
         { percent: 100, text: `✅ File berhasil diencrypt! (${modeName})`, delay: 500 }
     ];
     for (const step of steps) {
-        const barLength = 20;
+        const barLength = 10;
         const filled = Math.round((step.percent / 100) * barLength);
         const bar = '▰'.repeat(filled) + '▱'.repeat(barLength - filled);
         await ctx.telegram.editMessageText(waitMsg.chat.id, waitMsg.message_id, undefined, `<pre>✅ Encrypt Berjalan\n${step.text}\n${bar} ${step.percent}%</pre>`, { parse_mode: 'HTML' });
@@ -815,7 +762,7 @@ async function processObfuscate(
 
     if (!ctx.message.reply_to_message) {
         return ctx.reply(
-            "❌ Reply file .js atau kode JS."
+            "❌ Reply file .js"
         )
     }
 
@@ -881,7 +828,7 @@ async function processObfuscate(
 
     const waitMsg =
         await ctx.reply(
-            `<pre>▰▰▱▱▱▱▱▱▱▱ 10%</pre>
+            `<pre>▰▱▱▱▱▱▱▱▱▱ 10%</pre>
 ⚙️ Memulai Obfuscation: ${modeName}`,
             {
                 parse_mode: "HTML"
@@ -958,7 +905,7 @@ bot.start(async (ctx) => {
             [
                 {
                     type: 'emoji',
-                    emoji: '🔥'
+                    emoji: '🎉'
                 }
             ]
         );
@@ -975,14 +922,14 @@ async function showMenu1(ctx, messageId = null) {
     const caption = `\`\`\`js
 ╔══════✮❁•°♛°•❁✮ ═════╗
     𝐖𝐞𝐥𝐜𝐨𝐦𝐞 𝐓𝐨   ─  𝐔𝐬𝐞𝐫𝐬
-        𝐁𝐲 : 𝐒𝐚𝐛𝐢𝐥𝐎𝐟𝐟𝐢𝐜𝐢𝐚𝐥
+       𝐁𝐲 : 𝐒𝐚𝐛𝐢𝐥𝐎𝐟𝐟𝐢𝐜𝐢𝐚𝐥
 ╚══════✮❁•°❀°•❁✮══════╝
 
 System : Free Access Activated
 Usename : ${ctx.from.username}
 Id : ${ctx.from.id}
 Runtime : ${bottime}
-Featur : Encrypt For File,Tools,etc
+Featur : Encrypt For File,Tools,Dll
 ━━━━━━━━━━━━━━━━━━━━
 
 ﴿إِنَّ اللَّهَ هُوَ الرَّزَّاقُ ذُو الْقُوَّةِ الْمَتِينُ﴾ ۞ الذاريات / ٥٨
@@ -1020,14 +967,14 @@ Sesungguhnya Allah lah Pemberi rezki, Dialah yang mempunyai kekuatan yang kokoh.
 async function showMenu2(ctx, messageId = null) {
     const caption = `<pre>
 ╔═══════ ೋღ 𝖳𝗈𝗈𝗅𝗌 𝖬𝖾𝗇𝗎 ღೋ ═══════╗
-╠ ▢ /cekcode 𝖢𝗁𝖾𝖼𝗄 code
-╠ ▢ /cekerror 𝖢𝗁𝖾𝖼𝗄 𝖾𝗋𝗋𝗈𝗋 𝖿𝗈𝗋 𝖿𝗂𝗅𝖾
-╠ ▢ /infoerror 𝖨𝗇𝖿𝗈 𝖾𝗋𝗋𝗈𝗋 + 𝖺𝗎𝗍𝗈 𝖿𝗂𝖼
-╠ ▢ /cekidemoji 𝖢𝗁𝖾𝖼𝗄 𝗂𝖽 𝖾𝗆𝗈𝗃𝗂 𝗉𝗋𝖾𝗆
-╠ ▢ /fixerror 𝖥𝗂𝗑𝖾𝖽 𝖾𝗋𝗋𝗈𝗋
-╠ ▢ /cleancode 𝖢𝗅𝖾𝖺𝗇 𝖢𝗈𝖽𝖾
-╠ ▢ /ai 𝖢𝗁𝖺𝗍 𝖠𝗂
-╠ ▢ /getsource Get Source Html
+╠ ▢ /cekcode Reply code
+╠ ▢ /cekerror Reply file/code
+╠ ▢ /infoerror Reply File/code
+╠ ▢ /cekidemoji Reply emoji
+╠ ▢ /fixerror Reply file/code
+╠ ▢ /cleancode Reply File/code
+╠ ▢ /ai 𝖢𝗁𝖺𝗍 teks
+╠ ▢ /getsource Link Https
 ╚═══════ ೋღ ══ 🌸 ══ღೋ ═══════╝</pre>
 `;
     const thumb = await getThumbnailBuffer();
@@ -1065,6 +1012,11 @@ async function EncV1(ctx, messageId = null) {
 ╠ ▢ /rosemary 𝖴𝗅𝗍𝗋𝖺 𝖣𝖾𝖿𝖾𝗇𝗌𝖾 𝗆𝗈𝖽𝖾
 ╠ ▢ /enctime 𝟥𝟢 (𝟥𝟢 𝗁𝖺𝗋𝗂)
 ╠ ▢ /hardhtml Encrypt Hard Html
+╠════════════════════════════════════╣
+║ Cara Penggunaan
+║ /enctime 30
+║ Jadi setiap angka = 1hari
+║ Jadi kalo 10 = 10hari
 ╚═══════ ೋღ ═══  🌸  ═══ ღೋ ═══════╝</pre>
 `;
     const thumb = await getThumbnailBuffer();
@@ -1103,6 +1055,10 @@ async function EncV2(ctx, messageId = null) {
 ╠ ▢ /nebula 𝖭𝖾𝖻𝗎𝗅𝖺 𝖲𝗍𝗒𝗅𝖾
 ╠ ▢ /var 𝖵𝖺𝗋 𝖲𝗍𝗒𝗅𝖾
 ╠ ▢ /invishtml Encrypt Hmtl
+╠════════════════════════════════════╣
+║ Cara Penggunaan
+║ /enccustom 果Prime皮Sabil出Official去
+║ Jangan ada spasi dalam text
 ╚═══════ ೋღ ═══  🌸  ═══ ღೋ ═══════╝</pre>
 `;
     const thumb = await getThumbnailBuffer();
@@ -1158,59 +1114,6 @@ bot.action('tools_menu', async (ctx) => {
     const messageId = ctx.callbackQuery.message.message_id;
     await showMenu2(ctx, messageId);
     await ctx.answerCbQuery();
-});
-
-bot.action("owner_menu", async (ctx) => {
-
-  // hanya owner
-  if (Number(ctx.from.id) !== config.OWNER_ID) {
-
-    return ctx.answerCbQuery(
-      "✘ 𝖭𝗈 𝖭𝗈 𝖸𝖺𝗄.",
-      {
-        show_alert: true
-      }
-    )
-  }
-
-  await ctx.answerCbQuery()
-
-  const cap =
-`<blockquote>𝖬𝖾𝗇𝗎 𝖪𝗁𝗎𝗌𝗎𝗌 𝖮𝗐𝗇𝖾𝗋
-─────────────────────────
-( ✘ )𝖬𝖾𝗇𝗎 𝖪𝗁𝗎𝗌𝗎𝗌 𝖮𝗐𝗇𝖾𝗋
-
-/broadcast – Reply Text
-/maintenance – on/off|alasan<
-─────────────────────────
-
-𝖠𝖼𝖼𝖾𝗌𝗌 𝖮𝗇𝗅𝗒 𝖮𝗐𝗇𝖾𝗋 𝖨𝖽</blockquote>
-`
-
-  try {
-
-    await ctx.editMessageCaption(
-      cap,
-      {
-        parse_mode: "HTML",
-        reply_markup: OwnKb
-      }
-    )
-
-  } catch {
-
-    try {
-
-      await ctx.editMessageText(
-        cap,
-        {
-          parse_mode: "HTML",
-          reply_markup: OwnKb
-        }
-      )
-
-    } catch {}
-  }
 });
 // ==================== RANDOM ====================
 
@@ -1323,7 +1226,7 @@ function customStyle(code,name){
   const varName=randomName(names)
 
   return `(function(){
-${chaosVars(1200,name)}
+${chaosVars(1200,names)}
 function ${name}(){
 const ${varName}="${b64}";
 return Buffer.from(${varName},"base64").toString();
@@ -2079,12 +1982,14 @@ bot.on("text", async (ctx, next) => {
 bot.command("broadcast", async (ctx) => {
 
     if (ctx.from.id !== config.OWNER_ID) {
-        return ctx.reply("❌ Khusus Owner")
+        return ctx.reply(
+            "❌ Khusus Owner"
+        )
     }
 
     if (!ctx.message.reply_to_message) {
         return ctx.reply(
-            "Reply pesan yang ingin dibroadcast lalu ketik /broadcast"
+            "Reply pesan dengan command /broadcast"
         )
     }
 
@@ -2095,14 +2000,20 @@ bot.command("broadcast", async (ctx) => {
     }
 
     const db = JSON.parse(
-        fs.readFileSync(ACCESS_FILE, "utf8")
+        fs.readFileSync(
+            ACCESS_FILE,
+            "utf8"
+        )
     )
 
     const users = Object.keys(
         db.users || {}
     )
     .map(id => Number(id))
-    .filter(id => id !== config.OWNER_ID)
+    .filter(
+        id =>
+        id !== config.OWNER_ID
+    )
 
     if (!users.length) {
         return ctx.reply(
@@ -2113,13 +2024,14 @@ bot.command("broadcast", async (ctx) => {
     const replyMsg =
         ctx.message.reply_to_message
 
-    const waitMsg = await ctx.reply(
-`<pre>▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒ 0%</pre>
+    const waitMsg =
+        await ctx.reply(
+`<pre>▱▱▱▱▱▱▱▱▱▱▱ 0%</pre>
 Memulai Broadcast...`,
-        {
-            parse_mode: "HTML"
-        }
-    )
+            {
+                parse_mode: "HTML"
+            }
+        )
 
     const steps = [
         {
@@ -2156,33 +2068,45 @@ Memulai Broadcast...`,
 
     for (const step of steps) {
 
-        const barLength = 20
+        const barLength = 11
 
-        const filled = Math.round(
-            (step.percent / 100) *
-            barLength
-        )
-
-        const bar =
-            "█".repeat(filled) +
-            "▒".repeat(
-                barLength - filled
+        const filled =
+            Math.round(
+                (
+                    step.percent /
+                    100
+                ) *
+                barLength
             )
 
-        await ctx.telegram.editMessageText(
+        const bar =
+            "▰".repeat(
+                filled
+            ) +
+            "▱".repeat(
+                barLength -
+                filled
+            )
+
+        await ctx.telegram
+        .editMessageText(
             waitMsg.chat.id,
             waitMsg.message_id,
             undefined,
 `<pre>${bar} ${step.percent}%
 ${step.text}</pre>
-𝑙𝑜𝑎𝑑𝑖𝑛𝑔...
+⋘ 𝑃𝑙𝑒𝑎𝑠𝑒 𝑤𝑎𝑖𝑡... ⋙
 `,
             {
-                parse_mode: "HTML"
+                parse_mode:
+                "HTML"
             }
-        ).catch(() => {})
+        )
+        .catch(() => {})
 
-        await pause(step.delay)
+        await pause(
+            step.delay
+        )
 
     }
 
@@ -2193,32 +2117,21 @@ ${step.text}</pre>
 
         try {
 
-            if (replyMsg.text) {
-
-                await ctx.telegram.sendMessage(
-                    userId,
-                    `
-<blockquote><b>📢 Broadcast From Owner</b></blockquote>
-<blockquote>${replyMsg.text}</blockquote>
-<blockquote><b>Jika Ada yang ingin di tanyakan ke owner gunakan command /chatowner</b></blockquote>`,
-                    {
-                        parse_mode: "HTML"
-                    }
-                )
-
-            } else {
-
-                await ctx.telegram.copyMessage(
-                    userId,
-                    ctx.chat.id,
-                    replyMsg.message_id
-                )
-
-            }
+            await ctx.telegram
+            .copyMessage(
+                userId,
+                ctx.chat.id,
+                replyMsg.message_id
+            )
 
             success++
 
-        } catch {
+        } catch (err) {
+
+            console.log(
+                `Broadcast gagal ke ${userId}`,
+                err.message
+            )
 
             failed++
 
@@ -2228,10 +2141,12 @@ ${step.text}</pre>
 
     }
 
-    await ctx.telegram.deleteMessage(
+    await ctx.telegram
+    .deleteMessage(
         ctx.chat.id,
         waitMsg.message_id
-    ).catch(() => {})
+    )
+    .catch(() => {})
 
     await ctx.reply(
 `<blockquote>📢 <b>BROADCAST SELESAI</b></blockquote>
@@ -2241,7 +2156,8 @@ ${step.text}</pre>
 👥 Total : ${users.length}</blockquote>
 <blockquote>Broadcast berhasil dikirim ke seluruh user aktif.</blockquote>`,
         {
-            parse_mode: "HTML"
+            parse_mode:
+            "HTML"
         }
     )
 
@@ -2325,7 +2241,7 @@ bot.command("maintenance", async (ctx) => {
         )
 
         return ctx.reply(
-            `\`\`\`
+            `\`\`\`js
 ✅ Maintenance Disabled
 
 📌 Status : OFF
@@ -2365,7 +2281,7 @@ bot.command('ai', async (ctx) => {
     // Ambil teks setelah /claude
     const q = ctx.message.text.replace(/^\/ai\s*/, '').trim();
     if (!q) {
-        return ctx.reply('💬 Masukkan pertanyaan setelah /ai');
+        return ctx.reply('Ketik /ai sambil isi pesan yang ingin di tanyakan');
     }
 
     // Kirim pesan "sedang memproses..."
@@ -2887,26 +2803,24 @@ Atau reply ke file .js</blockquote>`,
   fs.unlinkSync(tmp)
 });
 
-bot.command("cekupdate", async (ctx) => {
-
-    const userId =
-        Number(ctx.from.id)
-
-    if (
-        userId !==
+bot.command( "cekupdate", async (ctx) => {
+if (
+        Number(ctx.from.id) !==
         Number(config.OWNER_ID)
     ) {
+
         return ctx.reply(
-            "<b>❌ Khusus Owner.</b>",
+            "<blockquote><b>❌ Khusus Owner</b></blockquote>",
             {
                 parse_mode: "HTML"
             }
         )
+
     }
 
     const waitMsg =
         await ctx.reply(
-            "<b>🔍 Mengecek pembaruan...</b>",
+            "<blockquote><b>🔍 Mengecek pembaruan...</b></blockquote>",
             {
                 parse_mode: "HTML"
             }
@@ -2915,7 +2829,9 @@ bot.command("cekupdate", async (ctx) => {
     try {
 
         const localCode =
-            fs.existsSync("./index.js")
+            fs.existsSync(
+                "./index.js"
+            )
             ? fs.readFileSync(
                 "./index.js",
                 "utf8"
@@ -2926,7 +2842,10 @@ bot.command("cekupdate", async (ctx) => {
             data: remoteCode
         } =
         await axios.get(
-            UPDATE_URL
+            UPDATE_URL,
+            {
+                responseType: "text"
+            }
         )
 
         await ctx.telegram
@@ -2942,7 +2861,7 @@ bot.command("cekupdate", async (ctx) => {
         ) {
 
             return ctx.reply(
-                "<b>❌ Tidak Ada Update pada file</b>",
+                "<blockquote><b>❌ Tidak Ada Update pada file</b></blockquote>",
                 {
                     parse_mode: "HTML"
                 }
@@ -2950,31 +2869,20 @@ bot.command("cekupdate", async (ctx) => {
 
         }
 
-        const successMsg =
+        const updateMsg =
             await ctx.reply(
-`
-<b>✅ Berhasil Cek Update</b>
-
-Bot akan otomatis mengupdate file dan mengganti dengan yg baru
-`,
-                {
-                    parse_mode: "HTML"
-                }
-            )
-
-        await new Promise(
-            resolve =>
-            setTimeout(
-                resolve,
+`<blockquote>✅ Berhasil Cek Update</blockquote>
+<blockquote>Terdapat Update Pada file</blockquote>`, { parse_mode: "HTML" } )
+await new Promise(
+            r => setTimeout(
+                r,
                 1000
             )
         )
 
         const restartMsg =
             await ctx.reply(
-`
-<b>🔄 Restart Bot</b>
-`,
+"<blockquote><b>Bot akan di restart Tunggu beberapa detik hingga bot selesai</b></blockquote>\n<blockquote><b>🔄 Restart</b></blockquote>",
                 {
                     parse_mode: "HTML"
                 }
@@ -2988,43 +2896,23 @@ Bot akan otomatis mengupdate file dan mengganti dengan yg baru
             })
         )
 
-        /*
-         * Hapus index.js lama
-         */
-
-        if (
-            fs.existsSync(
-                "./index.js"
-            )
-        ) {
-
-            fs.unlinkSync(
-                "./index.js"
-            )
-
-        }
-
-        /*
-         * Ganti index.js baru
-         */
-
         fs.writeFileSync(
             "./index.js",
-            remoteCode
+            remoteCode,
+            "utf8"
         )
 
         await new Promise(
-            resolve =>
-            setTimeout(
-                resolve,
-                500
+            r => setTimeout(
+                r,
+                1000
             )
         )
 
         await ctx.telegram
         .deleteMessage(
-            successMsg.chat.id,
-            successMsg.message_id
+            updateMsg.chat.id,
+            updateMsg.message_id
         )
         .catch(() => {})
 
@@ -3039,8 +2927,6 @@ Bot akan otomatis mengupdate file dan mengganti dengan yg baru
 
     } catch (err) {
 
-        console.log(err)
-
         await ctx.telegram
         .deleteMessage(
             waitMsg.chat.id,
@@ -3048,16 +2934,15 @@ Bot akan otomatis mengupdate file dan mengganti dengan yg baru
         )
         .catch(() => {})
 
-        ctx.reply(
-            `<b>❌ Gagal mengecek update</b>\n\n<code>${err.message}</code>`,
-            {
-                parse_mode: "HTML"
-            }
-        )
+        return ctx.reply(
+`❌ Gagal Mengecek Update
+${err.message} `, { parse_mode: "HTML" } )
+}
 
-    }
+}
+)
 
-});
+
 // kontol up
 // ==================== JALANKAN ====================
 // =============================
@@ -3326,6 +3211,5 @@ console.log(
     `[ AUTO BACKUP SYSTEM ACTIVE ]`
 );
 bot.launch().then(() => console.log('✅ Bot obfuscator berjalan'));
-sendUpdateNotification();
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
