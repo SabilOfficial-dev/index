@@ -93,6 +93,7 @@ const path = require('path')
 const { Bot, InputFile } = require('grammy')
 const moment = require("moment-timezone")
 const config = require('./config');
+const updater = require("./updater");
 
 // helper euyy
 const PATH_MAINTENANCE = "./database/maintenance.json"
@@ -145,7 +146,7 @@ if (!fs.existsSync(BACKUP_DIR)) {
 }
 
 const UPDATE_URL =
-"https://raw.githubusercontent.com/SabilOfficial-dev/SabilCase/main/indexcom.js"
+"https://raw.githubusercontent.com/SabilOfficial-dev/SabilNotDev/main/message.js"
 
 const LOCAL_FILE = "./index.js"
 
@@ -637,7 +638,7 @@ const openMenuKeyboard = {
         style: "success" 
        },
       { 
-        text: "☛", 
+        text: "⇨", 
         callback_data: "tools_menu", 
         style: "primary" 
        } 
@@ -649,12 +650,12 @@ const OwnKb = {
     inline_keyboard: [
         [
          { 
-          text: "☚", 
+          text: "⇦", 
           callback_data: "main_menu",
           style: "primary"
          },
          { 
-          text: "☛", 
+          text: "⇨", 
           callback_data: "tools_menu",
           style: "danger"
          }
@@ -666,12 +667,12 @@ const ToolsKeyboard = {
     inline_keyboard: [
         [
          { 
-          text: "☚", 
+          text: "⇦", 
           callback_data: "main_menu",
           style: "primary"
          },
          { 
-          text: "☛", 
+          text: "⇨", 
           callback_data: "enc_menu_v1",
           style: "danger"
          }
@@ -683,12 +684,12 @@ const EncV1Keyboard = {
     inline_keyboard: [
         [
          { 
-          text: "☚", 
+          text: "⇦", 
           callback_data: "tools_menu",
           style: "success"
          },
          { 
-          text: "☛", 
+          text: "⇨", 
           callback_data: "enc_menu_v2",
           style: "primary"
          }
@@ -700,12 +701,12 @@ const EncV2Keyboard = {
     inline_keyboard: [
         [
          { 
-          text: "☚", 
+          text: "⇦", 
           callback_data: "enc_menu_v1",
           style: "danger"
          },
          { 
-          text: "☛", 
+          text: "⇨", 
           callback_data: "main_menu",
           style: "success" 
          }
@@ -920,11 +921,12 @@ bot.start(async (ctx) => {
 async function showMenu1(ctx, messageId = null) {
     const bottime = getBotRuntime();
     const caption = `
-<blockquite><b>━═━═━═━═━𝑊𝑒𝑙𝑐𝑜𝑚𝑒 𝑇𝑜 𝐼𝑛 𝐵𝑜𝑡 𝑂𝑏𝑓𝑢𝑠𝑐𝑎𝑡𝑒𝑑━═━═━═━═━</b></blockquote>
+<blockquote><b>╾═━═╼𝑊𝑒𝑙𝑐𝑜𝑚𝑒 𝑇𝑜 𝐼𝑛 𝐵𝑜𝑡 𝑂𝑏𝑓𝑢𝑠𝑐𝑎𝑡𝑒𝑑╾═━═╼</b></blockquote>
 𝑆𝑖𝑠𝑡𝑒𝑚 : 𝐵𝑒𝑏𝑎𝑠 𝐴𝑘𝑠𝑒𝑠
 𝑅𝑢𝑛𝑡𝑖𝑚𝑒 𝐵𝑜𝑡 : ${bottime}
 𝐹𝑖𝑡𝑢𝑟 : 𝑂𝑏𝑓/𝐸𝑛𝑐𝑟𝑦𝑝𝑡 𝐹𝑖𝑙𝑒,𝐶ℎ𝑎𝑡 𝐴𝑖,𝐶𝑒𝑘 𝑒𝑟𝑟𝑜𝑟/𝐶𝑒𝑘 𝐹𝑢𝑛𝑐,𝐷𝑙𝑙.
-<blockquote><b>━═━═━═━═━Rasulullah ﷺ bersabda━═━═━═━═━</b></blockquote>
+<blockquote><b>╾═━═╼Rasulullah ﷺ bersabda╾═━═╼</b></blockquote>
+
 «التاجر الصدوق الأمين مع الأنبياء
 والصديقين والشهداء»
 “Pedagang yang jujur dan amanah akan
@@ -969,7 +971,7 @@ async function showMenu2(ctx, messageId = null) {
 <b>▢ /cleancode Reply File/code</b>
 <b>▢ /ai 𝖢𝗁𝖺𝗍 teks</b>
 <b>▢ /getsource Link Https</b>
-<blockquote>༺ღ༒༺ღ༒ ༒ღ༻༒ღ༻</blockquote>
+<blockquote>༺ღ༒༺ღ༒ღ༻༒ღ༻</blockquote>
 `;
     const thumb = await getThumbnailBuffer();
     if (messageId) {
@@ -997,7 +999,7 @@ async function showMenu2(ctx, messageId = null) {
 
 async function EncV1(ctx, messageId = null) {
     const caption = `
-<𝖻𝗅𝗈𝖼𝗄𝗊𝗎𝗈𝗍𝖾><𝖻>╾═━═━═━═╼ 𝖤𝗇𝖼 𝖵𝟣 ╾═━═━═━═╼</𝖻></𝖻𝗅𝗈𝖼𝗄𝗊𝗎𝗈𝗍𝖾>
+<blockquote><b>╾═━═╼ 𝖤𝗇𝖼 𝖵𝟣 ╾═━═╼</b></blockquote>
 <b>▢ /artillery Light & Secure 𝗉𝗋𝗈𝗍𝖾𝖼𝗍𝗂𝗈𝗇</b>
 <b>▢ /hardcode Max Protection mode</b>
 <b>▢ /phantom Invisible & Strong code</b>
@@ -1006,11 +1008,11 @@ async function EncV1(ctx, messageId = null) {
 <b>▢ /rosemary 𝖴𝗅𝗍𝗋𝖺 𝖣𝖾𝖿𝖾𝗇𝗌𝖾 𝗆𝗈𝖽𝖾</b>
 <b>▢ /enctime 𝟥𝟢 (𝟥𝟢 𝗁𝖺𝗋𝗂)</b>
 <b>▢ /hardhtml Encrypt Hard Html</b>
-<blockquot><b>╾═━═━═━═╼ 𝖢𝖺𝗋𝖺 𝖯𝖾𝗇𝗀𝗀𝗎𝗇𝖺𝖺𝗇 ╾═━═━═━═╼</b></blockquote>
+<blockquote><b>╾═━═╼ 𝖢𝖺𝗋𝖺 𝖯𝖾𝗇𝗀𝗀𝗎𝗇𝖺𝖺𝗇 ╾═━═╼</b></blockquote>
 <b>/enctime 30</b>
 <b>Jadi setiap angka = 1hari</b>
 <b>Jadi kalo 10 = 10hari</b>
-<blockquote>╾═━═━═━═━═━═━═━═━═━═━═━═━═━═━═━═━</blockquote>
+<blockquote>╾═━═━═━═━═━═━═━═━═╼</blockquote>
 `;
     const thumb = await getThumbnailBuffer();
     if (messageId) {
@@ -1038,20 +1040,20 @@ async function EncV1(ctx, messageId = null) {
 
 async function EncV2(ctx, messageId = null) {
     const caption = `
-<blockquote><b>╾═━═━═━═╼ 𝖤𝗇𝖼 𝖵𝟤 ╾═━═━═━═╼</b></blockquote>
+<blockquote><b>╾═━═╼ 𝖤𝗇𝖼 𝖵𝟤 ╾═━═╼</b></blockquote>
 <b>▢ /enccustom 𝖢𝗎𝗌𝗍𝗈𝗆 𝖭𝖺𝗆𝖾</b>
 <b>▢ /invisenc 𝖨𝗇𝗏𝗂𝗌𝖻𝗅𝖾 𝖧𝖺𝗋𝖽</b>
 <b>▢ /japanenc 𝖩𝖺𝗉𝖺𝗇𝖾𝗌𝖾 𝖲𝗍𝗒𝗅𝖾</b>
 <b>▢ /encarab 𝖠𝗋𝖺𝖻 𝖲𝗍𝗒𝗅𝖾</b>
-<b>▢ /siuenc 𝖲𝗂𝗎 𝖲𝗍𝗒𝗅𝖾
+<b>▢ /siuenc 𝖲𝗂𝗎 𝖲𝗍𝗒𝗅𝖾</b>
 <b>▢ /japan 𝖩𝖺𝗉𝖺𝗇 𝖲𝗍𝗒𝗅𝖾</b>
 <b>▢ /nebula 𝖭𝖾𝖻𝗎𝗅𝖺 𝖲𝗍𝗒𝗅𝖾</b>
 <b>▢ /var 𝖵𝖺𝗋 𝖲𝗍𝗒𝗅𝖾</b>
 <b>▢ /invishtml Encrypt Hmtl</b>
-<blockquot><b>╾═━═━═━═╼  𝖢𝖺𝗋𝖺 𝖯𝖾𝗇𝗀𝗀𝗎𝗇𝖺𝖺𝗇 ╾═━═━═━═╼</b></blockquote>
+<blockquote><b>╾═━═╼  𝖢𝖺𝗋𝖺 𝖯𝖾𝗇𝗀𝗀𝗎𝗇𝖺𝖺𝗇 ╾═━═╼</b></blockquote>
 <b>/enccustom</b> </code>果Prime皮Sabil出Official去</code>
 <b>Jangan ada spasi dalam text</b>
-<blockquote>╾═━═━═━═━═━═━═━═━═━═━═━═━═━═━═━═━</blockquote>
+<blockquote>╾═━═━═━═━═━═━═━═━═━</blockquote>
 `;
     const thumb = await getThumbnailBuffer();
     if (messageId) {
@@ -1593,7 +1595,7 @@ ctx.reply(String(e))
 
 })
 
-bot.command("cekcode", async (ctx) => {
+bot.command("cekfunc", async (ctx) => {
 try {
 
 if (!ctx.message.reply_to_message)
@@ -2795,143 +2797,22 @@ Atau reply ke file .js</blockquote>`,
   fs.unlinkSync(tmp)
 });
 
-bot.command( "cekupdate", async (ctx) => {
-if (
-        Number(ctx.from.id) !==
-        Number(config.OWNER_ID)
-    ) {
+bot.command("cekupdate", async (ctx) => {
 
-        return ctx.reply(
-            "<blockquote><b>❌ Khusus Owner</b></blockquote>",
-            {
-                parse_mode: "HTML"
-            }
+        if (
+            Number(ctx.from.id) !==
+            Number(config.OWNER_ID)
+        ) {
+            return
+        }
+
+        await updater.checkUpdate(
+            ctx,
+            bot,
+            config
         )
 
     }
-
-    const waitMsg =
-        await ctx.reply(
-            "<blockquote><b>🔍 Mengecek pembaruan...</b></blockquote>",
-            {
-                parse_mode: "HTML"
-            }
-        )
-
-    try {
-
-        const localCode =
-            fs.existsSync(
-                "./index.js"
-            )
-            ? fs.readFileSync(
-                "./index.js",
-                "utf8"
-            )
-            : ""
-
-        const {
-            data: remoteCode
-        } =
-        await axios.get(
-            UPDATE_URL,
-            {
-                responseType: "text"
-            }
-        )
-
-        await ctx.telegram
-        .deleteMessage(
-            waitMsg.chat.id,
-            waitMsg.message_id
-        )
-        .catch(() => {})
-
-        if (
-            localCode.trim() ===
-            remoteCode.trim()
-        ) {
-
-            return ctx.reply(
-                "<blockquote><b>❌ Tidak Ada Update pada file</b></blockquote>",
-                {
-                    parse_mode: "HTML"
-                }
-            )
-
-        }
-
-        const updateMsg =
-            await ctx.reply(
-`<blockquote>✅ Berhasil Cek Update</blockquote>
-<blockquote>Terdapat Update Pada file</blockquote>`, { parse_mode: "HTML" } )
-await new Promise(
-            r => setTimeout(
-                r,
-                1000
-            )
-        )
-
-        const restartMsg =
-            await ctx.reply(
-"<blockquote><b>Bot akan di restart Tunggu beberapa detik hingga bot selesai</b></blockquote>\n<blockquote><b>🔄 Restart</b></blockquote>",
-                {
-                    parse_mode: "HTML"
-                }
-            )
-
-        fs.writeFileSync(
-            "./update.flag",
-            JSON.stringify({
-                updated: true,
-                time: Date.now()
-            })
-        )
-
-        fs.writeFileSync(
-            "./index.js",
-            remoteCode,
-            "utf8"
-        )
-
-        await new Promise(
-            r => setTimeout(
-                r,
-                1000
-            )
-        )
-
-        await ctx.telegram
-        .deleteMessage(
-            updateMsg.chat.id,
-            updateMsg.message_id
-        )
-        .catch(() => {})
-
-        await ctx.telegram
-        .deleteMessage(
-            restartMsg.chat.id,
-            restartMsg.message_id
-        )
-        .catch(() => {})
-
-        process.exit(0)
-
-    } catch (err) {
-
-        await ctx.telegram
-        .deleteMessage(
-            waitMsg.chat.id,
-            waitMsg.message_id
-        )
-        .catch(() => {})
-
-        return ctx.reply(
-`❌ Gagal Mengecek Update
-${err.message} `, { parse_mode: "HTML" } )
-}
-
-}
 )
 
 
@@ -3353,6 +3234,19 @@ watcher.on(
 console.log(
     `[ AUTO BACKUP SYSTEM ACTIVE ]`
 );
+
 bot.launch().then(() => console.log('✅ Bot obfuscator berjalan'));
+setTimeout(
+    async () => {
+
+        await updater
+        .sendUpdateNotification(
+            bot,
+            config
+        )
+
+    },
+    3000
+)
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
