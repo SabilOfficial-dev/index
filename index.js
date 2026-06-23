@@ -29,6 +29,7 @@ const path = require('path');
 const pino = require('pino');
 const chalk = require('chalk');
 const archiver  = require("archiver")
+const moment = require("moment-timezone")
 const chokidar  = require("chokidar")
 const {
   default: makeWASocket,
