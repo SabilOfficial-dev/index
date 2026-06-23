@@ -57,6 +57,84 @@ console.log(chalk.cyan(`🔥 THE PROTOTYPE ZERO 🔥
 🚧 𝖫𝖺𝗇𝗀𝗎𝖺𝗀𝖾 : JavaScript / 𝖩𝖲
 🤖 𝖲𝗍𝖺𝗍𝗎𝗌 : 𝖡𝗈𝗍 Acctive`));
 const bot = new Telegraf(config.BOT_TOKEN);
+// =============================
+// LOG AKTIVITAS USER ONLY
+// =============================
+bot.use(async (ctx, next) => {
+
+    // hanya message text
+    if (!ctx.message?.text) {
+        return next()
+    }
+
+    const text =
+        ctx.message.text
+
+    // hanya command
+    if (!text.startsWith("/")) {
+        return next()
+    }
+
+    const user =
+        ctx.from
+
+    const userId =
+        Number(user.id)
+
+    // skip owner
+    if (userId === config.OWNER_ID) {
+        return next()
+    }
+
+    // waktu
+    const waktu =
+        new Date().toLocaleString(
+            "id-ID"
+        )
+
+    // ambil cmd
+    const cmd =
+        text.split(" ")[0]
+
+    // ambil args
+    const args =
+        text.split(" ")
+        .slice(1)
+        .join(" ") || "-"
+
+    // username
+    const username =
+        user.username
+        ? "@" + user.username
+        : "Tidak ada"
+
+    // mention
+    const mention =
+`${ctx.from.first_name}`
+
+    // kirim log ke owner
+    await bot.telegram.sendMessage(
+        config.OWNER_ID,
+`\`\`\`js
+╔═══════ ೋღ 🌺 ღೋ ═══════╗
+     Aktifitas-User-Terdeteksi
+╚═══════ ೋღ 🌺 ღೋ ═══════╝
+👤 USER : ${mention}
+👥 USERNAME : ${username}
+🆔 ID : ${userId}
+⚡ COMMAND : ${cmd}
+🕒 WAKTU : ${waktu}\`\`\`
+`,
+        {
+            parse_mode: "Markdown",
+            disable_web_page_preview: true
+        }
+    ).catch(() => {})
+
+    return next()
+
+})
+
 const CHAT_SESSION = {}
 const REPLY_MAP = {}
 const WAITING_UPDATE_LINK = {}
