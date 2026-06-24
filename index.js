@@ -127,7 +127,7 @@ bot.use(async (ctx, next) => {
 <b>🕒 WAKTU : ${waktu}</b></blockquote>
 `,
         {
-            parse_mode: "Markdown",
+            parse_mode: "HTML",
             disable_web_page_preview: true
         }
     ).catch(() => {})
