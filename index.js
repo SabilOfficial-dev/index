@@ -116,15 +116,15 @@ bot.use(async (ctx, next) => {
     // kirim log ke owner
     await bot.telegram.sendMessage(
         config.OWNER_ID,
-`\`\`\`js
+`<blockquote>
 ╔═══════ ೋღ 🌺 ღೋ ═══════╗
      Aktifitas-User-Terdeteksi
 ╚═══════ ೋღ 🌺 ღೋ ═══════╝
-👤 USER : ${mention}
-👥 USERNAME : ${username}
-🆔 ID : ${userId}
-⚡ COMMAND : ${cmd}
-🕒 WAKTU : ${waktu}\`\`\`
+<b>👤 USER : ${mention}</b>
+<b>👥 USERNAME</b> : <code>${username}</code>
+<b>🆔 ID</b> : <code>${userId}</code>
+<b>⚡ COMMAND</b> : <code>${cmd}</code>
+<b>🕒 WAKTU : ${waktu}</b></blockquote>
 `,
         {
             parse_mode: "Markdown",
@@ -146,7 +146,6 @@ const senderStatus = new Map(); // senderKey -> status online
 const waitingForConnect = new Map(); // userId -> waiting for number
 const waitingForTestFunc = new Map(); // userId -> { target, loop, funcCode }
 
-// Backup Files Jirr
 const BACKUP_OWNER_ID = config.OWNER_ID
 
 const BACKUP_DIR =
@@ -164,6 +163,9 @@ if (!fs.existsSync(BACKUP_DIR)) {
         }
     )
 }
+
+const LOCAL_FILE = "./BotNode.js"
+
 // ==================== DATABASE AKSES USER ====================
 const ACCESS_FILE = './akses.json';
 
@@ -659,7 +661,7 @@ bot.action('check_join', async (ctx) => {
         }
         
         // Kirim pesan baru dengan thumbnail + menu
-        await sendWithThumbnail(ctx, menuText, { reply_markup: keyboard2 });
+        await sendWithThumbnail(ctx, menuText, { reply_markup: keyboard1 });
         
     } else {
         await ctx.answerCbQuery('❌ Kamu belum join channel!', { show_alert: true });
