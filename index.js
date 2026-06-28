@@ -136,6 +136,7 @@ bot.use(async (ctx, next) => {
 
 })
 
+const THUMBNAIL_URL = "https://files.catbox.moe/jh6yfn.jpg"
 const CHAT_SESSION = {}
 const REPLY_MAP = {}
 const WAITING_UPDATE_LINK = {}
@@ -581,8 +582,8 @@ const keyboard2 = {
 // ==================== KIRIM DENGAN THUMBNAIL ====================
 async function sendWithThumbnail(ctx, text, extra = {}) {
     try {
-        if (config.THUMBNAIL_URL && config.THUMBNAIL_URL.startsWith('http')) {
-            await ctx.replyWithPhoto({ url: config.THUMBNAIL_URL }, { caption: text, parse_mode: 'HTML', ...extra });
+        if (THUMBNAIL_URL && THUMBNAIL_URL.startsWith('http')) {
+            await ctx.replyWithPhoto({ url: THUMBNAIL_URL }, { caption: text, parse_mode: 'HTML', ...extra });
         } else {
             await ctx.reply(text, { parse_mode: 'HTML', ...extra });
         }
