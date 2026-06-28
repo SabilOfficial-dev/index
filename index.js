@@ -638,7 +638,7 @@ async function getMenuText(ctx) {
 ├─▢ 🛡 ᴘʀᴇғɪx : /
 ├─▢ ⏳ ʀᴜɴᴛɪᴍᴇ : ${runtime}
 ╰───────────────────────╯</blockquote>
-<blockquote><b>⪻┉⪼ ᴘᴏᴡᴇʀᴇᴅ ʙʏ @SabilOfficial ⪻┉⪼</b></blockquote>
+<blockquote><b>© ᴘᴏᴡᴇʀᴇᴅ ʙʏ @sabilofficial</b></blockquote>
     `;
 }
 //// ==================== ACTION CHECK JOIN ====================
@@ -1711,7 +1711,7 @@ bot.action("main_menu", async (ctx) => {
 ├─▢ 🛡 ᴘʀᴇғɪx : /
 ├─▢ ⏳ ʀᴜɴᴛɪᴍᴇ : ${runtime}
 ╰───────────────────────╯</blockquote>
-<blockquote><b>⪻┅ 𝖯𝗋𝖾𝗌𝗌 𝖡𝗎𝗍𝗍𝗈𝗇 ┅⪼</b></blockquote>
+<blockquote><b>© ᴘᴏᴡᴇʀᴇᴅ ʙʏ @sabilofficial</b></blockquote>
 `;
         await ctx.editMessageCaption(menuText, {
             parse_mode: "HTML",
