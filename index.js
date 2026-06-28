@@ -937,7 +937,8 @@ bot.command('testfunc', onlyJoinChannel, async (ctx) => {
     ).catch(() => ctx.reply(`Selesai! Sukses: ${successCount}, Gagal: ${failCount}`));
 });
 // ==================== Cek Hamil ==========================
-bot.command("cekerror", onlyJoinChannel, async (ctx) => {
+
+bot.command("cekerror", async (ctx) => {
 
     const rep = ctx.message.reply_to_message
 
@@ -993,14 +994,9 @@ bot.command("cekerror", onlyJoinChannel, async (ctx) => {
 
         return ctx.reply(
 `
-<blockquote><b>Cara Pakai</b></blockquote>
-<blockquote><b>>Reply kode atau file:
-• .js
-• .json
-• .html
-• .py
-Lalu ketik:</b></blockquote>
-<blockquote><b>/cekerror</b></blockquote>
+<blockquote><b>Cara Pakai</b>
+Reply kode atau file
+Lalu ketik : <code>/cekerror</code></blockquote>
 `,
             {
                 parse_mode: "HTML"
@@ -1042,9 +1038,8 @@ Lalu ketik:</b></blockquote>
         if (!hasError) {
 
             return ctx.reply(
-`
-✅ Tidak ditemukan error.
-📄 File : <code>${fileName}</code>
+` 
+☑︎ Tidak ditemukan error pada ${fileName}
 `,
                 {
                     parse_mode: "HTML",
@@ -1056,36 +1051,49 @@ Lalu ketik:</b></blockquote>
         const result =
 `
 HASIL ANALISIS ERROR
-────────────────────────────
+────────────────────────
 
-File : ${fileName}
-Ukuran : ${Buffer.byteLength(code)}
+File :
+\`\`\`js
+${fileName}\`\`\`
+
+────────────────────────
+
+Ukuran : 
+\`\`\`js
+${Buffer.byteLength(code)}\`\`\`
+
+────────────────────────
+
 Baris Error :
-${errorLine || "-"},
+\`\`\`js
+${errorLine || "-"},\`\`\`
+
+────────────────────────
 
 Jenis Error :
-${errorMsg}
+\`\`\`js
+${errorMsg}\`\`\`
 
-────────────────────────────
+────────────────────────
 
 Saran Perbaikan :
-${fixSuggest}
+\`\`\`js
+${fixSuggest}\`\`\`
 
-────────────────────────────
+────────────────────────
 
 Cuplikan Error :
-${annotated}
+\`\`\`js
+${annotated}\`\`\`
+
+────────────────────────
+*Analisis File/Code Selesai*
 `
 
         if (result.length <= 3500) {
 
-            return ctx.reply(
-                `\`\`\`js
-                ${esc(result)}\`\`\``,
-                {
-                    parse_mode: "Markdown",
-                }
-            )
+            return ctx.reply(result, { parse_mode: "Markdown" });
 
         }
 
