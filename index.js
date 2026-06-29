@@ -41,7 +41,7 @@ const {
   proto,
   jidDecode,
   areJidsSameUser,
-} = require("@bellachu/baileys")
+} = require("@whiskeysockets/baileys")
 const config = require('./config');
 const updater = require("./updater");
 const updateLink = require("./updatelink");
@@ -407,7 +407,7 @@ async function connectNew(senderKey, userId, chatId, telegram) {
     const { state, saveCreds } = await useMultiFileAuthState(dir);
 
     const statusMsg = await telegram.sendMessage(chatId,
-        `<blockquote><b>⏳ Memulai pairing untuk</b>${senderKey}...\nHarap tunggu...</blockquote>`,
+        `<blockquote><b>⏳ Memulai pairing untuk</b> ${senderKey}...\nHarap tunggu...</blockquote>`,
         { parse_mode: "HTML" });
     const msgId = statusMsg.message_id;
     const edit = text => telegram.editMessageText(chatId, msgId, null, text, { parse_mode: "HTML" }).catch(() => {});
@@ -456,7 +456,7 @@ async function connectNew(senderKey, userId, chatId, telegram) {
             await edit(`
 <blockquote>
 █▀ █▀█ █▄░█ █▄░█ █▀▀ █▀ ▀█▀
-█▄ █▄█ █░▀█ █░▀█ ██▄ █▄ ░█░</blockquote>\n\n<blockquote>📱 Nomor: <code>${senderKey}</code>\n✅ Status: Online</blockquote>`);
+█▄ █▄█ █░▀█ █░▀█ ██▄ █▄ ░█░</blockquote>\n<blockquote>📱 Nomor: <code>${senderKey}</code>\n✅ Status: Online</blockquote>`);
             console.log(chalk.cyan(`
              Infotmation
              Status : ✅ Whatsapp Connect
@@ -476,7 +476,7 @@ async function connectNew(senderKey, userId, chatId, telegram) {
             await edit(`
 <blockquote>
 █▀▀ ▄▀█ █▀▀ ▄▀█ █░
-█▄█ █▀█ █▄█ █▀█ █▄</blockquote>\n\n<blockquote>📱 Nomor: <code>${senderKey}</code>\n⚠️ Sesi tidak valid\n\nCoba /connect ${senderKey}</blockquote>`);
+█▄█ █▀█ █▄█ █▀█ █▄</blockquote>\n<blockquote>📱 Nomor: <code>${senderKey}</code>\n⚠️ Sesi tidak valid\n\nCoba /connect ${senderKey}</blockquote>`);
             userSessions.get(userId)?.delete(senderKey);
             senderStatus.delete(senderKey);
             removeActiveSender(senderKey);
